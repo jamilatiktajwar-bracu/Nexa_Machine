@@ -13,8 +13,10 @@ std::string NexaShell::execute(const std::string& line) {
     std::istringstream input(line); std::string command; input>>command;
     if(command.empty()) return {};
     try {
-        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
-        if(command=="whoami") return security_.currentUser();
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
+        if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
+        if(!security_.loggedIn() && command!="login") return "session locked; login first";
         if(command=="useradd") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: useradd USER PASSWORD (minimum 8 characters)"; if(security_.currentUser()!="root") return "permission denied"; return security_.addUser(user,password)?"created user "+user:"user exists, invalid, or password too short"; }
         if(command=="login") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: login USER PASSWORD"; const bool ok=security_.login(user,password); if(ok) return "logged in as "+user; return security_.isLocked(user)?"account locked; contact root":"authentication failed"; }
         if(command=="passwd") {
@@ -28,7 +30,20 @@ std::string NexaShell::execute(const std::string& line) {
         }
         if(command=="unlock") { std::string user; input>>user; if(user.empty()) return "usage: unlock USER"; if(security_.currentUser()!="root") return "permission denied"; return security_.unlockUser(user)?"account unlocked":"unknown user"; }
         if(command=="groupadd") { std::string group; input>>group; if(group.empty()) return "usage: groupadd GROUP"; if(security_.currentUser()!="root") return "permission denied"; return security_.addGroup(group)?"created group "+group:"group exists or invalid"; }
-        if(command=="usermod") { std::string option,group,user; input>>option>>group>>user; if(option!="-g"||group.empty()||user.empty()) return "usage: usermod -g GROUP USER"; if(security_.currentUser()!="root") return "permission denied"; return security_.setPrimaryGroup(user,group)?"primary group updated":"unknown user or group"; }
+        if(command=="usermod") {
+            std::string option,group,user; input>>option>>group>>user;
+            if(group.empty()||user.empty()) return "usage: usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER";
+            if(security_.currentUser()!="root") return "permission denied";
+            if(option=="-g") return security_.setPrimaryGroup(user,group)?"primary group updated":"unknown user or group";
+            if(option=="-aG") return security_.addSupplementaryGroup(user,group)?"supplementary group added":"unknown user/group or membership exists";
+            if(option=="-rG") return security_.removeSupplementaryGroup(user,group)?"supplementary group removed":"unknown user or membership";
+            return "usage: usermod -g|-aG|-rG GROUP USER";
+        }
+        if(command=="groups") {
+            std::string user; input>>user; if(user.empty()) user=security_.currentUser();
+            if(!security_.hasUser(user)) return "unknown user";
+            std::string out; for(const auto& group:security_.memberships(user)) { if(!out.empty()) out+=" "; out+=group; } return out;
+        }
         if(command=="chmod") {
             std::string mode,path; input>>mode>>path; if(mode.empty()||path.empty()) return "usage: chmod MODE PATH";
             std::size_t used=0; auto parsed=std::stoul(mode,&used,8);
