@@ -5,6 +5,8 @@
 #include "nexa/memory_manager.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <optional>
 #include <map>
 #include <string>
 #include <vector>
@@ -16,14 +18,25 @@ struct ProcessInfo {
     ProcessState state{ProcessState::Ready};
     std::uint64_t ticks{};
     std::string faultReason;
+    std::uint8_t priority{0};
 };
-enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10 };
+enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
+struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
 public:
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
     std::uint32_t spawn(const std::string& name, const Executable& image);
     bool reapProcess(std::uint32_t pid);
+    void setPriority(std::uint32_t pid,std::uint8_t priority);
+    void setTimeQuantum(std::size_t instructions);
+    void setTimerInterval(std::uint64_t ticks);
+    [[nodiscard]] std::uint64_t systemTicks() const noexcept{return systemTicks_;}
+    [[nodiscard]] std::uint64_t timerInterrupts() const noexcept{return timerInterrupts_;}
+    [[nodiscard]] std::uint64_t pendingTimerInterrupts() const noexcept{return pendingTimerInterrupts_;}
+    bool acknowledgeTimerInterrupt() noexcept;
+    bool sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std::uint8_t> payload);
+    [[nodiscard]] std::optional<IpcMessage> receiveMessage(std::uint32_t pid);
     bool scheduleOne();
     void run(std::size_t maxTicks=100000);
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
@@ -39,11 +52,14 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; };
+    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; bool yieldRequested{false}; };
     std::size_t ramBytes_;
     std::uint32_t nextPid_{1}, currentPid_{0};
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
+    std::size_t timeQuantum_{1};
+    std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0};
+    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251;
     VirtualFileSystem fs_;
     VirtualMemoryManager memory_;
     std::string output_;
