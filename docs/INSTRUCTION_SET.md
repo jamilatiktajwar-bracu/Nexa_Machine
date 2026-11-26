@@ -32,3 +32,12 @@ From the interactive console:
 
 Snapshots store registers, RAM, program, PC, stack, flags, halt state, and instruction count. They are binary files and should only be loaded from trusted sources.
 \n## Device ports\n- Port 0: keyboard input. Queue text from the console using `keyboard TEXT` before running. The VM consumes one byte per `IN A, 0`.\n- Port 1: character display. `OUT A, 1` writes the character to the host console and device output buffer.\n\n## Debugger\n- `step` executes one instruction.\n- `break ADDRESS` sets an instruction-address breakpoint. `run` / `continue` stops when the program reaches it.\n- GUI has Run, Step, breakpoint setting, and a 64-byte hex RAM view.\n\n## Boot demo\n`examples/boot_message.nexa` is a startup-message demonstration. It is not a real bootloader or OS boot process.\n
+## Nexa 0.8 extensions
+
+`CONST NAME, value` (or `.CONST`) declares a numeric constant. `//` is an additional comment prefix.
+
+`SYS` dispatches service using A: 0 halt, 1 output character in B, 2 keyboard byte into A, 3 clear framebuffer.
+
+Graphics ports: OUT 2 sets X, OUT 3 sets Y, OUT 4 sets pixel color, OUT 5 draws at X/Y, OUT 6 clears using A (zero black, nonzero white). The display is a 64x32 monochrome framebuffer.
+
+RAM watchpoints stop execution after a watched address is written. Console commands `watch ADDRESS`, `unwatch ADDRESS`, `mem-write ADDRESS BYTE`.
