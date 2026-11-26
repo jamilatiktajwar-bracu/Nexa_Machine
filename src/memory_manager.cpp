@@ -61,11 +61,19 @@ std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t addr
     auto hit=tlb_.find(key);
     if(hit==tlb_.end()) ++tlbMisses_; else ++tlbHits_;
     auto& self=*const_cast<VirtualMemoryManager*>(this);
-    auto& live=self.mapping(pid,page);
-    if(!live.resident) {
+    PageMapping* livePtr=nullptr;
+    try { livePtr=&self.mapping(pid,page); }
+    catch(const std::runtime_error&) {
+        if(!pageFaultHandler_) throw;
+        ++pageFaults_;
+        pageFaultHandler_(pid,page);
+        livePtr=&self.mapping(pid,page);
+    }
+    if(!livePtr->resident) {
         ++pageFaults_;
         self.pageIn(pid,page);
     }
+    auto& live=*livePtr;
     live.lastUsed=++accessClock_;
     if(access==MemoryAccess::User&&!live.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
     if(writeAccess&&!live.writable) throw std::runtime_error("Page fault: write protection");
