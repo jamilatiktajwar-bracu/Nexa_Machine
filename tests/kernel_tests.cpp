@@ -10,6 +10,66 @@ int main() {
     assert(restoredFreshSecurity.hasUser("root"));
     assert(!restoredFreshSecurity.authenticate("root", "not-configured"));
 
+
+    nexa::NexaKernel schedulingKernel(512);
+    const nexa::Executable looping{0,{{nexa::Opcode::Inc,0},{nexa::Opcode::Jump,0}}};
+    const auto lowPid=schedulingKernel.spawn("low-priority",looping);
+    const auto highPid=schedulingKernel.spawn("high-priority",looping);
+    schedulingKernel.setPriority(lowPid,1);
+    schedulingKernel.setPriority(highPid,7);
+    schedulingKernel.setTimeQuantum(2);
+    assert(schedulingKernel.scheduleOne());
+    auto scheduled=schedulingKernel.processes();
+    std::uint64_t lowTicks=0,highTicks=0;
+    for(const auto& proc:scheduled){if(proc.pid==lowPid)lowTicks=proc.ticks;if(proc.pid==highPid)highTicks=proc.ticks;}
+    assert(highTicks==2&&lowTicks==0);
+    schedulingKernel.setTimerInterval(1);
+    assert(schedulingKernel.scheduleOne());
+    assert(schedulingKernel.systemTicks()==3&&schedulingKernel.timerInterrupts()==1);
+    assert(schedulingKernel.pendingTimerInterrupts()==1);
+    assert(schedulingKernel.acknowledgeTimerInterrupt());
+    assert(!schedulingKernel.acknowledgeTimerInterrupt());
+    const auto peerPid=schedulingKernel.spawn("equal-priority-peer",looping);
+    schedulingKernel.setPriority(peerPid,7);
+    assert(schedulingKernel.scheduleOne());
+    scheduled=schedulingKernel.processes();
+    bool peerRan=false;
+    for(const auto& proc:scheduled)if(proc.pid==peerPid)peerRan=proc.ticks==1;
+    assert(peerRan);
+    bool invalidPriority=false;
+    try{schedulingKernel.setPriority(peerPid,8);}catch(const std::invalid_argument&){invalidPriority=true;}
+    assert(invalidPriority);
+
+    nexa::NexaKernel ipcKernel(256);
+    const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{1,2,3}));
+    auto ipcMessage=ipcKernel.receiveMessage(ipcReceiver);
+    assert(ipcMessage&&ipcMessage->sender==ipcSender&&ipcMessage->payload==std::vector<std::uint8_t>({1,2,3}));
+    assert(!ipcKernel.receiveMessage(ipcReceiver));
+    std::vector<std::uint8_t> oversized(252,0);
+    assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,std::move(oversized)));
+
+    nexa::NexaKernel guestIpcKernel(256);
+    const auto guestReceiver=guestIpcKernel.spawn("guest-receiver",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::ReceiveMessage)},
+        {nexa::Opcode::LoadBImmediate,100},{nexa::Opcode::Syscall,0},
+        {nexa::Opcode::Load,105},{nexa::Opcode::Output,nexa::VM::DisplayPort},
+        {nexa::Opcode::Halt,0}}});
+    const auto guestSender=guestIpcKernel.spawn("guest-sender",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(guestReceiver&0xFF)},{nexa::Opcode::Store,100},
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>((guestReceiver>>8)&0xFF)},{nexa::Opcode::Store,101},
+        {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,102},
+        {nexa::Opcode::LoadImmediate,'Z'},{nexa::Opcode::Store,103},
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::SendMessage)},
+        {nexa::Opcode::LoadBImmediate,100},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});
+    guestIpcKernel.setPriority(guestSender,7);
+    guestIpcKernel.setPriority(guestReceiver,1);
+    guestIpcKernel.setTimeQuantum(32);
+    assert(guestIpcKernel.scheduleOne());
+    guestIpcKernel.run();
+    assert(guestIpcKernel.takeConsoleOutput()=="Z");
+
     nexa::NexaKernel pagingKernel(1024);
     const auto pagingPid=pagingKernel.spawn("paged-load-store",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,90},{nexa::Opcode::Store,200},
