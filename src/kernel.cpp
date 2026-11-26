@@ -69,6 +69,15 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     filePermissions_[pid] = {};
     return pid;
 }
+bool NexaKernel::hasDeadlock() const noexcept {
+    bool blocked=false;
+    for(const auto& [pid,proc]:processes_) {
+        (void)pid;
+        if(proc.info.state==ProcessState::Ready||proc.info.state==ProcessState::Running) return false;
+        if(proc.info.state==ProcessState::Blocked) blocked=true;
+    }
+    return blocked;
+}
 bool NexaKernel::reapProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) return false;
