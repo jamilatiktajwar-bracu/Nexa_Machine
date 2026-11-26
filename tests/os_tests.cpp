@@ -25,4 +25,12 @@ int main(){
  assert(syscallFailed&&exceptionVm.privilegeMode()==nexa::PrivilegeMode::User);
  nexa::VM vm;vm.loadProgram(nexa::parseAssembly("INT 1\nHALT\nLOAD A, 99\nIRET\n"));vm.setInterruptVector(1,2);vm.stepInstruction();assert(vm.programCounter()==2);vm.run();assert(vm.halted()&&vm.accumulator()==99);
  nexa::VirtualFileSystem fs;fs.createDirectory("/bin");fs.createDirectory("/bin/tools");fs.createFile("/bin/demo",{1,2,3});assert(fs.readFile("/bin/demo").size()==3);assert(fs.list("/bin").at(0)=="demo");fs.writeFile("/bin/demo",{9});assert(fs.readFile("/bin/demo")[0]==9);const char* imagePath="nexa_test.vfs";fs.saveImage(imagePath);nexa::VirtualFileSystem restored;restored.createFile("/old",{7});restored.loadImage(imagePath);assert(restored.exists("/bin/tools"));assert(restored.readFile("/bin/demo")==std::vector<std::uint8_t>{9});assert(restored.list("/bin").at(0)=="demo");std::remove(imagePath);fs.removeFile("/bin/demo");assert(!fs.exists("/bin/demo"));bool blocked=false;try{fs.createFile("/../escape");}catch(const std::invalid_argument&){blocked=true;}assert(blocked);
+ nexa::VM stackLimitVm;
+ std::vector<nexa::Instruction> pushProgram(nexa::VM::StackLimit+1,{nexa::Opcode::PushA,0});
+ pushProgram.push_back({nexa::Opcode::Halt,0});
+ stackLimitVm.loadProgram(std::move(pushProgram));
+ bool stackOverflowCaught=false;
+ try{stackLimitVm.run(nexa::VM::StackLimit+2);}catch(const std::runtime_error& error){stackOverflowCaught=std::string(error.what())=="Stack overflow";}
+ assert(stackOverflowCaught&&stackLimitVm.stackDepth()==nexa::VM::StackLimit);
+
 }
