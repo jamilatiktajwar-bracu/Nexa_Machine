@@ -19,6 +19,19 @@ int main() {
     kernel.run();
     assert(kernel.memoryManager().read(pagingPid,200,nexa::MemoryAccess::Kernel)==90);
     assert(kernel.takeConsoleOutput()=="Z");
+    const auto executeFaultPid=kernel.spawn("execute-protection",nexa::Executable{0,{
+        {nexa::Opcode::Halt,0}}});
+    const auto executeSpace=executeFaultPid|0x80000000u;
+    assert(kernel.memoryManager().canExecute(executeSpace,0));
+    bool codeWriteDenied=false;
+    try { kernel.memoryManager().write(executeSpace,0,0xFF); } catch(const std::runtime_error&) { codeWriteDenied=true; }
+    assert(codeWriteDenied);
+    kernel.memoryManager().protectPage(executeSpace,0,false,true,false);
+    kernel.run();
+    bool executeFault=false;
+    for(const auto& p:kernel.processes())
+        if(p.pid==executeFaultPid) executeFault=p.state==nexa::ProcessState::Faulted&&p.faultReason.find("execute protection")!=std::string::npos;
+    assert(executeFault);
     const auto protectedPid=kernel.spawn("protected-store",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,0},{nexa::Opcode::Halt,0}}});
     kernel.memoryManager().protectPage(protectedPid,0,true,false);
