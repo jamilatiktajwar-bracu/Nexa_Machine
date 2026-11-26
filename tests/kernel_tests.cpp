@@ -24,7 +24,8 @@ int main() {
     const auto executeFaultPid=pagingKernel.spawn("execute-protection",nexa::Executable{0,{
         {nexa::Opcode::Halt,0}}});
     const auto executeSpace=executeFaultPid|0x80000000u;
-    assert(pagingKernel.memoryManager().canExecute(executeSpace,0));\n    assert(pagingKernel.memoryManager().read(executeSpace,0,nexa::MemoryAccess::Kernel)==static_cast<std::uint8_t>(nexa::Opcode::Halt));
+    assert(pagingKernel.memoryManager().canExecute(executeSpace,0));
+    assert(pagingKernel.memoryManager().read(executeSpace,0,nexa::MemoryAccess::Kernel)==static_cast<std::uint8_t>(nexa::Opcode::Halt));
     bool codeWriteDenied=false;
     try { pagingKernel.memoryManager().write(executeSpace,0,0xFF); } catch(const std::runtime_error&) { codeWriteDenied=true; }
     assert(codeWriteDenied);
