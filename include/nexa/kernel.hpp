@@ -20,6 +20,8 @@ struct ProcessInfo {
     std::string faultReason;
     std::uint8_t priority{0};
     std::size_t pendingMessages{0};
+    std::uint8_t effectivePriority{0};
+    std::uint64_t readyWaitTicks{0};
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
@@ -32,6 +34,8 @@ public:
     [[nodiscard]] bool hasDeadlock() const noexcept;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setTimeQuantum(std::size_t instructions);
+    void setPriorityAgingThreshold(std::uint64_t ticks);
+    [[nodiscard]] std::uint64_t priorityAgingThreshold() const noexcept{return priorityAgingThreshold_;}
     [[nodiscard]] std::size_t timeQuantum() const noexcept{return timeQuantum_;}
     [[nodiscard]] std::uint64_t timerInterval() const noexcept{return timerInterval_;}
     void setTimerInterval(std::uint64_t ticks);
@@ -56,13 +60,13 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; bool yieldRequested{false}; };
+    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
     std::size_t ramBytes_;
     std::uint32_t nextPid_{1}, currentPid_{0};
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
     std::size_t timeQuantum_{1};
-    std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0};
+    std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0},priorityAgingThreshold_{0};
     static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251;
     VirtualFileSystem fs_;
     VirtualMemoryManager memory_;
