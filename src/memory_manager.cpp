@@ -33,14 +33,15 @@ void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writ
     if(it->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
     const auto frame=allocateFrame();
     it->second.emplace(page,PageMapping{frame,writable,user,executable});
+    invalidateTlb(pid);
 }
 void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     auto& table=spaces_.at(pid); auto it=table.find(page);
     if(it==table.end()) throw std::out_of_range("Virtual page is not mapped");
-    releaseFrame(it->second.frame); table.erase(it);
+    releaseFrame(it->second.frame); table.erase(it); invalidateTlb(pid);
 }
 void VirtualMemoryManager::protectPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
-    auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user; m.executable=executable;
+    auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user; m.executable=executable; invalidateTlb(pid);
 }
 PageMapping& VirtualMemoryManager::mapping(std::uint32_t pid,std::uint8_t page) {
     auto s=spaces_.find(pid); if(s==spaces_.end()) throw std::out_of_range("Unknown address space");
@@ -52,22 +53,37 @@ const PageMapping& VirtualMemoryManager::mapping(std::uint32_t pid,std::uint8_t 
     auto p=s->second.find(page); if(p==s->second.end()) throw std::runtime_error("Page fault: unmapped virtual page");
     return p->second;
 }
+std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t address,MemoryAccess access,bool writeAccess,bool executeAccess) const {
+    const auto page=static_cast<std::uint8_t>(address/PageSize);
+    const auto key=(static_cast<std::uint64_t>(pid)<<8)|page;
+    auto it=tlb_.find(key);
+    if(it==tlb_.end()) {
+        ++tlbMisses_;
+        const auto entry=mapping(pid,page);
+        if(tlb_.size()>=TlbCapacity) tlb_.erase(tlb_.begin());
+        it=tlb_.emplace(key,entry).first;
+    } else ++tlbHits_;
+    const auto& entry=it->second;
+    if(access==MemoryAccess::User&&!entry.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
+    if(writeAccess&&!entry.writable) throw std::runtime_error("Page fault: write protection");
+    if(executeAccess&&!entry.executable) throw std::runtime_error("Page fault: execute protection");
+    return static_cast<std::size_t>(entry.frame)*PageSize+(address%PageSize);
+}
+void VirtualMemoryManager::flushTlb() const noexcept {tlb_.clear();}
+void VirtualMemoryManager::invalidateTlb(std::uint32_t pid) const noexcept {
+    const auto prefix=static_cast<std::uint64_t>(pid)<<8;
+    for(auto it=tlb_.begin();it!=tlb_.end();) {
+        if((it->first&0xFFFFFFFFFFFFFF00ULL)==prefix) it=tlb_.erase(it); else ++it;
+    }
+}
 std::uint8_t VirtualMemoryManager::read(std::uint32_t pid,std::uint16_t address,MemoryAccess access) const {
-    const auto& m=mapping(pid,static_cast<std::uint8_t>(address/PageSize));
-    if(access==MemoryAccess::User&&!m.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
-    return physical_[static_cast<std::size_t>(m.frame)*PageSize+(address%PageSize)];
+    return physical_[translate(pid,address,access)];
 }
 void VirtualMemoryManager::write(std::uint32_t pid,std::uint16_t address,std::uint8_t value,MemoryAccess access) {
-    const auto& m=mapping(pid,static_cast<std::uint8_t>(address/PageSize));
-    if(access==MemoryAccess::User&&!m.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
-    if(!m.writable) throw std::runtime_error("Page fault: write protection");
-    physical_[static_cast<std::size_t>(m.frame)*PageSize+(address%PageSize)]=value;
+    physical_[translate(pid,address,access,true)]=value;
 }
 bool VirtualMemoryManager::canExecute(std::uint32_t pid,std::uint16_t address,MemoryAccess access) const {
-    const auto& m=mapping(pid,static_cast<std::uint8_t>(address/PageSize));
-    if(access==MemoryAccess::User&&!m.userAccessible) throw std::runtime_error("Page fault: supervisor-only code page");
-    if(!m.executable) throw std::runtime_error("Page fault: execute protection");
-    return true;
+    (void)translate(pid,address,access,false,true); return true;
 }
 bool VirtualMemoryManager::isMapped(std::uint32_t pid,std::uint8_t page) const {
     auto it=spaces_.find(pid); return it!=spaces_.end()&&it->second.contains(page);
