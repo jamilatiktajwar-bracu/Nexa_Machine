@@ -23,7 +23,7 @@ GUI auto-builds if Qt6 Widgets is installed. To explicitly disable: `-DNEXA_BUIL
 ```sh
 ./build/nexa examples/addition.nexa
 ./build/nexa console
-./build/nexa --config config/nexa.json examples/addition.nexa
+./build/nexa --config examples/configured_machine.json examples/memory_16bit.nexa
 ```
 Console commands: help, load FILE, run, reset, status, mem ADDRESS, disk-read OFFSET COUNT, disk-write OFFSET BYTE..., disk-save, quit.
 
