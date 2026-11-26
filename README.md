@@ -120,3 +120,8 @@ VFS disk images now preserve shell users and file ownership/mode metadata. savef
 ## Nexa OS 2.0 — Password authentication
 
 Shell accounts now use salted PBKDF2-HMAC-SHA256 password digests, password-verified login, and persistent credential metadata in VFS images. Account commands: `useradd USER PASSWORD`, `login USER PASSWORD`, and `passwd PASSWORD`. OpenSSL Crypto is a build dependency. This remains an educational shell; command-line passwords are not hidden and disk images are not cryptographically authenticated. See [Nexa OS 2.0](docs/NEXA_OS_2_0.md).
+
+
+## Nexa OS 2.1 — Account lockout and groups
+
+The shell now locks an account after five consecutive failed login attempts. Root can recover an account with `passwd USER NEW_PASSWORD` or `unlock USER`. Root can create groups with `groupadd GROUP` and change a user's primary group with `usermod -g GROUP USER`. Security metadata uses `NEXASEC3`, persisting group membership and lockout state while retaining readers for `NEXASEC1` and `NEXASEC2`. See [Nexa OS 2.1](docs/NEXA_OS_2_1.md). Lockout is a simple persistent account policy, not a network-grade authentication service.
