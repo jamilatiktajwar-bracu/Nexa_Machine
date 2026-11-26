@@ -18,7 +18,8 @@ void console(){nexa::MachineConfig config; nexa::VMManager manager(config);std::
 int main(int argc,char**argv){
  try{
   if(argc==2&&std::string(argv[1])=="console"){console();return 0;}
-  if(argc==4&&std::string(argv[1])=="--compile"){auto source=readFile(argv[2]);nexa::Executable e{0,nexa::parseAssembly(source)};nexa::saveExecutable(e,argv[3]);std::cout<<"Compiled "<<e.code.size()<<" instructions to "<<argv[3]<<"\\n";return 0;}\n  if(argc==3&&std::string(argv[1])=="--exe"){auto e=nexa::loadExecutable(argv[2]);nexa::VM vm;vm.loadProgram(e.code);vm.setProgramCounter(e.entryPoint);vm.run();std::cout<<"Executable halted. Instructions="<<vm.instructionsExecuted()<<"\\n";return 0;}
+  if(argc==4&&std::string(argv[1])=="--compile"){auto source=readFile(argv[2]);nexa::Executable e{0,nexa::parseAssembly(source)};nexa::saveExecutable(e,argv[3]);std::cout<<"Compiled "<<e.code.size()<<" instructions to "<<argv[3]<<"\n";return 0;}
+  if(argc==3&&std::string(argv[1])=="--exe"){auto e=nexa::loadExecutable(argv[2]);nexa::VM vm;vm.loadProgram(e.code);vm.setProgramCounter(e.entryPoint);vm.run();std::cout<<"Executable halted. Instructions="<<vm.instructionsExecuted()<<"\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"Usage: nexa [program.nexa] | nexa --compile source.nexa output.nexe | nexa --exe program.nexe | nexa console | nexa --config config.json program.nexa\n";return 0;}
   std::string program=demo;nexa::MachineConfig config;
   if(argc==2)program=readFile(argv[1]);
