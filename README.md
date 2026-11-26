@@ -159,3 +159,8 @@ This remains an educational host-side security model. Password entry is still su
 ## Nexa OS 2.4 — Virtual memory manager
 
 A standalone software paging layer is available in `nexa/virtual_memory.hpp`. It models 4 KiB pages, physical frame allocation/reclamation, per-address-space page tables, virtual-to-physical translation, and Read/Write/Execute permissions. Address spaces are isolated from each other; unmapped or unauthorized accesses raise page faults. The manager is a deterministic educational model and is not wired into the VM instruction fetch/data path or backed by a hardware MMU. See [Nexa OS 2.4](docs/NEXA_OS_2_4.md).
+
+
+## Nexa OS 2.4 — Virtual memory manager
+
+A standalone software paging layer is available in `nexa/virtual_memory.hpp`. It models 4 KiB pages, physical frame allocation/reclamation, per-address-space page tables, virtual-to-physical translation, and Read/Write/Execute permissions. Address spaces are isolated from each other; unmapped or unauthorized accesses raise page faults. The manager is a deterministic educational model and is not wired into the VM instruction fetch/data path or backed by a hardware MMU. See [Nexa OS 2.4](docs/NEXA_OS_2_4.md).
