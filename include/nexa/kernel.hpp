@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 namespace nexa {
-enum class ProcessState { Ready, Running, Halted, Faulted };
+enum class ProcessState { Ready, Running, Blocked, Halted, Faulted };
 struct ProcessInfo {
     std::uint32_t pid{};
     std::string name;
