@@ -169,7 +169,7 @@ bool NexaKernel::scheduleOne() {
 void NexaKernel::run(std::size_t maxSlices) { for(std::size_t n=0;n<maxSlices&&scheduleOne();++n) {} }
 std::vector<ProcessInfo> NexaKernel::processes() const {
     std::vector<ProcessInfo> result;
-    for(const auto& [id,p]:processes_) result.push_back(p.info);
+    for(const auto& [id,p]:processes_) { (void)id; auto info=p.info; info.pendingMessages=p.inbox.size(); result.push_back(std::move(info)); }
     return result;
 }
 std::string NexaKernel::takeConsoleOutput() {
