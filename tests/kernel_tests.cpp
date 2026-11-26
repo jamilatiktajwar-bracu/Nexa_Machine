@@ -40,6 +40,12 @@ int main() {
     try{schedulingKernel.setPriority(peerPid,8);}catch(const std::invalid_argument&){invalidPriority=true;}
     assert(invalidPriority);
 
+    nexa::NexaShell schedulerShell(schedulingKernel);
+    assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 2")=="priority updated");
+    assert(schedulerShell.execute("sched").find("policy=fixed-priority-round-robin")!=std::string::npos);
+    assert(schedulerShell.execute("ps").find("priority=2")!=std::string::npos);
+    assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 9")=="invalid PID or priority (0-7)");
+
     nexa::NexaKernel ipcKernel(256);
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
