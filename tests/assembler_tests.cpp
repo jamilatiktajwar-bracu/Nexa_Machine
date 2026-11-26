@@ -1,5 +1,6 @@
 #include "nexa/assembler.hpp"
 #include <cassert>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 int main(){
