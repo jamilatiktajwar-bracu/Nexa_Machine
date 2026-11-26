@@ -14,7 +14,7 @@ void VirtualMemoryManager::createAddressSpace(std::uint32_t pid) {
 void VirtualMemoryManager::destroyAddressSpace(std::uint32_t pid) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     invalidateTlb(pid);
-    for(const auto& [page,m]:it->second){(void)page;releaseFrame(m.frame);}
+    for(const auto& [page,m]:it->second){(void)page;if(m.resident) releaseFrame(m.frame); else if(swappedPages_) --swappedPages_;}
     spaces_.erase(it);
 }
 std::uint16_t VirtualMemoryManager::allocateFrame() {
@@ -39,7 +39,7 @@ void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writ
 void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     auto& table=spaces_.at(pid); auto it=table.find(page);
     if(it==table.end()) throw std::out_of_range("Virtual page is not mapped");
-    releaseFrame(it->second.frame); table.erase(it); invalidateTlb(pid);
+    if(it->second.resident) releaseFrame(it->second.frame); else if(swappedPages_) --swappedPages_;\n    table.erase(it); invalidateTlb(pid);
 }
 void VirtualMemoryManager::protectPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
     auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user; m.executable=executable; invalidateTlb(pid);
@@ -66,7 +66,7 @@ std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t addr
             if(!pageFaultHandler_) throw;
             ++pageFaults_; pageFaultHandler_(pid,page); entry=mapping(pid,page);
         }
-        if(tlb_.size()>=TlbCapacity) tlb_.erase(tlb_.begin());
+        if(tlb_.size()>=TlbCapacity) { auto oldest=tlb_.begin(); for(auto candidate=tlb_.begin();candidate!=tlb_.end();++candidate) { const auto p=static_cast<std::uint32_t>(candidate->first>>8); const auto pg=static_cast<std::uint8_t>(candidate->first&255); try { if(mapping(p,pg).lastUsed<mapping(static_cast<std::uint32_t>(oldest->first>>8),static_cast<std::uint8_t>(oldest->first&255)).lastUsed) oldest=candidate; } catch(...) { oldest=candidate; } } tlb_.erase(oldest); }
         it=tlb_.emplace(key,entry).first;
     } else ++tlbHits_;
     const auto& entry=it->second;
