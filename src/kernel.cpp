@@ -45,6 +45,18 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     filePermissions_[pid] = {};
     return pid;
 }
+bool NexaKernel::reapProcess(std::uint32_t pid) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) return false;
+    if(it->second.info.state!=ProcessState::Halted&&it->second.info.state!=ProcessState::Faulted) return false;
+    memory_.destroyAddressSpace(pid);
+    const auto codeSpace=pid|0x80000000u;
+    memory_.destroyAddressSpace(codeSpace);
+    filePermissions_.erase(pid);
+    processes_.erase(it);
+    if(currentPid_==pid) currentPid_=0;
+    return true;
+}
 bool NexaKernel::scheduleOne() {
     if(processes_.empty()) return false;
     std::vector<std::uint32_t> ids;
