@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <set>
 #include <string>
 #include <map>
@@ -14,6 +15,7 @@ public:
  static constexpr std::uint16_t KeyboardPort=0, DisplayPort=1, GraphicsXPort=2, GraphicsYPort=3, GraphicsColorPort=4, GraphicsDrawPort=5, GraphicsClearPort=6;
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
+ void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}
  void setProgramCounter(std::uint16_t address);
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
@@ -54,6 +56,7 @@ private:
  std::vector<std::uint16_t>stack_;
  std::deque<std::uint8_t>keyboard_;
  std::string deviceOutput_;
+ std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
