@@ -1,13 +1,13 @@
 # Nexa Machine
 Educational C++20 virtual machine and assembly environment. This is an interpreter/emulator project, not a hypervisor; it cannot boot a guest OS.
 
-## Features (0.5)
+## Features (0.6)
 - 8-bit A/B registers, wraparound arithmetic, 16-bit RAM addressing (up to 64 KiB)
 - CPU instructions: LOAD, STORE, ADD, SUB, INC, DEC, CMP, PRINT, HALT
 - Control flow: JMP, JZ, JNZ, CALL, RET; label support
 - Stack operations: PUSH A/B, POP A/B
 - Configurable RAM, virtual disk API, console, optional Qt6 desktop
-- Runtime instruction counter and stack depth reporting in API
+- Runtime instruction counter, stack depth, bounded execution (10M instructions default)\n- Save/load binary VM snapshots via API and console
 - Automated C++ tests and GitHub Actions CI
 
 ## Assembly quick reference
@@ -55,7 +55,7 @@ ctest --test-dir build --output-on-failure
 ```
 Qt6 Widgets is optional; if installed, CMake builds `nexa_gui`. Disable with `-DNEXA_BUILD_GUI=OFF`.
 
-Console commands: help, load FILE, run, reset, status, mem ADDRESS, disk-read OFFSET COUNT, disk-write OFFSET BYTE..., disk-save, quit.
+Console commands: help, load FILE, run, reset, status, mem ADDRESS, disk-read OFFSET COUNT, disk-write OFFSET BYTE..., disk-save, state-save FILE, state-load FILE, quit.\n\nSnapshots preserve program, RAM, registers, program counter, stack, flags, halt state, and instruction counter.
 
 ## Limitations
 No privileged CPU, device emulation layer, OS boot, sandboxing, or hardware virtualization. Instructions currently execute synchronously.
