@@ -105,3 +105,8 @@ Run `nexa --os` to open the kernel-backed VFS shell. It supports `ls`, `cat`, `t
 ## Nexa OS 1.7 — Persistent shell workspace
 
 The shell now supports `pwd`, `cd`, relative paths, and VFS persistence through `savefs HOST_PATH` / `loadfs HOST_PATH`. See [Nexa OS 1.7 documentation](docs/NEXA_OS_1_7.md).
+
+
+## Nexa OS 1.8 — User accounts and file permissions
+
+The shell now supports `useradd`, `login`, `whoami`, `chmod`, and `chown`, with owner/group/other mode-bit checks for file reads, writes, removal, and execution. See [Nexa OS 1.8](docs/NEXA_OS_1_8.md). This is an in-memory educational policy layer without password authentication or hardware-enforced isolation.
