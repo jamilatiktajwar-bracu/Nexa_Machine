@@ -78,6 +78,17 @@ bool NexaKernel::hasDeadlock() const noexcept {
     }
     return blocked;
 }
+bool NexaKernel::terminateProcess(std::uint32_t pid) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) return false;
+    if(it->second.info.state==ProcessState::Halted||it->second.info.state==ProcessState::Faulted) return false;
+    it->second.machine.requestHalt();
+    it->second.info.state=ProcessState::Halted;
+    it->second.openFiles.clear();
+    it->second.inbox.clear();
+    if(currentPid_==pid) currentPid_=0;
+    return true;
+}
 bool NexaKernel::reapProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) return false;
