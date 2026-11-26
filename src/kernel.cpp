@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <exception>
 #include <stdexcept>
+#include <limits>
 namespace nexa {
 NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>(VirtualMemoryManager::PageSize,((n+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize)*VirtualMemoryManager::PageSize*16)){
     VM check(n); (void)check;
@@ -150,7 +151,9 @@ bool NexaKernel::scheduleOne() {
     const auto effectivePriority=[this](const Process& candidate) {
         if(priorityAgingThreshold_==0) return candidate.info.priority;
         const auto boost=candidate.readyWaitTicks/priorityAgingThreshold_;
-        return static_cast<std::uint8_t>(std::min<std::uint64_t>(7,static_cast<std::uint64_t>(candidate.info.priority)+boost));
+        const auto base=candidate.info.priority;
+        if(boost>=static_cast<std::uint64_t>(7-base)) return std::uint8_t{7};
+        return static_cast<std::uint8_t>(base+boost);
     };
     for(const auto& [id,proc]:processes_) {
         if(proc.info.state!=ProcessState::Ready) continue;
@@ -175,7 +178,7 @@ bool NexaKernel::scheduleOne() {
             ++proc.info.ticks;
             ++systemTicks_;
             for(auto& [waitingPid,waiting]:processes_) {
-                if(waitingPid!=pid&&waiting.info.state==ProcessState::Ready&&waiting.readyWaitTicks<UINT64_MAX)
+                if(waitingPid!=pid&&waiting.info.state==ProcessState::Ready&&waiting.readyWaitTicks<std::numeric_limits<std::uint64_t>::max())
                     ++waiting.readyWaitTicks;
             }
             if(timerInterval_!=0&&systemTicks_%timerInterval_==0) {
@@ -217,7 +220,8 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         info.pendingMessages=p.inbox.size();
         info.readyWaitTicks=p.readyWaitTicks;
         const auto boost=priorityAgingThreshold_==0?0:p.readyWaitTicks/priorityAgingThreshold_;
-        info.effectivePriority=static_cast<std::uint8_t>(std::min<std::uint64_t>(7,static_cast<std::uint64_t>(p.info.priority)+boost));
+        if(boost>=static_cast<std::uint64_t>(7-p.info.priority)) info.effectivePriority=7;
+        else info.effectivePriority=static_cast<std::uint8_t>(p.info.priority+boost);
         result.push_back(std::move(info));
     }
     return result;
