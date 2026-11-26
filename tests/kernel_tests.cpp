@@ -86,6 +86,14 @@ int main() {
         yieldedProcessFinished=proc.state==nexa::ProcessState::Halted&&proc.ticks==4;
     assert(yieldedProcessFinished);
 
+
+    nexa::NexaKernel shellMemoryKernel(256);
+    nexa::NexaShell memoryShell(shellMemoryKernel);
+    assert(memoryShell.execute("memstat").find("frames_total=")!=std::string::npos);
+    assert(memoryShell.execute("swapfile /tmp/nexa_shell_swap.img")=="disk swap configured");
+    assert(shellMemoryKernel.memoryManager().swapFilePath()=="/tmp/nexa_shell_swap.img");
+    assert(memoryShell.execute("memstat").find("swap_backend=disk")!=std::string::npos);
+    std::remove("/tmp/nexa_shell_swap.img");
     nexa::NexaKernel ipcKernel(256);
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
