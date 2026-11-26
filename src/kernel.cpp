@@ -6,7 +6,7 @@ namespace nexa {
 NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>(VirtualMemoryManager::PageSize,((n+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize)*VirtualMemoryManager::PageSize*16)){VM check(n);(void)check;}
 std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image) {
     if(name.empty()) throw std::invalid_argument("Process name cannot be empty");
-    if(image.code.empty()||image.entryPoint>=image.code.size()) throw std::invalid_argument("Invalid process executable");
+    if(image.code.empty()||image.entryPoint>=image.code.size()||image.code.size()>65536) throw std::invalid_argument("Invalid process executable");
     const auto pid=nextPid_++;
     Process p{ProcessInfo{pid,name,ProcessState::Ready,0,{}},VM(ramBytes_)};
     p.machine.loadProgram(image.code);
@@ -15,17 +15,26 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
         if(service>static_cast<std::uint8_t>(Syscall::CloseFile)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
+    const auto codeSpace=pid|0x80000000u;
     memory_.createAddressSpace(pid);
     try {
         for(std::size_t page=0;page<(ramBytes_+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;++page)
-            memory_.mapPage(pid,static_cast<std::uint8_t>(page),true,true);
+            memory_.mapPage(pid,static_cast<std::uint8_t>(page),true,true,false);
+        memory_.createAddressSpace(codeSpace);
+        const auto codePages=(image.code.size()+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;
+        for(std::size_t page=0;page<codePages;++page)
+            memory_.mapPage(codeSpace,static_cast<std::uint8_t>(page),false,true,true);
     } catch(...) {
+        if(memory_.hasAddressSpace(codeSpace)) memory_.destroyAddressSpace(codeSpace);
         memory_.destroyAddressSpace(pid);
         throw;
     }
     p.machine.setMemoryAccessors(
         [this,pid](std::uint16_t address){return memory_.read(pid,address,MemoryAccess::User);},
         [this,pid](std::uint16_t address,std::uint8_t value){memory_.write(pid,address,value,MemoryAccess::User);});
+    p.machine.setInstructionFetchGuard([this,codeSpace](std::uint16_t address){
+        (void)memory_.canExecute(codeSpace,address,MemoryAccess::User);
+    });
     processes_.emplace(pid,std::move(p));
     filePermissions_[pid] = {};
     return pid;
