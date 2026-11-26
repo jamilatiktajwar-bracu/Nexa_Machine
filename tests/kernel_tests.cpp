@@ -1,0 +1,3 @@
+#include "nexa/kernel.hpp"
+#include <cassert>
+int main(){nexa::NexaKernel k(1024);nexa::Executable e{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};auto p1=k.spawn("alpha",e);auto p2=k.spawn("beta",e);assert(p1!=p2);assert(k.scheduleOne());assert(k.scheduleOne());k.run();auto ps=k.processes();assert(ps.size()==2);assert(ps[0].state==nexa::ProcessState::Halted);assert(ps[1].state==nexa::ProcessState::Halted);assert(k.takeConsoleOutput()=="AA");assert(k.syscall(p1,nexa::Syscall::GetPid)==(p1&255));assert(k.syscall(p1,nexa::Syscall::Write,'!')==0);assert(k.takeConsoleOutput()=="!");}
