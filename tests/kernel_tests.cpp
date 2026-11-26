@@ -105,7 +105,14 @@ int main() {
     for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)receiverWoken=proc.state==nexa::ProcessState::Ready;
     assert(receiverWoken);
     guestIpcKernel.run();
-    assert(guestIpcKernel.takeConsoleOutput()=="Z");
+    guestIpcProcesses=guestIpcKernel.processes();
+    for(const auto& proc:guestIpcProcesses)
+        if(proc.pid==guestReceiver&&proc.state==nexa::ProcessState::Faulted)
+            throw std::runtime_error("guest IPC receiver fault: "+proc.faultReason);
+    const auto guestIpcOutput=guestIpcKernel.takeConsoleOutput();
+    if(guestIpcOutput!="Z")
+        throw std::runtime_error("guest IPC output mismatch; bytes="+std::to_string(guestIpcOutput.size()));
+
     nexa::NexaKernel blockedKernel(256);
     const auto waitingPid=blockedKernel.spawn("waiting-reader",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::ReceiveMessage)},
