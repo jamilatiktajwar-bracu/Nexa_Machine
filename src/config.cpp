@@ -24,6 +24,12 @@ MachineConfig MachineConfig::load(const std::string& path) {
 }
 void MachineConfig::save(const std::string& path)const {
  std::ofstream out(path);if(!out)throw std::runtime_error("Cannot write config: "+path);
- out<<"{\\n  \\"name\\": \\""<<name<<"\\",\\n  \\"ram_bytes\\": "<<ramBytes<<",\\n  \\"disk_path\\": \\""<<diskPath<<"\\",\\n  \\"disk_bytes\\": "<<diskBytes<<"\\n}\\n";
+ out<<"{\\n";
+ out<<"  \\"name\\": \\""<<name<<"\\",\\n";
+ out<<"  \\"ram_bytes\\": "<<ramBytes<<",\\n";
+ out<<"  \\"disk_path\\": \\""<<diskPath<<"\\",\\n";
+ out<<"  \\"disk_bytes\\": "<<diskBytes<<"\\n";
+ out<<"}\\n";
 }
+
 }
