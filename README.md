@@ -1,78 +1,68 @@
 # Nexa Machine
-Educational C++20 virtual machine and assembly environment. This is an interpreter/emulator project, not a hypervisor.
+Educational C++20 virtual machine and assembly environment (not a hypervisor).
 
-## Features (0.7)
-- 8-bit A/B registers, wraparound arithmetic, 16-bit RAM addressing (up to 64 KiB)
-- CPU: LOAD, STORE, ADD, SUB, INC, DEC, CMP, PRINT, IN, OUT, HALT
-- Control flow: JMP, JZ, JNZ, CALL, RET; labels
-- Stack: PUSH/POP A/B
-- Keyboard and character display device ports
-- Debugger API and console single-step, instruction-address breakpoints
-- Optional Qt6 GUI with breakpoint control and 64-byte hex RAM monitor
-- Configurable RAM, virtual disk, console, snapshots
-- Execution budget and automated tests/CI
+## Version 0.8
+- 8-bit A/B registers, arithmetic, 16-bit RAM addressing
+- Assembler constants (`CONST NAME, value` or `.CONST NAME, value`), labels, hex literals, #/;/\-\- comments
+- CPU, branches, stack, calls, character I/O, `SYS` service instruction
+- Simulated keyboard and text display, 64×32 monochrome framebuffer
+- Graphics ports for coordinates, color, draw pixel, clear screen
+- Single-step debugger, instruction breakpoints, RAM watchpoints and memory editing
+- Optional Qt GUI includes a pixel framebuffer panel and RAM hex viewer
+- VM snapshot persistence, virtual disk, execution budget
+- NexaOS host shell prototype
 
-## Device I/O
-Port 0 is keyboard input. Console command `keyboard TEXT` queues bytes before program execution. Assembly reads a byte with `IN A, 0`; when no bytes remain, the input value is zero.
-Port 1 is character display output. `OUT A, 1` writes the ASCII character to terminal and the VM device output buffer.
+## Device ports
+| Port | Direction | Meaning |
+|---|---|---|
+| 0 | IN | Keyboard byte (empty queue yields 0) |
+| 1 | OUT | Character output |
+| 2 | IN/OUT | Graphics X coordinate |
+| 3 | IN/OUT | Graphics Y coordinate |
+| 4 | OUT | Pixel color (0 black, nonzero white) |
+| 5 | OUT | Draw pixel at current X,Y |
+| 6 | OUT | Clear framebuffer (A=0 black; A!=0 white) |
 
+Example:
 ```asm
-IN A, 0
-OUT A, 1
+CONST PX, 4
+LOAD A, PX
+OUT A, 2
+LOAD A, 3
+OUT A, 3
+LOAD A, 1
+OUT A, 4
+OUT A, 5
 HALT
 ```
 
-## Debugger
-- `step` executes one instruction in the console.
-- `break ADDRESS` sets a breakpoint at an instruction address.
-- `run` / `continue` executes until halt, budget exhaustion, or breakpoint.
-- GUI includes Run, Step, breakpoint input, and RAM hex view.
+## SYS services
+Service number is in A. `SYS`:
+- 0: halt
+- 1: print character in B
+- 2: read keyboard byte into A
+- 3: clear graphics framebuffer
 
-## Boot sequence example
-`examples/boot_message.nexa` displays a startup banner as a boot-sequence demo. This is bootloader groundwork only; it does not load an operating system or emulate firmware.
+## Memory tools
+Console: `mem ADDRESS`, `mem-write ADDRESS BYTE`, `watch ADDRESS`, `unwatch ADDRESS`. Execution pauses on a write to the watched address. APIs include writeMemory, framebuffer, pixel, and watchpoint status.
 
-## Assembly reference
-```asm
-LOAD A, 5
-LOAD B, 3
-ADD A, B
-SUB A, B
-INC A
-DEC A
-CMP A, 0
-JZ done
-JNZ loop
-JMP label
-PUSH A
-POP B
-CALL function
-RET
-PRINT A
-IN A, 0
-OUT A, 1
-HALT
-```
-Labels are case-insensitive and standalone. Numeric literals may be decimal or 0x-prefixed hex.
+## NexaOS prototype
+Run `nexa console`, then type `os`. Commands: help, echo, clear, mem, run FILE, exit. This is a host-side shell prototype, not yet a guest OS.
 
-## Build and run
+## Examples
+- `examples/graphics_demo.nexa`
+- `examples/syscall_demo.nexa`
+- `examples/nexa_shell.nexa`
+- `examples/keyboard_echo.nexa`
+- `examples/boot_message.nexa`
+
+## Build
 ```sh
 cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
-./build/nexa
-./build/nexa examples/addition.nexa
-./build/nexa examples/memory_16bit.nexa
-./build/nexa examples/keyboard_echo.nexa
-./build/nexa examples/boot_message.nexa
+./build/nexa examples/graphics_demo.nexa
+./build/nexa examples/syscall_demo.nexa
 ./build/nexa console
 ```
-Qt6 Widgets is optional. Disable the GUI with `-DNEXA_BUILD_GUI=OFF`.
-
-Console commands: help, load FILE, keyboard TEXT, run/continue, step, break ADDRESS, reset, status, mem ADDRESS, disk-read, disk-write, disk-save, state-save, state-load, quit.
-
-Snapshot files are binary and should only be loaded from trusted sources. The VM is not sandboxed.
-
-## Limitations
-No OS boot, privileged CPU, sandboxing, or hardware virtualization. Device I/O is a small simulated interface. Instructions execute synchronously.
-
-MIT license.
+Qt6 Widgets is optional; use `-DNEXA_BUILD_GUI=OFF` to disable it. Binary snapshots should only be loaded from trusted sources.
