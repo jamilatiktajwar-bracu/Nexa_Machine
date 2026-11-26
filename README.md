@@ -144,3 +144,13 @@ This remains an educational host-side security model. Password entry is still su
 - Creating and deleting entries requires write and execute permission on the parent directory.
 - File reads and execution require traversable parent directories.
 - These are educational host-side checks, not a production security boundary.
+
+
+## Nexa OS 2.4 — Virtual Memory Manager
+
+- 256-byte paging with per-process virtual address spaces and physical frame allocation.
+- Page map/unmap and protection changes (read-only, user-accessible, supervisor-only).
+- User-mode and kernel-mode memory access checks with explicit page-fault errors.
+- Physical frame zeroing on allocation and reuse after unmap/address-space destruction.
+- Kernel exposes its memory manager for diagnostics and controlled page-table operations.
+- This release establishes the paging subsystem API; VM instruction fetch/data accesses are not yet transparently translated through these page tables.
