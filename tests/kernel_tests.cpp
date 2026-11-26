@@ -95,7 +95,8 @@ int main() {
     assert(shell.execute("login guest guest-secret")=="logged in as guest");
     assert(shell.execute("write /shared.txt allowed")=="wrote 7 bytes");
     assert(shell.execute("login root root-secret")=="logged in as root");
-    for(int attempt=0;attempt<5;++attempt) assert(shell.execute("login guest bad-password")=="authentication failed");
+    for(int attempt=0;attempt<4;++attempt) assert(shell.execute("login guest bad-password")=="authentication failed");
+    assert(shell.execute("login guest bad-password")=="account locked; contact root");
     assert(shell.execute("login guest guest-secret")=="account locked; contact root");
     assert(shell.execute("passwd guest renewed-secret")=="password reset");
     assert(shell.execute("login guest renewed-secret")=="logged in as guest");
