@@ -97,8 +97,8 @@ public:
 
     [[nodiscard]] std::vector<std::uint8_t> serialize() const {
         std::ostringstream out;
-        out << "NEXASEC4\\n";
-        for(const auto& group:groups_) out << "G " << std::quoted(group) << "\\n";
+        out << "NEXASEC4\n";
+        for(const auto& group:groups_) out << "G " << std::quoted(group) << "\n";
         for(const auto& [name,record]:users_) {
             out << "U " << std::quoted(name) << " " << std::quoted(record.group) << " "
                 << record.supplementaryGroups.size() << " " << record.passwordSet << " "
@@ -106,13 +106,13 @@ public:
             for(auto b:record.salt) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
             out << " ";
             for(auto b:record.digest) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
-            out << std::dec << "\\n";
+            out << std::dec << "\n";
             for(const auto& group:record.supplementaryGroups)
-                out << "M " << std::quoted(name) << " " << std::quoted(group) << "\\n";
+                out << "M " << std::quoted(name) << " " << std::quoted(group) << "\n";
         }
         for(const auto& [path,meta]:owners_)
             out << "F " << std::quoted(path) << " " << std::quoted(meta.user) << " "
-                << std::quoted(meta.group) << " " << meta.mode << "\\n";
+                << std::quoted(meta.group) << " " << meta.mode << "\n";
         const auto data=out.str(); return {data.begin(),data.end()};
     }
 
