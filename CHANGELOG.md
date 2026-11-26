@@ -2,6 +2,11 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.9.1] — Scheduler quotas and VM safety polish
+- Per-process instruction budget controls, exact quota termination with exit code 124.
+- 4,096-entry VM stack cap and controlled stack overflow faults.
+- Saved states with oversized stacks rejected.
+
 ## [2.9.0] — Scheduler, IPC and process lifecycle
 
 ### Added
