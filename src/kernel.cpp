@@ -88,7 +88,6 @@ void NexaKernel::writeProcessMemory(std::uint32_t pid,std::uint16_t address,std:
     if(address>=it->second.machine.ramSize()) throw std::out_of_range("Process memory address out of range");
     it->second.machine.writeMemory(address,value);
 }
-}
 void NexaKernel::grantFileAccess(std::uint32_t pid,const std::string& path,FilePermission permissions) {
     if(!processes_.contains(pid)) throw std::out_of_range("Unknown process id");
     if(path.empty() || path.front()!='/' || path.find("..")!=std::string::npos)
