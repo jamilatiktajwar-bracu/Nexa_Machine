@@ -17,6 +17,7 @@ struct ProcessInfo {
     std::string faultReason;
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5 };
+enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
 public:
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
@@ -29,7 +30,7 @@ public:
     [[nodiscard]] std::string takeConsoleOutput();
     std::uint8_t syscall(std::uint32_t pid, Syscall call, std::uint8_t argument=0);
     [[nodiscard]] std::uint8_t readProcessMemory(std::uint32_t pid, std::uint16_t address) const;
-    void writeProcessMemory(std::uint32_t pid, std::uint16_t address, std::uint8_t value);
+    void writeProcessMemory(std::uint32_t pid, std::uint16_t address, std::uint8_t value);\n    void grantFileAccess(std::uint32_t pid, const std::string& path, FilePermission permissions);\n    [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct Process { ProcessInfo info; VM machine; };
     std::size_t ramBytes_;
@@ -37,6 +38,6 @@ private:
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
     VirtualFileSystem fs_;
-    std::string output_;
+    std::string output_;\n    std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
 };
 }
