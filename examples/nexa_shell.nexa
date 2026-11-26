@@ -1,0 +1,14 @@
+// Minimal input/output shell-loop proof of concept
+prompt:
+LOAD A, 62
+OUT A, 1
+LOAD A, 32
+OUT A, 1
+read:
+IN A, 0
+CMP A, 0
+JZ prompt
+CMP A, 10
+JZ prompt
+OUT A, 1
+JMP read
