@@ -18,7 +18,7 @@
 class NexaWindow:public QMainWindow {
 public:
  NexaWindow(){
-  setWindowTitle("Nexa Machine 0.7");resize(1050,760);
+  setWindowTitle("Nexa Machine 0.8");resize(1050,760);
   auto*w=new QWidget;auto*l=new QVBoxLayout(w);auto*bar=new QHBoxLayout;
   auto*run=new QPushButton("Run");auto*step=new QPushButton("Step");auto*reset=new QPushButton("Reset");
   auto*bp=new QLineEdit;bp->setPlaceholderText("Breakpoint instruction address");auto*setBp=new QPushButton("Set breakpoint");status=new QLabel("Ready");
