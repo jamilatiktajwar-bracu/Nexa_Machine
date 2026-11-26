@@ -110,6 +110,24 @@ int main() {
     assert(processControlKernel.memoryManager().freeFrames()==framesBeforeManagedProcess);
     assert(processShell.execute("reap "+std::to_string(managedPid))=="unknown or active process");
 
+    nexa::NexaKernel exitCleanupKernel(256);
+    const auto exitCleanupPid=exitCleanupKernel.spawn("exit-cleanup",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    exitCleanupKernel.filesystem().createFile("/exit-data",{44});
+    exitCleanupKernel.grantFileAccess(exitCleanupPid,"/exit-data",nexa::FilePermission::Read);
+    const std::string exitPath="/exit-data";
+    for(std::size_t index=0;index<exitPath.size();++index)
+        exitCleanupKernel.writeProcessMemory(exitCleanupPid,static_cast<std::uint16_t>(40+index),static_cast<std::uint8_t>(exitPath[index]));
+    exitCleanupKernel.writeProcessMemory(exitCleanupPid,static_cast<std::uint16_t>(40+exitPath.size()),0);
+    const auto exitHandle=exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::OpenRead,40);
+    assert(exitHandle!=0);
+    assert(exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::Exit,23)==0);
+    bool exitHandleClosed=false;
+    try{(void)exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::ReadByte,exitHandle);}
+    catch(const std::runtime_error&){exitHandleClosed=true;}
+    assert(exitHandleClosed);
+    auto exitProcesses=exitCleanupKernel.processes();
+    assert(exitProcesses.size()==1&&exitProcesses.front().exitCode==23&&exitProcesses.front().terminationReason=="exit");
+
     nexa::NexaKernel ipcKernel(256);
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
