@@ -61,8 +61,11 @@ int main() {
 
     nexa::NexaShell schedulerShell(schedulingKernel);
     assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 2")=="priority updated");
+    assert(schedulerShell.execute("aging 1")=="priority aging updated");
     assert(schedulerShell.execute("sched").find("policy=fixed-priority-round-robin")!=std::string::npos);
+    assert(schedulerShell.execute("sched").find("aging_threshold=1")!=std::string::npos);
     assert(schedulerShell.execute("ps").find("priority=2")!=std::string::npos);
+    assert(schedulerShell.execute("ps").find("effective_priority=")!=std::string::npos);
     assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 9")=="invalid PID or priority (0-7)");
 
     nexa::NexaKernel ipcKernel(256);
