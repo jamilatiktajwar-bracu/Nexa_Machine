@@ -57,23 +57,35 @@ const PageMapping& VirtualMemoryManager::mapping(std::uint32_t pid,std::uint8_t 
 std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t address,MemoryAccess access,bool writeAccess,bool executeAccess) const {
     const auto page=static_cast<std::uint8_t>(address/PageSize);
     const auto key=(static_cast<std::uint64_t>(pid)<<8)|page;
-    auto it=tlb_.find(key);
-    if(it==tlb_.end()) {
-        ++tlbMisses_;
-        PageMapping entry;
-        try { entry=mapping(pid,page); }
-        catch(const std::runtime_error&) {
-            if(!pageFaultHandler_) throw;
-            ++pageFaults_; pageFaultHandler_(pid,page); entry=mapping(pid,page);
+    auto hit=tlb_.find(key);
+    if(hit==tlb_.end()) ++tlbMisses_; else ++tlbHits_;
+    auto& self=*const_cast<VirtualMemoryManager*>(this);
+    auto& live=self.mapping(pid,page);
+    if(!live.resident) {
+        ++pageFaults_;
+        self.pageIn(pid,page);
+    }
+    live.lastUsed=++accessClock_;
+    if(access==MemoryAccess::User&&!live.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
+    if(writeAccess&&!live.writable) throw std::runtime_error("Page fault: write protection");
+    if(executeAccess&&!live.executable) throw std::runtime_error("Page fault: execute protection");
+    if(hit==tlb_.end()) {
+        if(tlb_.size()>=TlbCapacity) {
+            auto oldest=tlb_.begin();
+            for(auto candidate=tlb_.begin();candidate!=tlb_.end();++candidate) {
+                const auto candidatePid=static_cast<std::uint32_t>(candidate->first>>8);
+                const auto candidatePage=static_cast<std::uint8_t>(candidate->first&255);
+                const auto oldestPid=static_cast<std::uint32_t>(oldest->first>>8);
+                const auto oldestPage=static_cast<std::uint8_t>(oldest->first&255);
+                const auto candidateAge=self.mapping(candidatePid,candidatePage).lastUsed;
+                const auto oldestAge=self.mapping(oldestPid,oldestPage).lastUsed;
+                if(candidateAge<oldestAge) oldest=candidate;
+            }
+            tlb_.erase(oldest);
         }
-        if(tlb_.size()>=TlbCapacity) { auto oldest=tlb_.begin(); for(auto candidate=tlb_.begin();candidate!=tlb_.end();++candidate) { const auto p=static_cast<std::uint32_t>(candidate->first>>8); const auto pg=static_cast<std::uint8_t>(candidate->first&255); try { if(mapping(p,pg).lastUsed<mapping(static_cast<std::uint32_t>(oldest->first>>8),static_cast<std::uint8_t>(oldest->first&255)).lastUsed) oldest=candidate; } catch(...) { oldest=candidate; } } tlb_.erase(oldest); }
-        it=tlb_.emplace(key,entry).first;
-    } else ++tlbHits_;
-    const auto& entry=it->second;
-    if(access==MemoryAccess::User&&!entry.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
-    if(writeAccess&&!entry.writable) throw std::runtime_error("Page fault: write protection");
-    if(executeAccess&&!entry.executable) throw std::runtime_error("Page fault: execute protection");
-    return static_cast<std::size_t>(entry.frame)*PageSize+(address%PageSize);
+        tlb_.emplace(key,live);
+    } else hit->second=live;
+    return static_cast<std::size_t>(live.frame)*PageSize+(address%PageSize);
 }
 void VirtualMemoryManager::flushTlb() const noexcept {tlb_.clear();}
 void VirtualMemoryManager::invalidateTlb(std::uint32_t pid) const noexcept {
