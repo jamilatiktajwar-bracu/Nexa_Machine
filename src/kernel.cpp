@@ -111,6 +111,21 @@ void NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
     it->second.info.priority=priority;
     it->second.readyWaitTicks=0;
 }
+void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructions) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) throw std::out_of_range("Unknown process id");
+    if(it->second.info.state==ProcessState::Halted||it->second.info.state==ProcessState::Faulted)
+        throw std::logic_error("Cannot change instruction budget of a stopped process");
+    it->second.info.instructionBudget=instructions;
+    if(instructions!=0&&it->second.info.ticks>=instructions) {
+        it->second.machine.requestHalt();
+        it->second.info.state=ProcessState::Halted;
+        it->second.info.exitCode=124;
+        it->second.info.terminationReason="budget";
+        it->second.openFiles.clear();
+        it->second.inbox.clear();
+    }
+}
 void NexaKernel::setTimeQuantum(std::size_t instructions) {
     if(instructions==0||instructions>1000000) throw std::invalid_argument("Time quantum must be between 1 and 1000000 instructions");
     timeQuantum_=instructions;
@@ -179,6 +194,15 @@ bool NexaKernel::scheduleOne() {
             proc.machine.stepInstruction();
             ++proc.info.ticks;
             ++systemTicks_;
+            if(proc.info.instructionBudget!=0&&proc.info.ticks>=proc.info.instructionBudget) {
+                proc.machine.requestHalt();
+                proc.info.state=ProcessState::Halted;
+                proc.info.exitCode=124;
+                proc.info.terminationReason="budget";
+                proc.openFiles.clear();
+                proc.inbox.clear();
+                break;
+            }
             for(auto& [waitingPid,waiting]:processes_) {
                 if(waitingPid!=pid&&waiting.info.state==ProcessState::Ready&&waiting.readyWaitTicks<std::numeric_limits<std::uint64_t>::max())
                     ++waiting.readyWaitTicks;
