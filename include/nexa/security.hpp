@@ -112,10 +112,11 @@ public:
             if(kind=='U') {
                 UserRecord rec; rec.group=b;
                 if(version2) {
-                    unsigned set{}; std::string saltHex,digestHex; row>>set>>saltHex>>digestHex;
+                    unsigned set{}; std::string saltHex,digestHex; row>>set;
+                    if(version3) { unsigned locked{}; row>>rec.failedAttempts>>locked; if(!row||rec.failedAttempts>maxFailedAttempts_||locked>1) throw std::invalid_argument("invalid account lockout metadata"); rec.locked=locked!=0; }
+                    row>>saltHex>>digestHex;
                     if(!row||set>1||saltHex.size()!=32||digestHex.size()!=64) throw std::invalid_argument("invalid password metadata");
                     rec.passwordSet=set!=0; decodeHex(saltHex,rec.salt.data(),rec.salt.size()); decodeHex(digestHex,rec.digest.data(),rec.digest.size());
-                    if(version3) { unsigned locked{}; row>>rec.failedAttempts>>locked; if(!row||rec.failedAttempts>maxFailedAttempts_||locked>1) throw std::invalid_argument("invalid account lockout metadata"); rec.locked=locked!=0; }
                 }
                 if(!version3) groups.insert(rec.group);
                 if(a=="root") {
