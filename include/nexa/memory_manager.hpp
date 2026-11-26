@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 namespace nexa {
 enum class MemoryAccess { User, Kernel };
@@ -27,6 +28,8 @@ public:
     void write(std::uint32_t pid,std::uint16_t virtualAddress,std::uint8_t value,MemoryAccess access=MemoryAccess::User);
     [[nodiscard]] bool canExecute(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User) const;
     [[nodiscard]] std::size_t translate(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User,bool writeAccess=false,bool executeAccess=false) const;
+    void setPageFaultHandler(std::function<void(std::uint32_t,std::uint8_t)> handler){pageFaultHandler_=std::move(handler);}
+    [[nodiscard]] std::size_t pageFaults() const noexcept{return pageFaults_;}
     void flushTlb() const noexcept;
     void invalidateTlb(std::uint32_t pid) const noexcept;
     [[nodiscard]] std::size_t tlbHits() const noexcept{return tlbHits_;}
@@ -41,6 +44,8 @@ private:
     std::map<std::uint32_t,std::map<std::uint8_t,PageMapping>> spaces_;
     mutable std::unordered_map<std::uint64_t,PageMapping> tlb_;
     mutable std::size_t tlbHits_{0},tlbMisses_{0};
+    mutable std::size_t pageFaults_{0};
+    std::function<void(std::uint32_t,std::uint8_t)> pageFaultHandler_;
     static constexpr std::size_t TlbCapacity=16;
     [[nodiscard]] PageMapping& mapping(std::uint32_t pid,std::uint8_t page);
     [[nodiscard]] const PageMapping& mapping(std::uint32_t pid,std::uint8_t page) const;
