@@ -23,6 +23,7 @@ class NexaKernel {
 public:
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
     std::uint32_t spawn(const std::string& name, const Executable& image);
+    bool reapProcess(std::uint32_t pid);
     bool scheduleOne();
     void run(std::size_t maxTicks=100000);
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
