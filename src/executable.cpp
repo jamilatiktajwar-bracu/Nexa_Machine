@@ -34,7 +34,7 @@ Executable loadExecutable(const std::string&p){
  } else if(signature=="NEXAELF2"){
    const auto machine=get16(i),version=get16(i);e.entryPoint=get16(i);const auto n=get32(i);const auto sections=get16(i);
    if(machine!=1||version!=2||n==0||n>65535||e.entryPoint>=n||sections!=1)throw std::runtime_error("Unsupported executable machine, version, or section table");
-   const auto type=get16(i),flags=get16(i),address=get16(i),size=get32(i);
+   const auto type=get16(i);const auto flags=get16(i);const auto address=get16(i);const auto size=get32(i);
    if(type!=1||flags!=5||address!=0||size!=n*3u)throw std::runtime_error("Invalid executable code section");
    e.code.reserve(n);
    for(std::uint32_t k=0;k<n;++k){const int op=i.get();if(op<0||op>static_cast<int>(Opcode::Halt))throw std::runtime_error("Invalid executable opcode");const auto operand=get16(i);e.code.push_back({static_cast<Opcode>(op),operand});}
