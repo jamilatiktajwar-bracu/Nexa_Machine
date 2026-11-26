@@ -1,0 +1,6 @@
+# Example program for Nexa Machine 0.2
+LOAD A, 19
+LOAD B, 23
+ADD A, B
+PRINT A
+HALT
