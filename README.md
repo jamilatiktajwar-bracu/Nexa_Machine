@@ -125,3 +125,12 @@ Shell accounts now use salted PBKDF2-HMAC-SHA256 password digests, password-veri
 ## Nexa OS 2.1 — Account lockout and groups
 
 The shell now locks an account after five consecutive failed login attempts. Root can recover an account with `passwd USER NEW_PASSWORD` or `unlock USER`. Root can create groups with `groupadd GROUP` and change a user's primary group with `usermod -g GROUP USER`. Security metadata uses `NEXASEC3`, persisting group membership and lockout state while retaining readers for `NEXASEC1` and `NEXASEC2`. See [Nexa OS 2.1](docs/NEXA_OS_2_1.md). Lockout is a simple persistent account policy, not a network-grade authentication service.
+
+
+## Nexa OS 2.2 — Sessions and supplementary groups
+
+NexaSecurity now supports multiple supplementary group memberships per account. Use `usermod -aG GROUP USER` to add a membership, `usermod -rG GROUP USER` to remove one, and `groups [USER]` to inspect memberships. Group-based file permission checks recognize both primary and supplementary groups.
+
+The shell supports `logout`; after logout, commands are blocked until a successful `login USER PASSWORD`. Logging out also resets the shell working directory to `/`. Security metadata is now written as `NEXASEC4`; readers remain compatible with `NEXASEC1`, `NEXASEC2`, and `NEXASEC3` images.
+
+This remains an educational host-side security model. Password entry is still supplied as command text by the current shell interface, and it is not a production authentication boundary.
