@@ -19,6 +19,7 @@ public:
  void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}
  void setMemoryAccessors(std::function<std::uint8_t(std::uint16_t)> reader,std::function<void(std::uint16_t,std::uint8_t)> writer){memoryReader_=std::move(reader);memoryWriter_=std::move(writer);}
  void setInstructionFetchGuard(std::function<void(std::uint16_t)> guard){instructionFetchGuard_=std::move(guard);}
+ void setInstructionReader(std::function<Instruction(std::uint16_t)> reader){instructionReader_=std::move(reader);}
  void setProgramCounter(std::uint16_t address);
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
@@ -63,6 +64,7 @@ private:
  std::function<std::uint8_t(std::uint16_t)> memoryReader_;
  std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_; 
  std::function<void(std::uint16_t)> instructionFetchGuard_;
+ std::function<Instruction(std::uint16_t)> instructionReader_;
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
