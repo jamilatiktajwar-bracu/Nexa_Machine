@@ -14,6 +14,7 @@
 #include <QMouseEvent>
 #include <functional>
 #include <sstream>
+#include <algorithm>
 #include <iostream>
 #include "nexa/assembler.hpp"
 #include "nexa/vm.hpp"
