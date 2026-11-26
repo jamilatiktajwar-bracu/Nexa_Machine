@@ -25,7 +25,7 @@ Example session:
 
 ```text
 nexa-os$ mkdir /apps
-nexa-os$ write /apps/hello.nexa LOAD A, 1
+nexa-os$ write /apps/hello.nexa HALT
 nexa-os$ ls /apps
 nexa-os$ run /apps/hello.nexa
 ```
