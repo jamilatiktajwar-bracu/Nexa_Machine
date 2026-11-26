@@ -20,5 +20,8 @@ int main(){
  vm2.loadProgram(call);vm2.saveState("nexa_test.state");nexa::VM restored;restored.loadState("nexa_test.state");capture.str("");old=std::cout.rdbuf(capture.rdbuf());restored.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 10\n");assert(restored.accumulator()==10);std::remove("nexa_test.state");
  auto io=nexa::parseAssembly("IN A, 0\nOUT A, 1\nHALT\n");vm2.loadProgram(io);vm2.queueKeyboardInput("Z");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.run();std::cout.rdbuf(old);assert(vm2.deviceOutput()=="Z");assert(capture.str()=="Z");
  auto dbg=nexa::parseAssembly("LOAD A, 1\nINC A\nHALT\n");vm2.loadProgram(dbg);vm2.setBreakpoint(1);vm2.run();assert(vm2.programCounter()==1&&vm2.accumulator()==1);vm2.clearBreakpoints();assert(vm2.stepInstruction());assert(vm2.accumulator()==2);vm2.stepInstruction();assert(vm2.halted());
+ auto advanced=nexa::parseAssembly("CONST PX, 4\nLOAD A, PX\nOUT A, 2\nLOAD A, 3\nOUT A, 3\nLOAD A, 1\nOUT A, 4\nOUT A, 5\nHALT\n");vm2.loadProgram(advanced);vm2.run();assert(vm2.pixel(4,3));assert(!vm2.pixel(5,3));
+ auto sys=nexa::parseAssembly("LOAD B, 88\nLOAD A, 1\nSYS\nLOAD A, 0\nSYS\nHALT\n");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.loadProgram(sys);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="X");
+ auto watched=nexa::parseAssembly("LOAD A, 42\nSTORE [12]\nHALT\n");vm2.loadProgram(watched);vm2.setWatchpoint(12);vm2.run();assert(vm2.watchpointHit()&&vm2.programCounter()==2&&vm2.readMemory(12)==42);vm2.clearWatchpoint(12);vm2.run();assert(vm2.halted());
  auto infinite=nexa::parseAssembly("forever:\nJMP forever\n");restored.loadProgram(infinite);threw=false;try{restored.run(8);}catch(const std::runtime_error&){threw=true;}assert(threw);
 }
