@@ -95,3 +95,8 @@ Processes now receive no VFS permissions by default. The kernel can grant and ch
 ## Nexa OS 1.5 — Guest VFS file handles
 
 Guest programs can open existing VFS files through permission-checked kernel syscalls, read/write bytes, and close process-local handles. Guest paths are read from process RAM. See [Nexa OS 1.5 documentation](docs/NEXA_OS_1_5.md). The ABI is a compact educational prototype.
+
+
+## Nexa OS 1.6 — User-space shell and application launcher
+
+Run `nexa --os` to open the kernel-backed VFS shell. It supports `ls`, `cat`, `touch`, `mkdir`, `write`, `rm`, `run`, and `ps`. The `run` command assembles and launches guest assembly stored in the VFS. See [Nexa OS 1.6 documentation](docs/NEXA_OS_1_6.md). The VFS is in-memory by default and the shell is an educational host-side interface, not a standalone bootable OS.
