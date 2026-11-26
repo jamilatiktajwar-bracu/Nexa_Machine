@@ -104,12 +104,13 @@ int main() {
     assert(shell.execute("groupadd developers")=="created group developers");
     assert(shell.execute("groupadd qa")=="created group qa");
     assert(shell.execute("usermod -aG qa guest")=="supplementary group added");
-    assert(shell.execute("groups guest")=="developers qa");
+    assert(shell.execute("groups guest")=="guest qa");
     assert(shell.execute("usermod -aG qa guest")=="unknown user/group or membership exists");
     assert(shell.execute("usermod -rG qa guest")=="supplementary group removed");
-    assert(shell.execute("groups guest")=="developers");
+    assert(shell.execute("groups guest")=="guest");
     assert(shell.execute("usermod -aG qa guest")=="supplementary group added");
     assert(shell.execute("usermod -g developers guest")=="primary group updated");
+    assert(shell.execute("groups guest")=="developers qa");
     assert(shell.execute("write /team.txt team-data")=="wrote 9 bytes");
     assert(shell.execute("chgrp developers /team.txt")=="group updated");
     assert(shell.execute("chmod 640 /team.txt")=="mode updated");
