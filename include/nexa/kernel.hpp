@@ -24,6 +24,7 @@ struct ProcessInfo {
     std::uint64_t readyWaitTicks{0};
     std::optional<std::uint8_t> exitCode{};
     std::string terminationReason;
+    std::uint64_t instructionBudget{0};
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
@@ -36,6 +37,7 @@ public:
     bool terminateProcess(std::uint32_t pid);
     [[nodiscard]] bool hasDeadlock() const noexcept;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
+    void setInstructionBudget(std::uint32_t pid,std::uint64_t instructions);
     void setTimeQuantum(std::size_t instructions);
     void setPriorityAgingThreshold(std::uint64_t ticks);
     [[nodiscard]] std::uint64_t priorityAgingThreshold() const noexcept{return priorityAgingThreshold_;}
