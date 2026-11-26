@@ -27,6 +27,7 @@ public:
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
  void reset();
+ void requestHalt() noexcept{halted_=true;}
  void saveState(const std::string& path)const;
  void loadState(const std::string& path);
  void queueKeyboardInput(const std::string& text);
