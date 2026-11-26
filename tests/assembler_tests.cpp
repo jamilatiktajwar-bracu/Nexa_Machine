@@ -17,5 +17,7 @@ int main(){
  auto call=nexa::parseAssembly("LOAD A, 9\nCALL fn\nPRINT A\nHALT\nfn:\nINC A\nRET\n");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.loadProgram(call);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 10\n");
  auto stack=nexa::parseAssembly("LOAD A, 8\nPUSH A\nLOAD A, 1\nPOP A\nPRINT A\nHALT\n");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.loadProgram(stack);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 8\n");
  vm2.loadProgram(call);vm2.saveState("nexa_test.state");nexa::VM restored;restored.loadState("nexa_test.state");capture.str("");old=std::cout.rdbuf(capture.rdbuf());restored.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 10\n");assert(restored.accumulator()==10);std::remove("nexa_test.state");
+ auto io=nexa::parseAssembly("IN A, 0\nOUT A, 1\nHALT\n");vm2.loadProgram(io);vm2.queueKeyboardInput("Z");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.run();std::cout.rdbuf(old);assert(vm2.deviceOutput()=="Z");assert(capture.str()=="Z");
+ auto dbg=nexa::parseAssembly("LOAD A, 1\nINC A\nHALT\n");vm2.loadProgram(dbg);vm2.setBreakpoint(1);vm2.run();assert(vm2.programCounter()==1&&vm2.accumulator()==1);vm2.clearBreakpoints();assert(vm2.stepInstruction());assert(vm2.accumulator()==2);vm2.stepInstruction();assert(vm2.halted());
  auto infinite=nexa::parseAssembly("forever:\nJMP forever\n");restored.loadProgram(infinite);threw=false;try{restored.run(8);}catch(const std::runtime_error&){threw=true;}assert(threw);
 }
