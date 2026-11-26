@@ -47,7 +47,7 @@ public:
     bool sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std::uint8_t> payload);
     [[nodiscard]] std::optional<IpcMessage> receiveMessage(std::uint32_t pid);
     bool scheduleOne();
-    void run(std::size_t maxTicks=100000);
+    void run(std::size_t maxSlices=100000);
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
     [[nodiscard]] std::uint32_t currentPid() const noexcept { return currentPid_; }
     [[nodiscard]] VirtualFileSystem& filesystem() noexcept { return fs_; }
