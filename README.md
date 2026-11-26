@@ -1,7 +1,10 @@
 # Nexa Machine
+
+## Nexa OS 1.0 kernel foundation
+The embeddable `NexaKernel` can spawn executable images as isolated VM processes, schedule one instruction per process in deterministic round-robin order, track Ready/Running/Halted/Faulted states, collect console output, and expose a small host-mediated syscall API. See [docs/NEXA_OS_1_0.md](docs/NEXA_OS_1_0.md). This is an educational kernel foundation; it is not yet a standalone bootable OS.
 Educational C++20 virtual machine and assembly environment (not a hypervisor).
 
-## Version 0.9 (OS architecture foundation)
+## Version 1.0 (OS kernel foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
 - Assembler constants (`CONST NAME, value` or `.CONST NAME, value`), labels, hex literals, #/;/\-\- comments
 - CPU, branches, stack, calls, character I/O, `SYS` service instruction
@@ -10,7 +13,8 @@ Educational C++20 virtual machine and assembly environment (not a hypervisor).
 - Single-step debugger, instruction breakpoints, RAM watchpoints and memory editing
 - Optional Qt GUI includes a pixel framebuffer panel and RAM hex viewer
 - VM snapshot persistence, virtual disk, execution budget
-- Guest software interrupt vectors with `INT`/`IRET` instructions\n- Portable executable binary format (`NEXAEXE1`) and CLI compile/load\n- In-memory virtual filesystem (directories, file CRUD, path traversal rejection)\n- Interactive GUI pixel drawing (left-click/drag white, right-click/drag erase)\n- NexaOS host shell prototype
+- Guest software interrupt vectors with `INT`/`IRET` instructions
+- Portable executable binary format (`NEXAEXE1`) and CLI compile/load\n- In-memory virtual filesystem (directories, file CRUD, path traversal rejection)\n- Interactive GUI pixel drawing (left-click/drag white, right-click/drag erase)\n- NexaKernel process lifecycle, per-process VM isolation and round-robin scheduler\n- Kernel console output and host-mediated syscall API\n- NexaOS host shell prototype
 
 ## Device ports
 | Port | Direction | Meaning |
