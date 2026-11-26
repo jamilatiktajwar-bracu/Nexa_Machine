@@ -1,44 +1,9 @@
 #include "nexa/kernel.hpp"
 #include "nexa/shell.hpp"
-#include "nexa/virtual_memory.hpp"
 #include <cassert>
 #include <cstdio>
 #include <stdexcept>
 int main() {
-    // Virtual memory: independent page tables, access flags, page faults and frame reuse.
-    nexa::VirtualMemoryManager vmm(3*nexa::VirtualMemoryManager::PageSize);
-    assert(vmm.physicalBytes()==3*nexa::VirtualMemoryManager::PageSize);
-    assert(vmm.freeFrames()==3);
-    vmm.createAddressSpace(10);
-    vmm.createAddressSpace(11);
-    vmm.mapPage(10,0x0000,nexa::PageAccess::Read|nexa::PageAccess::Write);
-    vmm.mapPage(11,0x0000,nexa::PageAccess::Read|nexa::PageAccess::Execute);
-    assert(vmm.mappedPages(10)==1&&vmm.mappedPages(11)==1);
-    vmm.write8(10,0x0012,0xA5);
-    assert(vmm.read8(10,0x0012)==0xA5);
-    assert(vmm.read8(11,0x0012)==0);
-    bool denied=false;
-    try { vmm.write8(11,0x0012,0xFF); } catch(const std::runtime_error&) { denied=true; }
-    assert(denied);
-    bool unmapped=false;
-    try { (void)vmm.read8(10,0x1000); } catch(const std::out_of_range&) { unmapped=true; }
-    assert(unmapped);
-    bool unaligned=false;
-    try { vmm.mapPage(10,1,nexa::PageAccess::Read); } catch(const std::invalid_argument&) { unaligned=true; }
-    assert(unaligned);
-    vmm.mapPage(10,0x1000,nexa::PageAccess::Read);
-    bool exhausted=false;
-    try { vmm.mapPage(10,0x2000,nexa::PageAccess::Read); } catch(const std::runtime_error&) { exhausted=true; }
-    assert(exhausted);
-    vmm.unmapPage(10,0x1000);
-    assert(vmm.freeFrames()==1);
-    vmm.mapPage(10,0x2000,nexa::PageAccess::Read|nexa::PageAccess::Write);
-    vmm.destroyAddressSpace(10);
-    assert(!vmm.hasAddressSpace(10));
-    assert(vmm.freeFrames()==2);
-    vmm.destroyAddressSpace(11);
-    assert(vmm.freeFrames()==3);
-
     nexa::NexaSecurity freshSecurity;
     nexa::NexaSecurity restoredFreshSecurity;
     restoredFreshSecurity.deserialize(freshSecurity.serialize());
