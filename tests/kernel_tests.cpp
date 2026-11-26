@@ -104,7 +104,7 @@ int main() {
     nexa::NexaShell processShell(processControlKernel);
     assert(processShell.execute("kill "+std::to_string(managedPid))=="process terminated");
     auto managedProcesses=processControlKernel.processes();
-    assert(managedProcesses.size()==1&&managedProcesses.front().state==nexa::ProcessState::Halted);
+    assert(managedProcesses.size()==1&&managedProcesses.front().state==nexa::ProcessState::Halted&&managedProcesses.front().exitCode==137&&managedProcesses.front().terminationReason=="killed");
     assert(processShell.execute("reap "+std::to_string(managedPid))=="process reaped");
     assert(processControlKernel.processes().empty());
     assert(processControlKernel.memoryManager().freeFrames()==framesBeforeManagedProcess);
@@ -303,9 +303,12 @@ int main() {
     kernel.run();
     assert(kernel.takeConsoleOutput()=="H");
     processes=kernel.processes();
-    bool guestHalted=false;
-    for(const auto& process:processes) if(process.pid==guestPid) guestHalted=process.state==nexa::ProcessState::Halted;
-    assert(guestHalted);
+    bool guestHalted=false,guestExitCode=false;
+    for(const auto& process:processes) if(process.pid==guestPid) {
+        guestHalted=process.state==nexa::ProcessState::Halted;
+        guestExitCode=process.exitCode&&*process.exitCode=='H'&&process.terminationReason=="exit";
+    }
+    assert(guestHalted&&guestExitCode);
     nexa::Executable invalid{0,{{nexa::Opcode::LoadImmediate,99},{nexa::Opcode::Syscall,0}}};
     const auto badPid=kernel.spawn("invalid-syscall",invalid);
     // A faulting guest is isolated; the scheduler continues and records its fault.
@@ -314,8 +317,8 @@ int main() {
     processes=kernel.processes();
     bool badFaulted=false,healthyHalted=false;
     for(const auto& process:processes) {
-        if(process.pid==badPid) badFaulted=process.state==nexa::ProcessState::Faulted&&!process.faultReason.empty();
-        if(process.pid==healthyPid) healthyHalted=process.state==nexa::ProcessState::Halted;
+        if(process.pid==badPid) badFaulted=process.state==nexa::ProcessState::Faulted&&!process.faultReason.empty()&&process.terminationReason=="fault";
+        if(process.pid==healthyPid) healthyHalted=process.state==nexa::ProcessState::Halted&&process.terminationReason=="halt";
     }
     assert(badFaulted&&healthyHalted);
     assert(kernel.takeConsoleOutput()=="A");
