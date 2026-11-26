@@ -37,6 +37,8 @@ std::vector<Instruction>parseAssembly(const std::string&src){
  else if(op=="JMP"||op=="JZ"||op=="JNZ"||op=="CALL"){if(v.size()!=1)throw std::runtime_error("syntax: "+op+" label");auto t=target(v[0]);p.push_back({op=="JMP"?Opcode::Jump:op=="JZ"?Opcode::JumpZero:op=="JNZ"?Opcode::JumpNotZero:Opcode::Call,t});}
  else if(op=="PUSH"||op=="POP"){if(v.size()!=1)throw std::runtime_error("syntax: "+op+" A/B");auto r=upper(v[0]);if(r=="A")p.push_back({op=="PUSH"?Opcode::PushA:Opcode::PopA,0});else if(r=="B")p.push_back({op=="PUSH"?Opcode::PushB:Opcode::PopB,0});else throw std::runtime_error("register must be A or B");}
  else if(op=="RET"){if(!trim(args).empty())throw std::runtime_error("RET takes no operands");p.push_back({Opcode::Return,0});}
+ else if(op=="INT"){if(v.size()!=1)throw std::runtime_error("syntax: INT vector (0..255)");p.push_back({Opcode::Interrupt,number(v[0],ln.n,255)});}
+ else if(op=="IRET"){if(!trim(args).empty())throw std::runtime_error("IRET takes no operands");p.push_back({Opcode::InterruptReturn,0});}
  else throw std::runtime_error("unknown instruction '"+op+"'");
  }catch(const std::exception&e){throw std::runtime_error("Assembly line "+std::to_string(ln.n)+": "+e.what());}}
  if(p.empty())throw std::runtime_error("Assembly program is empty");return p;
