@@ -1,6 +1,7 @@
 #include "nexa/kernel.hpp"
 #include "nexa/shell.hpp"
 #include <cassert>
+#include <cstdio>
 #include <stdexcept>
 int main() {
     nexa::NexaKernel kernel(1024);
@@ -85,6 +86,16 @@ int main() {
     assert(shell.execute("chown guest /shared.txt")=="owner updated");
     assert(shell.execute("login guest")=="logged in as guest");
     assert(shell.execute("write /shared.txt allowed")=="wrote 7 bytes");
+    assert(shell.execute("login root")=="logged in as root");
+    assert(shell.execute("savefs /tmp/nexa_security_test.img")=="filesystem image saved");
+    nexa::NexaKernel restoredKernel(1024);
+    nexa::NexaShell restoredShell(restoredKernel);
+    assert(restoredShell.execute("loadfs /tmp/nexa_security_test.img")=="filesystem image loaded");
+    assert(restoredShell.execute("whoami")=="root");
+    assert(restoredShell.execute("login guest")=="logged in as guest");
+    assert(restoredShell.execute("cat /shared.txt")=="allowed");
+    assert(restoredShell.execute("write /shared.txt persisted")=="wrote 9 bytes");
+    std::remove("/tmp/nexa_security_test.img");
     assert(shell.execute("login root")=="logged in as root");
     assert(shell.execute("mkdir /apps")=="created directory /apps");
     assert(shell.execute("cd /apps")=="/apps");
