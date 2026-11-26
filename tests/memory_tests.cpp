@@ -13,7 +13,7 @@ int main(){
  fault=false; try{mm.write(1,0,0x42);}catch(const std::runtime_error&){fault=true;} assert(fault);
  mm.protectPage(1,0,true,false);
  fault=false; try{(void)mm.read(1,0);}catch(const std::runtime_error&){fault=true;} assert(fault);
- assert(mm.read(1,0,nexa::MemoryAccess::Kernel)==0x41);
+ assert(mm.read(1,5,nexa::MemoryAccess::Kernel)==0x41);
  mm.mapPage(1,1); mm.write(1,0x0100,0x77); assert(mm.read(1,0x0100)==0x77);
  mm.unmapPage(1,1); assert(mm.freeFrames()==2);
  mm.protectPage(2,0,true,true,false);
