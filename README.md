@@ -75,3 +75,8 @@ Qt6 Widgets is optional; use `-DNEXA_BUILD_GUI=OFF` to disable it. Binary snapsh
 ## Nexa OS 1.1
 
 Guest programs can now invoke the kernel syscall bridge using the `SYS` instruction. Register A selects the service and register B supplies its 8-bit argument. See [Nexa OS 1.1 syscall ABI](docs/NEXA_OS_1_1.md). The bridge currently runs through a host callback and is a prototype, not a hardware privilege boundary.
+
+
+## Nexa OS 1.2
+
+Process RAM can be inspected through PID-checked kernel APIs, and faults are contained to the failing process. See [Nexa OS 1.2](docs/NEXA_OS_1_2.md).
