@@ -1,0 +1,13 @@
+// Service 1: write character in B. Service 0: halt.
+LOAD B, 78
+LOAD A, 1
+SYS
+LOAD B, 69
+LOAD A, 1
+SYS
+LOAD B, 88
+LOAD A, 1
+SYS
+LOAD A, 0
+SYS
+HALT
