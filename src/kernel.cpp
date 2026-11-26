@@ -147,4 +147,4 @@ bool NexaKernel::hasFileAccess(std::uint32_t pid,const std::string& path,FilePer
     const auto requested=static_cast<std::uint8_t>(permission);
     return requested!=0 && (accessIt->second & requested)==requested;
 }
-
+}
