@@ -15,8 +15,11 @@ Each inbox holds at most 64 messages; payloads are limited to 251 bytes. Sending
 
 Guest ABI:
 - `SYS SendMessage` (service 11), B points to `[targetPidLow, targetPidHigh, length, payload...]`
-- `SYS ReceiveMessage` (service 12), B points to an output buffer. On success it writes `[senderPid byte0..byte3, length, payload...]` and returns 1; an empty inbox returns 0.
+- `SYS ReceiveMessage` (service 12), B points to an output buffer. On success it writes `[senderPid byte0..byte3, length, payload...]` and returns 1. If the inbox is empty, the calling process blocks and retries the receive syscall after a sender wakes it.
 - Payload is at most 251 bytes. All descriptors and payloads must fit in the guest process RAM. A too-small receive buffer leaves the message queued.
+
+## Blocking and deadlock detection
+An empty guest receive blocks the process instead of busy-waiting. A successful send wakes a blocked receiver, which retries its receive syscall. `hasDeadlock()` reports when at least one process is blocked and no process is Ready or Running; this is a scheduler-level detector, not a full wait-for-graph analysis.
 
 ## Regression coverage
 Tests cover priority choice, quantum accounting, timer IRQ delivery/acknowledgement, host FIFO IPC, payload limits and guest-to-guest message passing through the syscall ABI.
