@@ -35,7 +35,7 @@ std::string readSecret(const std::string& prompt) {
 #endif
  std::cout<<"\n"; return value;
 }
-void osConsole(){nexa::NexaKernel kernel; nexa::NexaShell shell(kernel); std::cout<<"Nexa OS 1.6 user-space shell. Type help.\n"; std::string line; while(true){std::cout<<"nexa-os$ "<<std::flush;if(!std::getline(std::cin,line))break;if(line=="exit"||line=="quit")break;std::stringstream commandStream(line); std::string command,user,extra; commandStream>>command;
+void osConsole(){nexa::NexaKernel kernel; nexa::NexaShell shell(kernel); std::cout<<"Nexa OS 2.3 user-space shell. Type help.\n"; std::string line; while(true){std::cout<<"nexa-os$ "<<std::flush;if(!std::getline(std::cin,line))break;if(line=="exit"||line=="quit")break;std::stringstream commandStream(line); std::string command,user,extra; commandStream>>command;
  if(command=="login"||command=="useradd") { commandStream>>user>>extra; if(!user.empty()&&extra.empty()) line+=" "+readSecret(command=="login"?"Password: ":"New password: "); }
  else if(command=="passwd") { commandStream>>user; if(user.empty()) line+=" "+readSecret("New password: "); }
  const auto result=shell.execute(line);if(!result.empty())std::cout<<result<<(result.back()=='\n'?"":"\n");}}
