@@ -14,6 +14,7 @@ public:
  static constexpr std::uint16_t KeyboardPort=0, DisplayPort=1, GraphicsXPort=2, GraphicsYPort=3, GraphicsColorPort=4, GraphicsDrawPort=5, GraphicsClearPort=6;
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
+ void setProgramCounter(std::uint16_t address);
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
  void reset();
