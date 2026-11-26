@@ -110,3 +110,8 @@ The shell now supports `pwd`, `cd`, relative paths, and VFS persistence through 
 ## Nexa OS 1.8 — User accounts and file permissions
 
 The shell now supports `useradd`, `login`, `whoami`, `chmod`, and `chown`, with owner/group/other mode-bit checks for file reads, writes, removal, and execution. See [Nexa OS 1.8](docs/NEXA_OS_1_8.md). This is an in-memory educational policy layer without password authentication or hardware-enforced isolation.
+
+
+## Nexa OS 1.9 — Persistent account and permission metadata
+
+VFS disk images now preserve shell users and file ownership/mode metadata. savefs stores versioned security metadata alongside the filesystem; loadfs restores it and resets the active session to root. Older images without metadata remain compatible. This is educational metadata persistence, not password authentication or cryptographic protection. See [Nexa OS 1.9](docs/NEXA_OS_1_9.md).
