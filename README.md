@@ -10,7 +10,7 @@ Educational C++20 virtual machine and assembly environment. This is an interpret
 - Runtime instruction counter, stack depth, bounded execution (10M instructions default)\n- Save/load binary VM snapshots via API and console
 - Automated C++ tests and GitHub Actions CI
 
-## Assembly quick reference
+Full instruction documentation: [docs/INSTRUCTION_SET.md](docs/INSTRUCTION_SET.md).\n\n## Assembly quick reference
 ```asm
 LOAD A, 5
 LOAD B, 3
