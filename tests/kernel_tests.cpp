@@ -104,14 +104,23 @@ int main() {
     bool receiverWoken=false;
     for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)receiverWoken=proc.state==nexa::ProcessState::Ready;
     assert(receiverWoken);
+    bool guestMessageQueued=false;
+    for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)guestMessageQueued=proc.pendingMessages==1;
+    assert(guestMessageQueued);
     guestIpcKernel.run();
     guestIpcProcesses=guestIpcKernel.processes();
     for(const auto& proc:guestIpcProcesses)
         if(proc.pid==guestReceiver&&proc.state==nexa::ProcessState::Faulted)
             throw std::runtime_error("guest IPC receiver fault: "+proc.faultReason);
     const auto guestIpcOutput=guestIpcKernel.takeConsoleOutput();
-    if(guestIpcOutput!="Z")
-        throw std::runtime_error("guest IPC output mismatch; bytes="+std::to_string(guestIpcOutput.size()));
+    if(guestIpcOutput!="Z") {
+        std::string diagnostic="guest IPC output mismatch; bytes="+std::to_string(guestIpcOutput.size());
+        for(const auto& proc:guestIpcProcesses)
+            diagnostic+=" pid="+std::to_string(proc.pid)+" state="+std::to_string(static_cast<int>(proc.state))+
+                " ticks="+std::to_string(proc.ticks)+" inbox="+std::to_string(proc.pendingMessages)+
+                " fault="+proc.faultReason;
+        throw std::runtime_error(diagnostic);
+    }
 
     nexa::NexaKernel blockedKernel(256);
     const auto waitingPid=blockedKernel.spawn("waiting-reader",nexa::Executable{0,{
