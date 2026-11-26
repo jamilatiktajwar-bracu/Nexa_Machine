@@ -16,6 +16,8 @@ int main(){
  assert(mm.read(1,0,nexa::MemoryAccess::Kernel)==0x41);
  mm.mapPage(1,1); mm.write(1,0x0100,0x77); assert(mm.read(1,0x0100)==0x77);
  mm.unmapPage(1,1); assert(mm.freeFrames()==2);
- mm.protectPage(2,0,true,true,false);\n fault=false; try{(void)mm.canExecute(2,0);}catch(const std::runtime_error&){fault=true;} assert(fault);\n mm.destroyAddressSpace(1); assert(mm.freeFrames()==3);
+ mm.protectPage(2,0,true,true,false);
+ fault=false; try{(void)mm.canExecute(2,0);}catch(const std::runtime_error&){fault=true;} assert(fault);
+ mm.destroyAddressSpace(1); assert(mm.freeFrames()==3);
  mm.destroyAddressSpace(2); assert(mm.freeFrames()==4);
 }
