@@ -8,6 +8,7 @@ namespace nexa {
 
 enum class Opcode : std::uint8_t {
     LoadImmediate, // A <- immediate
+    LoadBImmediate, // B <- immediate
     Add,          // A <- A + B (wraps to 8 bits)
     Store,        // RAM[address] <- A
     Load,         // A <- RAM[address]
