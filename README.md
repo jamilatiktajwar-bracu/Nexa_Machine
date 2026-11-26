@@ -80,3 +80,8 @@ Guest programs can now invoke the kernel syscall bridge using the `SYS` instruct
 ## Nexa OS 1.2
 
 Process RAM can be inspected through PID-checked kernel APIs, and faults are contained to the failing process. See [Nexa OS 1.2](docs/NEXA_OS_1_2.md).
+
+
+## Nexa OS 1.3 — Persistent VFS
+
+The virtual filesystem now supports portable disk-image persistence with validated loading (`NEXAVFS1`). Save and restore the directory tree and file contents using `VirtualFileSystem::saveImage()` and `loadImage()`. See [Nexa OS 1.3 documentation](docs/NEXA_OS_1_3.md). This remains a host-side image format, not a production journaled filesystem or a standalone boot disk.
