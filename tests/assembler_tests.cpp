@@ -12,7 +12,7 @@ int main(){
  const auto wide=nexa::parseAssembly("LOAD A, 77\nSTORE [300]\nLOAD A, [300]\nHALT\n");nexa::VM vm(1024);vm.loadProgram(wide);vm.run();assert(vm.readMemory(300)==77);assert(vm.accumulator()==77);assert(vm.instructionsExecuted()==4);
  threw=false;try{(void)nexa::parseAssembly("STORE [65536]\nHALT\n");}catch(const std::runtime_error&){threw=true;}assert(threw);
  // Branching countdown loop: print 3,2,1
- auto loop=nexa::parseAssembly("LOAD A, 3\nagain:\nPRINT A\nDEC A\nCMP A, 0\nJNZ again\nHALT\n");assert(loop[4].operand==0);
+ auto loop=nexa::parseAssembly("LOAD A, 3\nagain:\nPRINT A\nDEC A\nCMP A, 0\nJNZ again\nHALT\n");assert(loop[4].opcode==nexa::Opcode::JumpNotZero&&loop[4].operand==1);
  std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());nexa::VM vm2;vm2.loadProgram(loop);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 3\nOutput: 2\nOutput: 1\n");
  auto call=nexa::parseAssembly("LOAD A, 9\nCALL fn\nPRINT A\nHALT\nfn:\nINC A\nRET\n");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.loadProgram(call);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 10\n");
  auto stack=nexa::parseAssembly("LOAD A, 8\nPUSH A\nLOAD A, 1\nPOP A\nPRINT A\nHALT\n");capture.str("");old=std::cout.rdbuf(capture.rdbuf());vm2.loadProgram(stack);vm2.run();std::cout.rdbuf(old);assert(capture.str()=="Output: 8\n");
