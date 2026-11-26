@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <array>
+#include <set>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
@@ -19,8 +20,11 @@ class NexaSecurity {
         std::array<unsigned char,16> salt{};
         std::array<unsigned char,32> digest{};
         bool passwordSet{false};
+        unsigned failedAttempts{0};
+        bool locked{false};
     };
     static constexpr int iterations_ = 120000;
+    static constexpr unsigned maxFailedAttempts_ = 5;
 public:
     NexaSecurity() { users_["root"]={"root",{}, {},false}; }
 
@@ -32,7 +36,7 @@ public:
     bool hasUser(const std::string& name) const { return users_.count(name)!=0; }
     bool authenticate(const std::string& name, const std::string& password) const {
         const auto it=users_.find(name);
-        if(it==users_.end() || !it->second.passwordSet) return false;
+        if(it==users_.end() || !it->second.passwordSet || it->second.locked) return false;
         std::array<unsigned char,32> candidate{};
         if(PKCS5_PBKDF2_HMAC(password.data(),static_cast<int>(password.size()),it->second.salt.data(),
             static_cast<int>(it->second.salt.size()),iterations_,EVP_sha256(),static_cast<int>(candidate.size()),candidate.data())!=1)
@@ -42,21 +46,43 @@ public:
         return diff==0;
     }
     bool login(const std::string& name, const std::string& password) {
-        if(!authenticate(name,password)) return false;
+        auto it=users_.find(name);
+        if(it==users_.end() || it->second.locked || !it->second.passwordSet) return false;
+        if(!authenticate(name,password)) { if(++it->second.failedAttempts>=maxFailedAttempts_) it->second.locked=true; return false; }
+        it->second.failedAttempts=0;
         current_=name;
         return true;
     }
     bool setPassword(const std::string& password) {
         if(password.size()<8) return false;
-        hashPassword(users_.at(current_),password); return true;
+        auto& record=users_.at(current_); hashPassword(record,password);
+        record.failedAttempts=0; record.locked=false; return true;
     }
+    bool resetPassword(const std::string& user,const std::string& password) {
+        auto it=users_.find(user); if(it==users_.end()||password.size()<8) return false;
+        hashPassword(it->second,password); it->second.failedAttempts=0; it->second.locked=false; return true;
+    }
+    bool unlockUser(const std::string& user) {
+        auto it=users_.find(user); if(it==users_.end()) return false;
+        it->second.failedAttempts=0; it->second.locked=false; return true;
+    }
+    bool addGroup(const std::string& group) {
+        if(group.empty()||group.find('/')!=std::string::npos||group.find('"')!=std::string::npos) return false;
+        return groups_.insert(group).second;
+    }
+    bool setPrimaryGroup(const std::string& user,const std::string& group) {
+        auto it=users_.find(user); if(it==users_.end()||!groups_.count(group)) return false;
+        it->second.group=group; return true;
+    }
+    bool hasGroup(const std::string& group) const { return groups_.count(group)!=0; }
     const std::string& currentUser() const noexcept { return current_; }
 
     [[nodiscard]] std::vector<std::uint8_t> serialize() const {
         std::ostringstream out;
-        out << "NEXASEC2\n";
+        out << "NEXASEC3\n";
+        for(const auto& group:groups_) out << "G " << std::quoted(group) << "\n";
         for(const auto& [name,record]:users_) {
-            out << "U " << std::quoted(name) << " " << std::quoted(record.group) << " " << record.passwordSet << " ";
+            out << "U " << std::quoted(name) << " " << std::quoted(record.group) << " " << record.passwordSet << " " << record.failedAttempts << " " << record.locked << " ";
             for(auto b:record.salt) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
             out << " ";
             for(auto b:record.digest) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
@@ -68,15 +94,19 @@ public:
 
     void deserialize(const std::vector<std::uint8_t>& bytes) {
         const std::string data(bytes.begin(),bytes.end()); std::istringstream in(data);
-        std::string header; if(!std::getline(in,header)||(header!="NEXASEC1"&&header!="NEXASEC2")) throw std::invalid_argument("invalid security metadata");
-        const bool version2=header=="NEXASEC2";
+        std::string header; if(!std::getline(in,header)||(header!="NEXASEC1"&&header!="NEXASEC2"&&header!="NEXASEC3")) throw std::invalid_argument("invalid security metadata");
+        const bool version2=header=="NEXASEC2"||header=="NEXASEC3";
+        const bool version3=header=="NEXASEC3";
         std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {},false}}};
         auto owners=std::map<std::string,FileOwner>{};
+        std::set<std::string> groups{"root"};
         bool rootSeen=false;
         std::string line;
         while(std::getline(in,line)) {
             if(line.empty()) continue;
-            std::istringstream row(line); char kind{}; std::string a,b,c; row>>kind>>std::quoted(a)>>std::quoted(b);
+            std::istringstream row(line); char kind{}; std::string a,b,c; row>>kind;
+            if(kind=='G') { row>>std::quoted(a); if(!row||a.empty()||!groups.insert(a).second) throw std::invalid_argument("invalid security group"); std::string extra; if(row>>extra) throw std::invalid_argument("extra security metadata fields"); continue; }
+            row>>std::quoted(a)>>std::quoted(b);
             if(!row) throw std::invalid_argument("malformed security metadata");
             if(kind=='U') {
                 UserRecord rec; rec.group=b;
@@ -84,6 +114,7 @@ public:
                     unsigned set{}; std::string saltHex,digestHex; row>>set>>saltHex>>digestHex;
                     if(!row||set>1||saltHex.size()!=32||digestHex.size()!=64) throw std::invalid_argument("invalid password metadata");
                     rec.passwordSet=set!=0; decodeHex(saltHex,rec.salt.data(),rec.salt.size()); decodeHex(digestHex,rec.digest.data(),rec.digest.size());
+                    if(version3) { unsigned locked{}; row>>rec.failedAttempts>>locked; if(!row||rec.failedAttempts>maxFailedAttempts_||locked>1) throw std::invalid_argument("invalid account lockout metadata"); rec.locked=locked!=0; }
                 }
                 if(a=="root") {
                     if(rootSeen) throw std::invalid_argument("duplicate security user");
@@ -99,7 +130,9 @@ public:
             } else throw std::invalid_argument("unknown security metadata record");
             std::string extra; if(row>>extra) throw std::invalid_argument("extra security metadata fields");
         }
-        users_=std::move(users); owners_=std::move(owners); current_="root";
+        for(const auto& [name,record]:users) if(!groups.count(record.group)) throw std::invalid_argument("unknown user group");
+        for(const auto& [path,meta]:owners) if(!groups.count(meta.group)) throw std::invalid_argument("unknown file group");
+        groups_=std::move(groups); users_=std::move(users); owners_=std::move(owners); current_="root";
     }
     void registerPath(const std::string& path,std::uint16_t mode) {
         if(!owners_.count(path)) owners_[path]={current_,users_.at(current_).group,mode};
@@ -122,6 +155,7 @@ public:
     }
 private:
     std::map<std::string,UserRecord> users_;
+    std::set<std::string> groups_{"root"};
     std::map<std::string,FileOwner> owners_;
     std::string current_{"root"};
 
