@@ -1,16 +1,16 @@
 name: C++ build and tests
-
 on:
   push:
   pull_request:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Qt6 for optional desktop build
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON
       - name: Build
         run: cmake --build build --parallel
       - name: Test
