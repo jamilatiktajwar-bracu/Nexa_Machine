@@ -13,6 +13,9 @@ struct PageMapping {
     bool writable{true};
     bool userAccessible{true};
     bool executable{true};
+    bool resident{true};
+    std::uint64_t lastUsed{};
+    std::vector<std::uint8_t> swapImage;
 };
 
 class VirtualMemoryManager {
@@ -37,6 +40,10 @@ public:
     [[nodiscard]] bool isMapped(std::uint32_t pid,std::uint8_t virtualPage) const;
     [[nodiscard]] std::size_t mappedPages(std::uint32_t pid) const;
     [[nodiscard]] std::size_t freeFrames() const noexcept;
+    [[nodiscard]] std::size_t swappedPages() const noexcept{return swappedPages_;}
+    [[nodiscard]] std::size_t swapIns() const noexcept{return swapIns_;}
+    [[nodiscard]] std::size_t swapOuts() const noexcept{return swapOuts_;}
+    [[nodiscard]] std::size_t residentPages() const noexcept{return totalFrames()-freeFrames();}
     [[nodiscard]] std::size_t totalFrames() const noexcept{return physical_.size()/PageSize;}
 private:
     std::vector<std::uint8_t> physical_;
@@ -45,11 +52,15 @@ private:
     mutable std::unordered_map<std::uint64_t,PageMapping> tlb_;
     mutable std::size_t tlbHits_{0},tlbMisses_{0};
     mutable std::size_t pageFaults_{0};
+    mutable std::uint64_t accessClock_{0};
+    std::size_t swappedPages_{0},swapIns_{0},swapOuts_{0};
     std::function<void(std::uint32_t,std::uint8_t)> pageFaultHandler_;
     static constexpr std::size_t TlbCapacity=16;
     [[nodiscard]] PageMapping& mapping(std::uint32_t pid,std::uint8_t page);
     [[nodiscard]] const PageMapping& mapping(std::uint32_t pid,std::uint8_t page) const;
     [[nodiscard]] std::uint16_t allocateFrame();
     void releaseFrame(std::uint16_t frame);
+    [[nodiscard]] std::uint16_t evictOrAllocateFrame();
+    void pageIn(std::uint32_t pid,std::uint8_t page);
 };
 }
