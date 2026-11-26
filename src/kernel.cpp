@@ -18,7 +18,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::CloseFile)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::ReceiveMessage)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -81,34 +81,92 @@ bool NexaKernel::reapProcess(std::uint32_t pid) {
     if(currentPid_==pid) currentPid_=0;
     return true;
 }
+void NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
+    if(priority>7) throw std::invalid_argument("Process priority must be between 0 and 7");
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) throw std::out_of_range("Unknown process id");
+    it->second.info.priority=priority;
+}
+void NexaKernel::setTimeQuantum(std::size_t instructions) {
+    if(instructions==0||instructions>1000000) throw std::invalid_argument("Time quantum must be between 1 and 1000000 instructions");
+    timeQuantum_=instructions;
+}
+void NexaKernel::setTimerInterval(std::uint64_t ticks) {
+    timerInterval_=ticks;
+}
+bool NexaKernel::acknowledgeTimerInterrupt() noexcept {
+    if(pendingTimerInterrupts_==0) return false;
+    --pendingTimerInterrupts_;
+    return true;
+}
+bool NexaKernel::sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std::uint8_t> payload) {
+    auto sender=processes_.find(from),receiver=processes_.find(to);
+    if(sender==processes_.end()||receiver==processes_.end()) throw std::out_of_range("Unknown IPC process id");
+    if(receiver->second.info.state==ProcessState::Halted||receiver->second.info.state==ProcessState::Faulted) return false;
+    if(payload.size()>MaxIpcPayload||receiver->second.inbox.size()>=MaxInboxMessages) return false;
+    receiver->second.inbox.push_back(IpcMessage{from,std::move(payload)});
+    return true;
+}
+std::optional<IpcMessage> NexaKernel::receiveMessage(std::uint32_t pid) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) throw std::out_of_range("Unknown IPC process id");
+    if(it->second.inbox.empty()) return std::nullopt;
+    auto message=std::move(it->second.inbox.front());
+    it->second.inbox.pop_front();
+    return message;
+}
 bool NexaKernel::scheduleOne() {
     if(processes_.empty()) return false;
     std::vector<std::uint32_t> ids;
-    for(const auto& [id,p]:processes_) if(p.info.state==ProcessState::Ready) ids.push_back(id);
+    std::uint8_t highestPriority=0;
+    bool haveReady=false;
+    for(const auto& [id,proc]:processes_) {
+        if(proc.info.state!=ProcessState::Ready) continue;
+        if(!haveReady||proc.info.priority>highestPriority) {
+            ids.clear(); highestPriority=proc.info.priority; haveReady=true;
+        }
+        if(proc.info.priority==highestPriority) ids.push_back(id);
+    }
     if(ids.empty()) return false;
     auto it=std::find_if(ids.begin(),ids.end(),[&](auto id){return id>cursor_;});
     const auto pid=it==ids.end()?ids.front():*it;
     cursor_=pid; currentPid_=pid;
     auto& proc=processes_.at(pid);
     proc.info.state=ProcessState::Running;
-    try {
-        proc.machine.stepInstruction();
-        ++proc.info.ticks;
-        output_+=proc.machine.deviceOutput();
-        proc.machine.clearDeviceOutput();
-        proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;
-    } catch(const std::exception& e) {
-        proc.info.state=ProcessState::Faulted;
-        proc.info.faultReason=e.what();
-        output_+=proc.machine.deviceOutput();
-        proc.machine.clearDeviceOutput();
-    } catch(...) {
-        proc.info.state=ProcessState::Faulted;
-        proc.info.faultReason="Unknown process fault";
+    proc.yieldRequested=false;
+    for(std::size_t instruction=0;instruction<timeQuantum_;++instruction) {
+        bool timerFired=false;
+        try {
+            proc.machine.stepInstruction();
+            ++proc.info.ticks;
+            ++systemTicks_;
+            if(timerInterval_!=0&&systemTicks_%timerInterval_==0) {
+                ++timerInterrupts_;
+                ++pendingTimerInterrupts_;
+                timerFired=true;
+            }
+            output_+=proc.machine.deviceOutput();
+            proc.machine.clearDeviceOutput();
+            if(proc.machine.halted()||proc.yieldRequested) break;
+            if(timerFired) break;
+        } catch(const std::exception& e) {
+            proc.info.state=ProcessState::Faulted;
+            proc.info.faultReason=e.what();
+            output_+=proc.machine.deviceOutput();
+            proc.machine.clearDeviceOutput();
+            break;
+        } catch(...) {
+            proc.info.state=ProcessState::Faulted;
+            proc.info.faultReason="Unknown process fault";
+            break;
+        }
     }
+    if(proc.info.state!=ProcessState::Faulted)
+        proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;
+    proc.yieldRequested=false;
     return true;
 }
-void NexaKernel::run(std::size_t maxTicks) { for(std::size_t n=0;n<maxTicks&&scheduleOne();++n) {} }
+void NexaKernel::run(std::size_t maxSlices) { for(std::size_t n=0;n<maxSlices&&scheduleOne();++n) {} }
 std::vector<ProcessInfo> NexaKernel::processes() const {
     std::vector<ProcessInfo> result;
     for(const auto& [id,p]:processes_) result.push_back(p.info);
@@ -133,7 +191,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
-    case Syscall::Yield: return 0;
+    case Syscall::Yield: it->second.yieldRequested=true; return 0;
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     case Syscall::OpenRead:
     case Syscall::OpenWrite: {
@@ -167,6 +225,32 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::CloseFile:
         if(!it->second.openFiles.erase(arg)) throw std::runtime_error("Invalid file handle");
         return 0;
+    case Syscall::SendMessage: {
+        if(static_cast<std::size_t>(arg)+3>it->second.machine.ramSize()) throw std::runtime_error("IPC send descriptor outside process RAM");
+        const auto low=it->second.machine.readMemory(arg);
+        const auto high=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto length=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2));
+        const auto target=static_cast<std::uint32_t>(low|(static_cast<std::uint16_t>(high)<<8));
+        if(static_cast<std::size_t>(arg)+3+length>it->second.machine.ramSize()) throw std::runtime_error("IPC payload outside process RAM");
+        std::vector<std::uint8_t> payload; payload.reserve(length);
+        for(std::size_t index=0;index<length;++index) payload.push_back(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+3+index)));
+        if(!sendMessage(pid,target,std::move(payload))) throw std::runtime_error("IPC destination unavailable or inbox full");
+        return 1;
+    }
+    case Syscall::ReceiveMessage: {
+        if(static_cast<std::size_t>(arg)+5>it->second.machine.ramSize()) throw std::runtime_error("IPC receive descriptor outside process RAM");
+        if(it->second.inbox.empty()) return 0;
+        const auto& message=it->second.inbox.front();
+        if(static_cast<std::size_t>(arg)+5+message.payload.size()>it->second.machine.ramSize()) throw std::runtime_error("IPC receive buffer too small");
+        const auto sender=message.sender;
+        for(std::size_t byte=0;byte<4;++byte)
+            it->second.machine.writeMemory(static_cast<std::uint16_t>(arg+byte),static_cast<std::uint8_t>((sender>>(8*byte))&0xFF));
+        it->second.machine.writeMemory(static_cast<std::uint16_t>(arg+4),static_cast<std::uint8_t>(message.payload.size()));
+        for(std::size_t index=0;index<message.payload.size();++index)
+            it->second.machine.writeMemory(static_cast<std::uint16_t>(arg+5+index),message.payload[index]);
+        it->second.inbox.pop_front();
+        return 1;
+    }
     }
     return 255;
 }
