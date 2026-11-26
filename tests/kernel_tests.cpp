@@ -13,6 +13,21 @@ int main() {
     assert(kernel.hasFileAccess(first,"/7",nexa::FilePermission::Read));
     assert(!kernel.hasFileAccess(first,"/7",nexa::FilePermission::Write));
     assert(!kernel.hasFileAccess(second,"/7",nexa::FilePermission::Read));
+    kernel.writeProcessMemory(first,100,'/');
+    kernel.writeProcessMemory(first,101,'7');
+    kernel.writeProcessMemory(first,102,0);
+    const auto readHandle=kernel.syscall(first,nexa::Syscall::OpenRead,100);
+    assert(readHandle!=0);
+    assert(kernel.syscall(first,nexa::Syscall::ReadByte,readHandle)==7);
+    assert(kernel.syscall(first,nexa::Syscall::ReadByte,readHandle)==0);
+    assert(kernel.syscall(first,nexa::Syscall::CloseFile,readHandle)==0);
+    kernel.grantFileAccess(first,"/7",nexa::FilePermission::Write);
+    const auto writeHandle=kernel.syscall(first,nexa::Syscall::OpenWrite,100);
+    kernel.writeProcessMemory(first,110,writeHandle);
+    kernel.writeProcessMemory(first,111,88);
+    assert(kernel.syscall(first,nexa::Syscall::WriteByte,110)==0);
+    assert(kernel.filesystem().readFile("/7")==std::vector<std::uint8_t>{88});
+    assert(kernel.syscall(first,nexa::Syscall::CloseFile,writeHandle)==0);
     bool badPermissionPath=false;
     try { kernel.grantFileAccess(first,"/../7",nexa::FilePermission::Read); }
     catch(const std::invalid_argument&) { badPermissionPath=true; }
