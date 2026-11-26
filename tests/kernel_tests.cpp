@@ -43,7 +43,9 @@ int main() {
     nexa::NexaKernel budgetKernel(512);
     const auto budgetPid=budgetKernel.spawn("bounded-loop",looping);
     budgetKernel.setTimeQuantum(3);
-    budgetKernel.setInstructionBudget(budgetPid,5);
+    nexa::NexaShell budgetShell(budgetKernel);
+    assert(budgetShell.execute("limit "+std::to_string(budgetPid)+" 5")=="instruction budget updated");
+    assert(budgetShell.execute("ps").find("budget=5")!=std::string::npos);
     budgetKernel.run();
     auto budgetProcesses=budgetKernel.processes();
     bool budgetStopped=false;
