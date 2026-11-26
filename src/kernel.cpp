@@ -51,7 +51,17 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
     for(const auto& [id,p]:processes_) result.push_back(p.info);
     return result;
 }
-std::string NexaKernel::takeConsoleOutput() { auto s=std::move(output_); output_.clear(); return s; }
+std::string NexaKernel::takeConsoleOutput() {
+    // Drain any buffered device output as well as kernel-mediated writes.
+    for (auto& [id, process] : processes_) {
+        (void)id;
+        output_ += process.machine.deviceOutput();
+        process.machine.clearDeviceOutput();
+    }
+    auto result = std::move(output_);
+    output_.clear();
+    return result;
+}
 std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
