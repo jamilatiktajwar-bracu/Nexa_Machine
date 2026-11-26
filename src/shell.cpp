@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -120,6 +120,18 @@ std::string NexaShell::execute(const std::string& line) {
             Executable image{0,parseAssembly(source)}; auto pid=kernel_.spawn(path,image); kernel_.run(); auto out=kernel_.takeConsoleOutput();
             auto processes=kernel_.processes(); auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
             if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="\nprocess fault: "+found->faultReason; return out;
+        }
+        if(command=="limit") {
+            std::string pidText,budgetText; input>>pidText>>budgetText;
+            if(pidText.empty()||budgetText.empty()) return "usage: limit PID INSTRUCTIONS (0 disables)";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t pidUsed=0,budgetUsed=0;
+            const auto pidValue=std::stoull(pidText,&pidUsed);
+            const auto budget=std::stoull(budgetText,&budgetUsed);
+            if(pidUsed!=pidText.size()||budgetUsed!=budgetText.size()||pidValue>0xFFFFFFFFu)
+                return "invalid PID or instruction budget";
+            kernel_.setInstructionBudget(static_cast<std::uint32_t>(pidValue),budget);
+            return "instruction budget updated";
         }
         if(command=="nice") {
             std::string pidText,priorityText; input>>pidText>>priorityText;
@@ -211,7 +223,7 @@ std::string NexaShell::execute(const std::string& line) {
                 const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Halted?"halted":"faulted";
                 out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
                     " effective_priority="+std::to_string(p.effectivePriority)+" ticks="+std::to_string(p.ticks)+
-                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" inbox="+std::to_string(p.pendingMessages)+
+                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" budget="+std::to_string(p.instructionBudget)+" inbox="+std::to_string(p.pendingMessages)+
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
                     " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
                 if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
