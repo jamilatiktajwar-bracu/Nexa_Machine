@@ -8,12 +8,18 @@
 namespace nexa {
 VM::VM(std::size_t n):ram_(n,0){if(!n||n>65536)throw std::invalid_argument("RAM must be 1..65536 bytes");}
 void VM::loadProgram(std::vector<Instruction>p){program_=std::move(p);reset();}
-void VM::reset(){pc_=0;a_=b_=0;std::fill(ram_.begin(),ram_.end(),0);stack_.clear();halted_=false;zeroFlag_=false;instructionCount_=0;}
+void VM::reset(){pc_=0;a_=b_=0;std::fill(ram_.begin(),ram_.end(),0);stack_.clear();keyboard_.clear();deviceOutput_.clear();halted_=false;zeroFlag_=false;instructionCount_=0;}
 std::uint8_t VM::readMemory(std::uint16_t a)const noexcept{return a<ram_.size()?ram_[a]:0;}
-void VM::run(std::size_t budget){std::size_t start=instructionCount_;while(!halted_){if(instructionCount_-start>=budget)throw std::runtime_error("Instruction budget exceeded; possible infinite loop");step();}}
+void VM::run(std::size_t budget){std::size_t start=instructionCount_;while(!halted_){if(hasBreakpoint(pc_))return;if(instructionCount_-start>=budget)throw std::runtime_error("Instruction budget exceeded; possible infinite loop");step();}}
+bool VM::stepInstruction(){if(halted_)return false;step();return !halted_;}
+void VM::queueKeyboardInput(const std::string& text){for(unsigned char ch:text)keyboard_.push_back(ch);}
+void VM::setBreakpoint(std::size_t a){breakpoints_.insert(a);}
+void VM::clearBreakpoint(std::size_t a){breakpoints_.erase(a);}
+void VM::clearBreakpoints(){breakpoints_.clear();}
+bool VM::hasBreakpoint(std::size_t a)const{return breakpoints_.contains(a);}
 void VM::saveState(const std::string&path)const{
  std::ofstream out(path,std::ios::binary);if(!out)throw std::runtime_error("Cannot write state file: "+path);
- const char magic[8]={'N','E','X','A','S','T','0','1'};out.write(magic,8);
+ const char magic[8]={'N','E','X','A','S','T','0','2'};out.write(magic,8);
  auto put=[&](auto v){out.write(reinterpret_cast<const char*>(&v),sizeof(v));};
  std::uint32_t ram=static_cast<std::uint32_t>(ram_.size()),prog=static_cast<std::uint32_t>(program_.size()),stk=static_cast<std::uint32_t>(stack_.size());
  std::uint64_t savedPc=pc_,savedCount=instructionCount_;std::uint8_t savedHalted=halted_?1:0,savedZero=zeroFlag_?1:0;
@@ -25,7 +31,7 @@ void VM::saveState(const std::string&path)const{
 }
 void VM::loadState(const std::string&path){
  std::ifstream in(path,std::ios::binary);if(!in)throw std::runtime_error("Cannot open state file: "+path);
- char magic[8];in.read(magic,8);if(!in||std::string(magic,8)!="NEXAST01")throw std::runtime_error("Invalid Nexa state file");
+ char magic[8];in.read(magic,8);if(!in||std::string(magic,8)!="NEXAST02")throw std::runtime_error("Invalid Nexa state file");
  auto get=[&](auto&v){in.read(reinterpret_cast<char*>(&v),sizeof(v));if(!in)throw std::runtime_error("Truncated state file");};
  std::uint32_t ram=0,prog=0,stk=0;std::uint8_t na=0,nb=0,nh=0,nz=0;std::uint64_t npc=0,ncount=0;
  get(ram);get(prog);get(stk);get(na);get(nb);get(npc);get(ncount);get(nh);get(nz);
@@ -52,6 +58,8 @@ void VM::step(){
  case Opcode::Store:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");ram_[i.operand]=a_;break;
  case Opcode::Load:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");a_=ram_[i.operand];zeroFlag_=a_==0;break;
  case Opcode::Print:std::cout<<"Output: "<<static_cast<unsigned>(a_)<<'\n';break;
+ case Opcode::Input:if(i.operand==KeyboardPort){a_=keyboard_.empty()?0:keyboard_.front();if(!keyboard_.empty())keyboard_.pop_front();zeroFlag_=a_==0;}else throw std::runtime_error("Unknown input port");break;
+ case Opcode::Output:if(i.operand==DisplayPort){deviceOutput_.push_back(static_cast<char>(a_));std::cout.put(static_cast<char>(a_));}else throw std::runtime_error("Unknown output port");break;
  case Opcode::Jump:pc_=i.operand;break;
  case Opcode::JumpZero:if(zeroFlag_)pc_=i.operand;break;
  case Opcode::JumpNotZero:if(!zeroFlag_)pc_=i.operand;break;
