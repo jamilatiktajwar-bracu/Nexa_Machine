@@ -124,7 +124,7 @@ std::string NexaShell::execute(const std::string& line) {
         if(command=="nice") {
             std::string pidText,priorityText; input>>pidText>>priorityText;
             if(pidText.empty()||priorityText.empty()) return "usage: nice PID PRIORITY";
-            if(user!="root") return "permission denied";
+            if(security_.currentUser()!="root") return "permission denied";
             std::size_t pidUsed=0,priorityUsed=0;
             const auto pidValue=std::stoull(pidText,&pidUsed);
             const auto priorityValue=std::stoul(priorityText,&priorityUsed);
