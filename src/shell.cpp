@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | sched | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -132,6 +132,15 @@ std::string NexaShell::execute(const std::string& line) {
                 return "invalid PID or priority (0-7)";
             kernel_.setPriority(static_cast<std::uint32_t>(pidValue),static_cast<std::uint8_t>(priorityValue));
             return "priority updated";
+        }
+        if(command=="aging") {
+            std::string thresholdText; input>>thresholdText;
+            if(thresholdText.empty()) return "usage: aging TICKS (0 disables)";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto threshold=std::stoull(thresholdText,&used);
+            if(used!=thresholdText.size()) return "invalid aging threshold";
+            kernel_.setPriorityAgingThreshold(threshold);
+            return "priority aging updated";
         }
         if(command=="sched") {
             return "policy=fixed-priority-round-robin quantum="+std::to_string(kernel_.timeQuantum())+
