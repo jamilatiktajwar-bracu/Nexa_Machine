@@ -201,6 +201,10 @@ bool NexaKernel::scheduleOne() {
     }
     if(proc.info.state!=ProcessState::Faulted&&proc.info.state!=ProcessState::Blocked)
         proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;
+    if(proc.info.state==ProcessState::Faulted||proc.info.state==ProcessState::Halted) {
+        proc.openFiles.clear();
+        proc.inbox.clear();
+    }
     proc.yieldRequested=false;
     return true;
 }
