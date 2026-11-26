@@ -24,4 +24,18 @@ int main(){
  const auto missesBeforeFlush=mm.tlbMisses(); mm.flushTlb(); (void)mm.read(1,5,nexa::MemoryAccess::Kernel); assert(mm.tlbMisses()==missesBeforeFlush+1);
  mm.destroyAddressSpace(1); assert(mm.freeFrames()==3);
  mm.destroyAddressSpace(2); assert(mm.freeFrames()==4);
+ nexa::VirtualMemoryManager swapped(512);
+ swapped.createAddressSpace(7);
+ swapped.mapPage(7,0); swapped.mapPage(7,1);
+ swapped.write(7,0,0xA0); swapped.write(7,256,0xB1);
+ (void)swapped.read(7,0);
+ swapped.mapPage(7,2);
+ assert(swapped.swappedPages()==1&&swapped.swapOuts()==1);
+ assert(swapped.read(7,256)==0xB1);
+ assert(swapped.swapIns()==1);
+ swapped.write(7,256,0xB2);
+ assert(swapped.read(7,256)==0xB2);
+ swapped.destroyAddressSpace(7);
+ assert(swapped.freeFrames()==swapped.totalFrames());
+
 }
