@@ -276,8 +276,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
         if(static_cast<std::size_t>(arg)+5>it->second.machine.ramSize()) throw std::runtime_error("IPC receive descriptor outside process RAM");
         if(it->second.inbox.empty()) {
             it->second.info.state=ProcessState::Blocked;
-            const auto retryAddress=it->second.machine.programCounter()-1;
-            it->second.machine.setProgramCounter(static_cast<std::uint16_t>(retryAddress));
+            it->second.machine.retryCurrentInstruction();
             return 0;
         }
         const auto& message=it->second.inbox.front();
