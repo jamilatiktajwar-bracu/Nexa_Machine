@@ -1,24 +1,45 @@
 # Nexa Machine
-Educational C++20 virtual machine and assembly environment. This is an interpreter/emulator project, not a hypervisor; it cannot boot a guest OS.
+Educational C++20 virtual machine and assembly environment. This is an interpreter/emulator project, not a hypervisor.
 
-## Features (0.6)
+## Features (0.7)
 - 8-bit A/B registers, wraparound arithmetic, 16-bit RAM addressing (up to 64 KiB)
-- CPU instructions: LOAD, STORE, ADD, SUB, INC, DEC, CMP, PRINT, HALT
-- Control flow: JMP, JZ, JNZ, CALL, RET; label support
-- Stack operations: PUSH A/B, POP A/B
-- Configurable RAM, virtual disk API, console, optional Qt6 desktop
-- Runtime instruction counter, stack depth, bounded execution (10M instructions default)\n- Save/load binary VM snapshots via API and console
-- Automated C++ tests and GitHub Actions CI
+- CPU: LOAD, STORE, ADD, SUB, INC, DEC, CMP, PRINT, IN, OUT, HALT
+- Control flow: JMP, JZ, JNZ, CALL, RET; labels
+- Stack: PUSH/POP A/B
+- Keyboard and character display device ports
+- Debugger API and console single-step, instruction-address breakpoints
+- Optional Qt6 GUI with breakpoint control and 64-byte hex RAM monitor
+- Configurable RAM, virtual disk, console, snapshots
+- Execution budget and automated tests/CI
 
-Full instruction documentation: [docs/INSTRUCTION_SET.md](docs/INSTRUCTION_SET.md).\n\n## Assembly quick reference
+## Device I/O
+Port 0 is keyboard input. Console command `keyboard TEXT` queues bytes before program execution. Assembly reads a byte with `IN A, 0`; when no bytes remain, the input value is zero.
+Port 1 is character display output. `OUT A, 1` writes the ASCII character to terminal and the VM device output buffer.
+
+```asm
+IN A, 0
+OUT A, 1
+HALT
+```
+
+## Debugger
+- `step` executes one instruction in the console.
+- `break ADDRESS` sets a breakpoint at an instruction address.
+- `run` / `continue` executes until halt, budget exhaustion, or breakpoint.
+- GUI includes Run, Step, breakpoint input, and RAM hex view.
+
+## Boot sequence example
+`examples/boot_message.nexa` displays a startup banner as a boot-sequence demo. This is bootloader groundwork only; it does not load an operating system or emulate firmware.
+
+## Assembly reference
 ```asm
 LOAD A, 5
 LOAD B, 3
-ADD A, B       # A = 8
-SUB A, B       # A = 5
+ADD A, B
+SUB A, B
 INC A
 DEC A
-CMP A, 0       # updates zero flag
+CMP A, 0
 JZ done
 JNZ loop
 JMP label
@@ -27,20 +48,11 @@ POP B
 CALL function
 RET
 PRINT A
+IN A, 0
+OUT A, 1
 HALT
 ```
-Labels are standalone tokens ending in colon. CMP sets the zero flag if the operands match. JZ/JNZ branch based on that flag. CALL pushes the return address; RET restores it. Stack is a shared LIFO for data and return addresses.
-
-## Countdown sample
-```asm
-LOAD A, 3
-loop:
-PRINT A
-DEC A
-CMP A, 0
-JNZ loop
-HALT
-```
+Labels are case-insensitive and standalone. Numeric literals may be decimal or 0x-prefixed hex.
 
 ## Build and run
 ```sh
@@ -50,14 +62,17 @@ ctest --test-dir build --output-on-failure
 ./build/nexa
 ./build/nexa examples/addition.nexa
 ./build/nexa examples/memory_16bit.nexa
+./build/nexa examples/keyboard_echo.nexa
+./build/nexa examples/boot_message.nexa
 ./build/nexa console
-./build/nexa --config examples/configured_machine.json examples/memory_16bit.nexa
 ```
-Qt6 Widgets is optional; if installed, CMake builds `nexa_gui`. Disable with `-DNEXA_BUILD_GUI=OFF`.
+Qt6 Widgets is optional. Disable the GUI with `-DNEXA_BUILD_GUI=OFF`.
 
-Console commands: help, load FILE, run, reset, status, mem ADDRESS, disk-read OFFSET COUNT, disk-write OFFSET BYTE..., disk-save, state-save FILE, state-load FILE, quit.\n\nSnapshots preserve program, RAM, registers, program counter, stack, flags, halt state, and instruction counter.
+Console commands: help, load FILE, keyboard TEXT, run/continue, step, break ADDRESS, reset, status, mem ADDRESS, disk-read, disk-write, disk-save, state-save, state-load, quit.
+
+Snapshot files are binary and should only be loaded from trusted sources. The VM is not sandboxed.
 
 ## Limitations
-No privileged CPU, device emulation layer, OS boot, sandboxing, or hardware virtualization. Instructions currently execute synchronously.
+No OS boot, privileged CPU, sandboxing, or hardware virtualization. Device I/O is a small simulated interface. Instructions execute synchronously.
 
 MIT license.
