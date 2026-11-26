@@ -80,7 +80,7 @@ void VM::step(){
  case Opcode::Return:if(stack_.empty())throw std::runtime_error("Stack underflow on RET");pc_=stack_.back();stack_.pop_back();break;
  case Opcode::Interrupt:triggerInterrupt(static_cast<std::uint8_t>(i.operand));break;
  case Opcode::InterruptReturn:if(stack_.empty())throw std::runtime_error("Stack underflow on IRET");pc_=stack_.back();stack_.pop_back();break;
- case Opcode::Syscall:if(syscallHandler_){auto service=a_;a_=syscallHandler_(service,b_);zeroFlag_=a_==0;if(service==0)halted_=true;}else switch(a_){case 0:halted_=true;break;case 1:deviceOutput_.push_back(static_cast<char>(b_));std::cout.put(static_cast<char>(b_));break;case 2:a_=keyboard_.empty()?0:keyboard_.front();if(!keyboard_.empty())keyboard_.pop_front();zeroFlag_=a_==0;break;case 3:std::fill(framebuffer_.begin(),framebuffer_.end(),0);break;default:throw std::runtime_error("Unknown syscall service (A=service)");}break;
+ case Opcode::Syscall:if(syscallHandler_){auto service=a_;const auto previousMode=privilegeMode_;privilegeMode_=PrivilegeMode::Kernel;try{a_=syscallHandler_(service,b_);}catch(...){privilegeMode_=previousMode;throw;}privilegeMode_=previousMode;zeroFlag_=a_==0;if(service==0)halted_=true;}else switch(a_){case 0:halted_=true;break;case 1:deviceOutput_.push_back(static_cast<char>(b_));std::cout.put(static_cast<char>(b_));break;case 2:a_=keyboard_.empty()?0:keyboard_.front();if(!keyboard_.empty())keyboard_.pop_front();zeroFlag_=a_==0;break;case 3:std::fill(framebuffer_.begin(),framebuffer_.end(),0);break;default:throw std::runtime_error("Unknown syscall service (A=service)");}break;
  case Opcode::Halt:halted_=true;break;
  default:throw std::runtime_error("Unknown opcode");
  }
