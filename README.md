@@ -134,3 +134,13 @@ NexaSecurity now supports multiple supplementary group memberships per account. 
 The shell supports `logout`; after logout, commands are blocked until a successful `login USER PASSWORD`. Logging out also resets the shell working directory to `/`. Security metadata is now written as `NEXASEC4`; readers remain compatible with `NEXASEC1`, `NEXASEC2`, and `NEXASEC3` images.
 
 This remains an educational host-side security model. Password entry is still supplied as command text by the current shell interface, and it is not a production authentication boundary.
+
+
+## Nexa OS 2.3 — Directory permissions and session security
+
+- Interactive terminal password prompts for login, account creation, and password changes disable terminal echo.
+- Sessions expire after 15 minutes of inactivity and return to a logged-out state.
+- Directory traversal requires execute permission on each ancestor; listing requires read and execute permission.
+- Creating and deleting entries requires write and execute permission on the parent directory.
+- File reads and execution require traversable parent directories.
+- These are educational host-side checks, not a production security boundary.
