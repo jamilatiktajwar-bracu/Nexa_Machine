@@ -30,6 +30,7 @@ int main(){
  swapped.write(7,0,0xA0); swapped.write(7,256,0xB1);
  (void)swapped.read(7,0);
  swapped.mapPage(7,2);
+ assert(swapped.read(7,512)==0);
  assert(swapped.swappedPages()==1&&swapped.swapOuts()==1);
  assert(swapped.read(7,256)==0xB1);
  assert(swapped.swapIns()==1);
