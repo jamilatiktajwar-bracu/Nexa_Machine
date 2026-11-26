@@ -170,3 +170,12 @@ A 16-entry simulated TLB now records hits/misses and invalidates stale translati
 ## Nexa OS 2.7 — Swap, LRU and memory-backed instruction fetch
 
 Physical-memory pressure now triggers global LRU page eviction into simulated swap images; swapped pages are restored on demand. Guest instruction opcodes and operands are encoded into read-only executable pages and fetched/decoded from the process code address space. See [Nexa OS 2.7 documentation](docs/NEXA_OS_2_7.md).
+
+
+## Nexa OS 2.8 — Disk-backed swap, ELF-like executables and privilege modes
+
+- Optional host-file-backed swap stores evicted 256-byte pages and restores them on demand; in-memory swap remains the default.
+- New executable images use the section-based `NEXAELF2` format with machine/version metadata and RX code-section flags. The loader remains compatible with legacy `NEXAEXE1` binaries.
+- Host-mediated syscalls enter a scoped simulated Kernel privilege mode and reliably restore the previous mode after completion or exception.
+- Guest memory access continues through User-mode page permissions; supervisor-only pages are blocked.
+- See [Nexa OS 2.8 documentation](docs/NEXA_OS_2_8.md). This remains an educational simulator, not a hardware-enforced security boundary or standards-compliant ELF loader.
