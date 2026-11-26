@@ -284,8 +284,11 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
         if(static_cast<std::size_t>(arg)+3+length>it->second.machine.ramSize()) throw std::runtime_error("IPC payload outside process RAM");
         std::vector<std::uint8_t> payload; payload.reserve(length);
         for(std::size_t index=0;index<length;++index) payload.push_back(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+3+index)));
-        if(!sendMessage(pid,target,std::move(payload))) throw std::runtime_error("IPC destination unavailable or inbox full");
-        return 1;
+        const auto destination=processes_.find(target);
+        if(destination==processes_.end()||destination->second.info.state==ProcessState::Halted||
+           destination->second.info.state==ProcessState::Faulted||destination->second.inbox.size()>=MaxInboxMessages)
+            return 0;
+        return sendMessage(pid,target,std::move(payload))?1:0;
     }
     case Syscall::ReceiveMessage: {
         if(static_cast<std::size_t>(arg)+5>it->second.machine.ramSize()) throw std::runtime_error("IPC receive descriptor outside process RAM");
