@@ -71,7 +71,7 @@ int main() {
     assert(kernel.takeConsoleOutput()=="A");
     nexa::NexaShell shell(kernel);
     assert(shell.execute("mkdir /apps")=="created directory /apps");
-    assert(shell.execute("write /apps/hello.nexa LOAD A, 1\\nLOAD B, 79\\nSYS\\nHALT")=="wrote 37 bytes");
+    assert(shell.execute("write /apps/hello.nexa LOAD A, 1\\nLOAD B, 79\\nSYS\\nHALT")=="wrote 29 bytes");
     assert(shell.execute("cat /apps/hello.nexa").find("LOAD A, 1")==0);
     assert(shell.execute("ls /apps").find("hello.nexa")!=std::string::npos);
     assert(shell.execute("run /apps/hello.nexa")=="O");
