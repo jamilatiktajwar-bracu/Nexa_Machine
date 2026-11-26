@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <vector>\n#include <string>
+#include <string>
+#include <vector>
 namespace nexa {
 enum class Opcode : std::uint8_t { LoadImmediate, LoadBImmediate, Add, Sub, Inc, Dec, Compare, CompareImmediate, Store, Load, Print, Jump, JumpZero, JumpNotZero, PushA, PushB, PopA, PopB, Call, Return, Halt };
 struct Instruction { Opcode opcode{}; std::uint16_t operand{}; };
@@ -8,7 +9,11 @@ class VM {
 public:
  static constexpr std::size_t DefaultRamSize=256;
  explicit VM(std::size_t ramSize=DefaultRamSize);
- void loadProgram(std::vector<Instruction>); void run(std::size_t instructionBudget=10000000); void reset();\n void saveState(const std::string& path)const; void loadState(const std::string& path);
+ void loadProgram(std::vector<Instruction>);
+ void run(std::size_t instructionBudget=10000000);
+ void reset();
+ void saveState(const std::string& path)const;
+ void loadState(const std::string& path);
  [[nodiscard]] std::uint8_t accumulator()const noexcept{return a_;}
  [[nodiscard]] std::uint8_t secondRegister()const noexcept{return b_;}
  [[nodiscard]] std::uint8_t readMemory(std::uint16_t)const noexcept;
@@ -18,8 +23,12 @@ public:
  [[nodiscard]] std::size_t programCounter()const noexcept{return pc_;}
  [[nodiscard]] std::size_t stackDepth()const noexcept{return stack_.size();}
 private:
- std::vector<std::uint8_t>ram_;std::uint8_t a_{0},b_{0};std::size_t pc_{0},instructionCount_{0};
- std::vector<Instruction>program_;std::vector<std::uint16_t>stack_;bool halted_{false},zeroFlag_{false};
+ std::vector<std::uint8_t>ram_;
+ std::uint8_t a_{0},b_{0};
+ std::size_t pc_{0},instructionCount_{0};
+ std::vector<Instruction>program_;
+ std::vector<std::uint16_t>stack_;
+ bool halted_{false},zeroFlag_{false};
  void step();
 };
 }
