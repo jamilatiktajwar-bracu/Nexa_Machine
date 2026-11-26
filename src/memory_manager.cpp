@@ -132,6 +132,7 @@ std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t addr
         ++pageFaults_;
         self.pageIn(pid,page);
     }
+    hit=tlb_.find(key);
     auto& live=*livePtr;
     live.lastUsed=++accessClock_;
     if(access==MemoryAccess::User&&!live.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
