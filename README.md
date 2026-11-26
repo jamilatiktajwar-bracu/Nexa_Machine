@@ -29,7 +29,7 @@ Windows: run the executable in the generated build directory (for example `build
 
 ## Run your own assembly
 
-Create `example.nexa`:
+Use the sample file `examples/addition.nexa`, or create `example.nexa`:
 
 ```asm
 LOAD A, 19
@@ -68,7 +68,7 @@ HALT
 - [x] VM execution core
 - [x] Assembly parser and file loader
 - [x] CLI program runner
-- [ ] Unit tests and instruction encoding
+- [x] Initial parser unit tests and CI build workflow\n- [ ] More VM execution tests and instruction encoding
 - [ ] VM config / virtual disk
 - [ ] Qt 6 desktop manager
 - [ ] Hardware acceleration (KVM / WHPX)
