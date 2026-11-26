@@ -7,6 +7,16 @@ int main() {
     const auto first=kernel.spawn("alpha",basic);
     const auto second=kernel.spawn("beta",basic);
     assert(first!=second);
+    kernel.filesystem().createFile("/7",{7});
+    assert(!kernel.hasFileAccess(first,"/7",nexa::FilePermission::Read));
+    kernel.grantFileAccess(first,"/7",nexa::FilePermission::Read);
+    assert(kernel.hasFileAccess(first,"/7",nexa::FilePermission::Read));
+    assert(!kernel.hasFileAccess(first,"/7",nexa::FilePermission::Write));
+    assert(!kernel.hasFileAccess(second,"/7",nexa::FilePermission::Read));
+    bool badPermissionPath=false;
+    try { kernel.grantFileAccess(first,"/../7",nexa::FilePermission::Read); }
+    catch(const std::invalid_argument&) { badPermissionPath=true; }
+    assert(badPermissionPath);
     kernel.writeProcessMemory(first,20,42);
     assert(kernel.readProcessMemory(first,20)==42);
     assert(kernel.readProcessMemory(second,20)==0);
