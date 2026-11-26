@@ -1,79 +1,42 @@
 # Nexa Machine
+An experimental educational virtual machine built with C++20. **This is not a hypervisor and cannot boot an operating system.**
 
-Nexa Machine is an experimental virtual-machine project. Our first stage is a portable educational byte-sized VM; future stages will add a desktop manager and hardware-assisted virtualization.
-
-## Nexa VM 0.2 (Assembler + Loader)
-
-- 8-bit registers A and B
-- 256 bytes of virtual RAM
-- Assembly text parser and file loader
-- CLI runs `.nexa` program files
-- Instructions: `LOAD`, `ADD`, `STORE`, `PRINT`, `HALT`
-- Decimal and hexadecimal values (e.g. `42`, `0x2A`)
-- `#` and `;` comments
-- C++20 / CMake
-
-**This is an educational CPU emulator, not yet a hypervisor. It cannot boot a guest OS.**
+## VM 0.3
+- 8-bit A/B CPU and assembly interpreter
+- Configurable RAM size (1 byte to 64 KiB; current instruction addresses limited to 8-bit)
+- JSON-style machine config
+- File-backed virtual disk with bounds-checked byte reads/writes
+- VM manager API for load/start/stop/reset and state
+- Runtime instruction counter
+- CMake + tests + CI
 
 ## Build
-
-Requirements: CMake 3.20+ and a C++20 compiler.
-
 ```sh
 cmake -S . -B build
 cmake --build build
+ctest --test-dir build --output-on-failure
 ./build/nexa
 ```
+Windows: run `build\\Debug\\nexa.exe` (or your generator's output path).
 
-Windows: run the executable in the generated build directory (for example `build\\Debug\\nexa.exe`).
-
-## Run your own assembly
-
-Use the sample file `examples/addition.nexa`, or create `example.nexa`:
-
-```asm
-LOAD A, 19
-LOAD B, 23
-ADD A, B
-PRINT A
-HALT
-```
-
-Then:
-
+## Run assembly
 ```sh
-./build/nexa example.nexa
+./build/nexa examples/addition.nexa
 ```
+Expected output includes `Output: 42`.
 
-Expected:
-
-```
-Nexa Machine VM 0.2
-Output: 42
-VM halted.
-```
-
-### Memory example
-
-```asm
-LOAD A, 77
-STORE [10]
-LOAD A, [10]
-PRINT A
-HALT
-```
+## Configuration
+See `config/nexa.json` and `examples/configured_machine.json`. The config parser supports `name`, `ram_bytes`, `disk_path`, and `disk_bytes`. Config/manager/disk components are currently library-level APIs; the CLI is still a basic assembly runner.
 
 ## Roadmap
+- [x] VM interpreter and assembler
+- [x] CLI runner
+- [x] Configurable RAM, configuration parser, disk image API, VM manager API
+- [ ] Expand instruction addressing to 16-bit
+- [ ] Interactive console and device I/O
+- [ ] Qt desktop manager
+- [ ] Snapshot/restore
+- [ ] KVM/WHPX hardware virtualization
+- [ ] Bootable guest support (long-term)
 
-- [x] VM execution core
-- [x] Assembly parser and file loader
-- [x] CLI program runner
-- [x] Initial parser unit tests and CI build workflow\n- [ ] More VM execution tests and instruction encoding
-- [ ] VM config / virtual disk
-- [ ] Qt 6 desktop manager
-- [ ] Hardware acceleration (KVM / WHPX)
-- [ ] Bootable guest OS support
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+MIT License. See LICENSE.
