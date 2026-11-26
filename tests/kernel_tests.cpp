@@ -4,6 +4,12 @@
 #include <cstdio>
 #include <stdexcept>
 int main() {
+    nexa::NexaSecurity freshSecurity;
+    nexa::NexaSecurity restoredFreshSecurity;
+    restoredFreshSecurity.deserialize(freshSecurity.serialize());
+    assert(restoredFreshSecurity.hasUser("root"));
+    assert(!restoredFreshSecurity.authenticate("root", "not-configured"));
+
     nexa::NexaKernel kernel(1024);
     nexa::Executable basic{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};
     const auto first=kernel.spawn("alpha",basic);
