@@ -105,6 +105,7 @@ bool NexaKernel::sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std
     if(receiver->second.info.state==ProcessState::Halted||receiver->second.info.state==ProcessState::Faulted) return false;
     if(payload.size()>MaxIpcPayload||receiver->second.inbox.size()>=MaxInboxMessages) return false;
     receiver->second.inbox.push_back(IpcMessage{from,std::move(payload)});
+    if(receiver->second.info.state==ProcessState::Blocked) receiver->second.info.state=ProcessState::Ready;
     return true;
 }
 std::optional<IpcMessage> NexaKernel::receiveMessage(std::uint32_t pid) {
@@ -147,7 +148,7 @@ bool NexaKernel::scheduleOne() {
             }
             output_+=proc.machine.deviceOutput();
             proc.machine.clearDeviceOutput();
-            if(proc.machine.halted()||proc.yieldRequested) break;
+            if(proc.machine.halted()||proc.yieldRequested||proc.info.state==ProcessState::Blocked) break;
             if(timerFired) break;
         } catch(const std::exception& e) {
             proc.info.state=ProcessState::Faulted;
@@ -161,7 +162,7 @@ bool NexaKernel::scheduleOne() {
             break;
         }
     }
-    if(proc.info.state!=ProcessState::Faulted)
+    if(proc.info.state!=ProcessState::Faulted&&proc.info.state!=ProcessState::Blocked)
         proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;
     proc.yieldRequested=false;
     return true;
@@ -239,7 +240,12 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     }
     case Syscall::ReceiveMessage: {
         if(static_cast<std::size_t>(arg)+5>it->second.machine.ramSize()) throw std::runtime_error("IPC receive descriptor outside process RAM");
-        if(it->second.inbox.empty()) return 0;
+        if(it->second.inbox.empty()) {
+            it->second.info.state=ProcessState::Blocked;
+            const auto retryAddress=it->second.machine.programCounter()-1;
+            it->second.machine.setProgramCounter(static_cast<std::uint16_t>(retryAddress));
+            return 0;
+        }
         const auto& message=it->second.inbox.front();
         if(static_cast<std::size_t>(arg)+5+message.payload.size()>it->second.machine.ramSize()) throw std::runtime_error("IPC receive buffer too small");
         const auto sender=message.sender;
