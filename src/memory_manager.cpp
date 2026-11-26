@@ -28,11 +28,11 @@ void VirtualMemoryManager::releaseFrame(std::uint16_t frame) {
     if(frame>=usedFrames_.size()||!usedFrames_[frame]) throw std::runtime_error("Invalid physical frame release");
     usedFrames_[frame]=false;
 }
-void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user) {
+void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     if(it->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
     const auto frame=allocateFrame();
-    it->second.emplace(page,PageMapping{frame,writable,user});
+    it->second.emplace(page,PageMapping{frame,writable,user,executable});
 }
 void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     auto& table=spaces_.at(pid); auto it=table.find(page);
@@ -62,6 +62,12 @@ void VirtualMemoryManager::write(std::uint32_t pid,std::uint16_t address,std::ui
     if(access==MemoryAccess::User&&!m.userAccessible) throw std::runtime_error("Page fault: supervisor-only page");
     if(!m.writable) throw std::runtime_error("Page fault: write protection");
     physical_[static_cast<std::size_t>(m.frame)*PageSize+(address%PageSize)]=value;
+}
+bool VirtualMemoryManager::canExecute(std::uint32_t pid,std::uint16_t address,MemoryAccess access) const {
+    const auto& m=mapping(pid,static_cast<std::uint8_t>(address/PageSize));
+    if(access==MemoryAccess::User&&!m.userAccessible) throw std::runtime_error("Page fault: supervisor-only code page");
+    if(!m.executable) throw std::runtime_error("Page fault: execute protection");
+    return true;
 }
 bool VirtualMemoryManager::isMapped(std::uint32_t pid,std::uint8_t page) const {
     auto it=spaces_.find(pid); return it!=spaces_.end()&&it->second.contains(page);
