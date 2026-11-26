@@ -12,7 +12,7 @@ Current kernel capabilities include:
 - Bounded process mailboxes, blocking guest receive, automatic wakeup, and scheduler deadlock detection.
 - Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
-Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
+Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
 ## Version 1.0 (OS kernel foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
