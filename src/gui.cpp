@@ -15,7 +15,7 @@
 class NexaWindow:public QMainWindow {
 public:
  NexaWindow(){
-  setWindowTitle("Nexa Machine 0.4");resize(900,650);
+  setWindowTitle("Nexa Machine 0.5");resize(900,650);
   auto*w=new QWidget;auto*l=new QVBoxLayout(w);auto*bar=new QHBoxLayout;
   auto*run=new QPushButton("Run");auto*reset=new QPushButton("Reset example");status=new QLabel("Ready");
   bar->addWidget(run);bar->addWidget(reset);bar->addWidget(status);l->addLayout(bar);
