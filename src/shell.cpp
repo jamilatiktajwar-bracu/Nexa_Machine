@@ -81,7 +81,7 @@ std::string NexaShell::execute(const std::string& line) {
         if(command=="pwd") return currentDirectory_;
         if(command=="cd") {
             std::string path; input>>path; if(path.empty()) path="/";
-            if(path=="..") { if(currentDirectory_!="/") { auto pos=currentDirectory_.find_last_of('/'); currentDirectory_=pos==0?"/":currentDirectory_.substr(0,pos); } return currentDirectory_; }
+            if(path=="..") { if(!security_.can(currentDirectory_,'x')) return "permission denied"; if(currentDirectory_!="/") { auto pos=currentDirectory_.find_last_of('/'); currentDirectory_=pos==0?"/":currentDirectory_.substr(0,pos); } return currentDirectory_; }
             const auto target=resolvePath(path); if(!security_.can(target,'x')||!canTraverse(target)) return "permission denied"; currentDirectory_=target; (void)kernel_.filesystem().list(currentDirectory_); return currentDirectory_;
         }
         if(command=="savefs"||command=="loadfs") {
