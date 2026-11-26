@@ -33,13 +33,14 @@ void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writ
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     if(it->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
     const auto frame=allocateFrame();
-    it->second.emplace(page,PageMapping{frame,writable,user,executable});
+    it->second.emplace(page,PageMapping{frame,writable,user,executable,true,++accessClock_,{}});
     invalidateTlb(pid);
 }
 void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     auto& table=spaces_.at(pid); auto it=table.find(page);
     if(it==table.end()) throw std::out_of_range("Virtual page is not mapped");
-    if(it->second.resident) releaseFrame(it->second.frame); else if(swappedPages_) --swappedPages_;\n    table.erase(it); invalidateTlb(pid);
+    if(it->second.resident) releaseFrame(it->second.frame); else if(swappedPages_) --swappedPages_;
+    table.erase(it); invalidateTlb(pid);
 }
 void VirtualMemoryManager::protectPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
     auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user; m.executable=executable; invalidateTlb(pid);
