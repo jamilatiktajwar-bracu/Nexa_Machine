@@ -1,0 +1,6 @@
+#include "nexa/virtual_disk.hpp"
+#include <algorithm>
+#include <fstream>
+#include <stdexcept>
+#include <utility>
+namespace nexa {VirtualDisk::VirtualDisk(std::string p,std::size_t n):path_(std::move(p)),bytes_(n,0){if(!n)throw std::invalid_argument("Disk size must be positive");}void VirtualDisk::load(){std::ifstream f(path_,std::ios::binary);if(f)f.read(reinterpret_cast<char*>(bytes_.data()),static_cast<std::streamsize>(bytes_.size()));}void VirtualDisk::flush()const{std::ofstream f(path_,std::ios::binary|std::ios::trunc);if(!f)throw std::runtime_error("Cannot open disk image");f.write(reinterpret_cast<const char*>(bytes_.data()),static_cast<std::streamsize>(bytes_.size()));if(!f)throw std::runtime_error("Disk write failed");}void VirtualDisk::write(std::size_t o,const std::vector<std::uint8_t>&d){if(o>bytes_.size()||d.size()>bytes_.size()-o)throw std::out_of_range("Disk write out of range");std::copy(d.begin(),d.end(),bytes_.begin()+static_cast<std::ptrdiff_t>(o));}std::vector<std::uint8_t>VirtualDisk::read(std::size_t o,std::size_t n)const{if(o>bytes_.size()||n>bytes_.size()-o)throw std::out_of_range("Disk read out of range");return {bytes_.begin()+static_cast<std::ptrdiff_t>(o),bytes_.begin()+static_cast<std::ptrdiff_t>(o+n)};}}
