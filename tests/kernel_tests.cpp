@@ -343,6 +343,7 @@ int main() {
     nexa::NexaShell shell(kernel);
     assert(shell.execute("pwd")=="/");
     assert(shell.execute("whoami")=="root");
+    assert(shell.execute("ps").find("fault=")!=std::string::npos);
     assert(shell.execute("passwd root-secret")=="password updated");
     assert(shell.execute("useradd guest guest-secret")=="created user guest");
     assert(shell.execute("login guest wrong-secret")=="authentication failed");
