@@ -1,0 +1,13 @@
+#include "nexa/vfs.hpp"
+#include <algorithm>
+#include <stdexcept>
+namespace nexa {
+std::string VirtualFileSystem::normalize(const std::string&p){if(p.empty())throw std::invalid_argument("Empty VFS path");std::string s=p.front()=='/'?p:"/"+p;std::string out;for(std::size_t i=0;i<s.size();){while(i<s.size()&&s[i]=='/')++i;auto j=i;while(j<s.size()&&s[j]!='/')++j;if(j==i)break;auto part=s.substr(i,j-i);if(part=="..")throw std::invalid_argument("Parent traversal is not allowed");if(part!="."){out+="/"+part;}i=j;}return out.empty()?"/":out;}
+void VirtualFileSystem::createDirectory(const std::string&p){auto n=normalize(p);if(std::find(directories_.begin(),directories_.end(),n)!=directories_.end())return;auto parent=n.substr(0,n.find_last_of('/'));if(parent.empty())parent="/";if(std::find(directories_.begin(),directories_.end(),parent)==directories_.end())throw std::runtime_error("Parent directory missing");directories_.push_back(n);}
+void VirtualFileSystem::createFile(const std::string&p,const std::vector<std::uint8_t>&d){auto n=normalize(p);if(files_.contains(n))throw std::runtime_error("File already exists");auto parent=n.substr(0,n.find_last_of('/'));if(parent.empty())parent="/";if(std::find(directories_.begin(),directories_.end(),parent)==directories_.end())throw std::runtime_error("Parent directory missing");files_[n]=d;}
+void VirtualFileSystem::writeFile(const std::string&p,const std::vector<std::uint8_t>&d){auto n=normalize(p);if(!files_.contains(n))throw std::runtime_error("File not found");files_[n]=d;}
+std::vector<std::uint8_t>VirtualFileSystem::readFile(const std::string&p)const{auto n=normalize(p);auto it=files_.find(n);if(it==files_.end())throw std::runtime_error("File not found");return it->second;}
+bool VirtualFileSystem::exists(const std::string&p)const{auto n=normalize(p);return files_.contains(n)||std::find(directories_.begin(),directories_.end(),n)!=directories_.end();}
+void VirtualFileSystem::removeFile(const std::string&p){auto n=normalize(p);if(!files_.erase(n))throw std::runtime_error("File not found");}
+std::vector<std::string>VirtualFileSystem::list(const std::string&p)const{auto dir=normalize(p);if(std::find(directories_.begin(),directories_.end(),dir)==directories_.end())throw std::runtime_error("Directory not found");std::vector<std::string>r;auto prefix=dir=="/"?"/":dir+"/";for(auto&d:directories_)if(d!=dir&&d.rfind(prefix,0)==0&&d.find('/',prefix.size())==std::string::npos)r.push_back(d.substr(prefix.size()));for(auto&f:files_)if(f.first.rfind(prefix,0)==0&&f.first.find('/',prefix.size())==std::string::npos)r.push_back(f.first.substr(prefix.size()));std::sort(r.begin(),r.end());return r;}
+}
