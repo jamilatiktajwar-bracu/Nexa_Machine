@@ -68,6 +68,24 @@ int main() {
     assert(schedulerShell.execute("ps").find("effective_priority=")!=std::string::npos);
     assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 9")=="invalid PID or priority (0-7)");
 
+    nexa::NexaKernel yieldKernel(256);
+    const auto yieldingPid=yieldKernel.spawn("voluntary-yield",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::Yield)},
+        {nexa::Opcode::Syscall,0},{nexa::Opcode::LoadImmediate,'Y'},{nexa::Opcode::Halt,0}}});
+    yieldKernel.setTimeQuantum(4);
+    assert(yieldKernel.scheduleOne());
+    auto yieldProcesses=yieldKernel.processes();
+    bool yieldedAfterSyscall=false;
+    for(const auto& proc:yieldProcesses)if(proc.pid==yieldingPid)
+        yieldedAfterSyscall=proc.state==nexa::ProcessState::Ready&&proc.ticks==2;
+    assert(yieldedAfterSyscall);
+    assert(yieldKernel.scheduleOne());
+    yieldProcesses=yieldKernel.processes();
+    bool yieldedProcessFinished=false;
+    for(const auto& proc:yieldProcesses)if(proc.pid==yieldingPid)
+        yieldedProcessFinished=proc.state==nexa::ProcessState::Halted&&proc.ticks==4;
+    assert(yieldedProcessFinished);
+
     nexa::NexaKernel ipcKernel(256);
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
