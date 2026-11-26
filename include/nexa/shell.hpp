@@ -8,5 +8,7 @@ public:
     [[nodiscard]] std::string execute(const std::string& line);
 private:
     NexaKernel& kernel_;
+    std::string currentDirectory_{"/"};
+    [[nodiscard]] std::string resolvePath(const std::string& path) const;
 };
 }
