@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | sched | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -121,7 +121,34 @@ std::string NexaShell::execute(const std::string& line) {
             auto processes=kernel_.processes(); auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
             if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="\nprocess fault: "+found->faultReason; return out;
         }
-        if(command=="ps") { std::string out; for(const auto& p:kernel_.processes()) { const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Halted?"halted":"faulted"; out+=std::to_string(p.pid)+" "+p.name+" "+state+" ticks="+std::to_string(p.ticks)+"\n"; } return out; }
+        if(command=="nice") {
+            std::string pidText,priorityText; input>>pidText>>priorityText;
+            if(pidText.empty()||priorityText.empty()) return "usage: nice PID PRIORITY";
+            if(user!="root") return "permission denied";
+            std::size_t pidUsed=0,priorityUsed=0;
+            const auto pidValue=std::stoull(pidText,&pidUsed);
+            const auto priorityValue=std::stoul(priorityText,&priorityUsed);
+            if(pidUsed!=pidText.size()||priorityUsed!=priorityText.size()||pidValue>0xFFFFFFFFu||priorityValue>7)
+                return "invalid PID or priority (0-7)";
+            kernel_.setPriority(static_cast<std::uint32_t>(pidValue),static_cast<std::uint8_t>(priorityValue));
+            return "priority updated";
+        }
+        if(command=="sched") {
+            return "policy=fixed-priority-round-robin quantum="+std::to_string(kernel_.timeQuantum())+
+                " ticks="+std::to_string(kernel_.systemTicks())+
+                " timer_interval="+std::to_string(kernel_.timerInterval())+
+                " timer_irqs="+std::to_string(kernel_.timerInterrupts())+
+                " pending_irqs="+std::to_string(kernel_.pendingTimerInterrupts());
+        }
+        if(command=="ps") {
+            std::string out;
+            for(const auto& p:kernel_.processes()) {
+                const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Halted?"halted":"faulted";
+                out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
+                    " ticks="+std::to_string(p.ticks)+" inbox="+std::to_string(p.pendingMessages)+"\n";
+            }
+            return out;
+        }
         return "unknown command: "+command+" (type help)";
     } catch(const std::exception& e) { return std::string("error: ")+e.what(); }
 }
