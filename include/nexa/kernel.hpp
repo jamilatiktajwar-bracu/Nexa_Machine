@@ -19,6 +19,7 @@ struct ProcessInfo {
     std::uint64_t ticks{};
     std::string faultReason;
     std::uint8_t priority{0};
+    std::size_t pendingMessages{0};
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
@@ -30,6 +31,8 @@ public:
     bool reapProcess(std::uint32_t pid);
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setTimeQuantum(std::size_t instructions);
+    [[nodiscard]] std::size_t timeQuantum() const noexcept{return timeQuantum_;}
+    [[nodiscard]] std::uint64_t timerInterval() const noexcept{return timerInterval_;}
     void setTimerInterval(std::uint64_t ticks);
     [[nodiscard]] std::uint64_t systemTicks() const noexcept{return systemTicks_;}
     [[nodiscard]] std::uint64_t timerInterrupts() const noexcept{return timerInterrupts_;}
