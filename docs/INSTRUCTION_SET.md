@@ -18,7 +18,7 @@ Flags: CMP and most value-loading/arithmetic instructions update the zero flag.
 | JZ / JNZ | label/address | Branch if zero flag is set/clear |
 | PUSH / POP | A or B | Shared LIFO stack |
 | CALL / RET | label / none | Push return PC and return |
-| PRINT | A | Print A as decimal |
+| PRINT | A | Print A as decimal to host console |\n| IN | A, port | Read byte from keyboard port 0 (empty queue returns 0) |\n| OUT | A, port | Write A as character to display port 1 |
 | HALT | none | Stop execution |
 
 Labels are case-insensitive and must be alone on a line, ending with `:`.
@@ -31,3 +31,4 @@ From the interactive console:
 - `state-load path.nexa-state` — restore snapshot (replaces current program and RAM).
 
 Snapshots store registers, RAM, program, PC, stack, flags, halt state, and instruction count. They are binary files and should only be loaded from trusted sources.
+\n## Device ports\n- Port 0: keyboard input. Queue text from the console using `keyboard TEXT` before running. The VM consumes one byte per `IN A, 0`.\n- Port 1: character display. `OUT A, 1` writes the character to the host console and device output buffer.\n\n## Debugger\n- `step` executes one instruction.\n- `break ADDRESS` sets an instruction-address breakpoint. `run` / `continue` stops when the program reaches it.\n- GUI has Run, Step, breakpoint setting, and a 64-byte hex RAM view.\n\n## Boot demo\n`examples/boot_message.nexa` is a startup-message demonstration. It is not a real bootloader or OS boot process.\n
