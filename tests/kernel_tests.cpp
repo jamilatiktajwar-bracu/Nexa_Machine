@@ -76,7 +76,7 @@ int main() {
     auto guestIpcProcesses=guestIpcKernel.processes();
     bool receiverBlocked=false;
     for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)receiverBlocked=proc.state==nexa::ProcessState::Blocked;
-    assert(receiverBlocked);
+    assert(receiverBlocked&&!guestIpcKernel.hasDeadlock());
     assert(guestIpcKernel.scheduleOne());
     guestIpcProcesses=guestIpcKernel.processes();
     bool receiverWoken=false;
@@ -84,6 +84,36 @@ int main() {
     assert(receiverWoken);
     guestIpcKernel.run();
     assert(guestIpcKernel.takeConsoleOutput()=="Z");
+    nexa::NexaKernel blockedKernel(256);
+    const auto waitingPid=blockedKernel.spawn("waiting-reader",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::ReceiveMessage)},
+        {nexa::Opcode::LoadBImmediate,100},{nexa::Opcode::Syscall,0},
+        {nexa::Opcode::Load,105},{nexa::Opcode::Output,nexa::VM::DisplayPort},
+        {nexa::Opcode::Halt,0}}});
+    blockedKernel.setTimeQuantum(8);
+    assert(blockedKernel.scheduleOne());
+    assert(blockedKernel.hasDeadlock());
+    assert(!blockedKernel.scheduleOne());
+    const auto wakeSource=blockedKernel.spawn("wake-source",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    assert(!blockedKernel.hasDeadlock());
+    assert(blockedKernel.sendMessage(wakeSource,waitingPid,{'A'}));
+    assert(blockedKernel.scheduleOne());
+    blockedKernel.run();
+    assert(blockedKernel.takeConsoleOutput()=="A");
+
+    // Inbox capacity is bounded and FIFO; a full mailbox never overwrites messages.
+    for(std::uint8_t value=0;value<64;++value)
+        assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{value}));
+    assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,{99}));
+    auto ipcProcesses=ipcKernel.processes();
+    bool inboxFull=false;
+    for(const auto& proc:ipcProcesses)if(proc.pid==ipcReceiver)inboxFull=proc.pendingMessages==64;
+    assert(inboxFull);
+    for(std::uint8_t value=0;value<64;++value) {
+        auto message=ipcKernel.receiveMessage(ipcReceiver);
+        assert(message&&message->payload.size()==1&&message->payload[0]==value);
+    }
+
 
     nexa::NexaKernel pagingKernel(1024);
     const auto pagingPid=pagingKernel.spawn("paged-load-store",nexa::Executable{0,{
