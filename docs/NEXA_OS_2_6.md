@@ -7,7 +7,7 @@ The virtual memory manager now caches translations by address-space ID and virtu
 Process data pages are no longer allocated eagerly at spawn. An unmapped data-page access raises a simulated page fault; the kernel page-fault callback allocates and zero-initializes the page, then retries translation. Code address spaces do not use this data-page allocator: an unmapped code page remains an execution fault.
 
 ## Memory reclamation
-Unmapping and address-space destruction release physical frames. Released frames are zeroed when allocated again. TLB entries are invalidated when address spaces change.
+Unmapping and address-space destruction release physical frames. Released frames are zeroed when allocated again. TLB entries are invalidated when address spaces change. `NexaKernel::reapProcess(pid)` removes a halted or faulted process, destroys both data and code address spaces, clears per-process file permissions, and releases all mapped frames. Ready/running processes cannot be reaped.
 
 ## Instrumentation
 - `tlbHits()`, `tlbMisses()`
