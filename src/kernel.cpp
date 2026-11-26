@@ -27,7 +27,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     try {
         memory_.createAddressSpace(codeSpace);
         codeSpaceCreated=true;
-        const auto codePages=(image.code.size()+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;
+        const auto codePages=((image.code.size()*3)+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;
         for(std::size_t page=0;page<codePages;++page)
             memory_.mapPage(codeSpace,static_cast<std::uint8_t>(page),true,true,true);
         for(std::size_t index=0;index<image.code.size();++index) {
