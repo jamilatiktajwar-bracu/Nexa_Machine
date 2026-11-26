@@ -31,6 +31,9 @@ void VM::step() {
         case Opcode::LoadImmediate:
             a_ = instruction.operand;
             break;
+        case Opcode::LoadBImmediate:
+            b_ = instruction.operand;
+            break;
         case Opcode::Add:
             a_ = static_cast<std::uint8_t>(a_ + b_);
             break;
