@@ -119,7 +119,7 @@ public:
     void deserialize(const std::vector<std::uint8_t>& bytes) {
         const std::string data(bytes.begin(),bytes.end()); std::istringstream in(data);
         std::string header; if(!std::getline(in,header)||(header!="NEXASEC1"&&header!="NEXASEC2"&&header!="NEXASEC3"&&header!="NEXASEC4")) throw std::invalid_argument("invalid security metadata");
-        const bool version2=header=="NEXASEC2"||header=="NEXASEC3";
+        const bool version2=header=="NEXASEC2"||header=="NEXASEC3"||header=="NEXASEC4";
         const bool version3=header=="NEXASEC3"||header=="NEXASEC4";\n        const bool version4=header=="NEXASEC4";
         std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {}, {},false}}};
         auto owners=std::map<std::string,FileOwner>{};
