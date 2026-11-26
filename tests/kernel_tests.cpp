@@ -103,6 +103,17 @@ int main() {
     assert(shell.execute("login root root-secret")=="logged in as root");
     assert(shell.execute("groupadd developers")=="created group developers");
     assert(shell.execute("usermod -g developers guest")=="primary group updated");
+    assert(shell.execute("write /team.txt team-data")=="wrote 9 bytes");
+    assert(shell.execute("chgrp developers /team.txt")=="group updated");
+    assert(shell.execute("chmod 640 /team.txt")=="mode updated");
+    assert(shell.execute("login guest renewed-secret")=="logged in as guest");
+    assert(shell.execute("cat /team.txt")=="team-data");
+    assert(shell.execute("write /team.txt denied")=="permission denied");
+    assert(shell.execute("login root root-secret")=="logged in as root");
+    assert(shell.execute("chmod 660 /team.txt")=="mode updated");
+    assert(shell.execute("login guest renewed-secret")=="logged in as guest");
+    assert(shell.execute("write /team.txt shared")=="wrote 6 bytes");
+    assert(shell.execute("login root root-secret")=="logged in as root");
     assert(shell.execute("savefs /tmp/nexa_security_test.img")=="filesystem image saved");
     nexa::NexaKernel restoredKernel(1024);
     nexa::NexaShell restoredShell(restoredKernel);
