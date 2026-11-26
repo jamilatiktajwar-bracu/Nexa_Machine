@@ -56,7 +56,7 @@ public:
         std::ostringstream out;
         out << "NEXASEC2\n";
         for(const auto& [name,record]:users_) {
-            out << "U " << std::quoted(name) << " " << std::quoted(record.group) << " " << record.passwordSet;
+            out << "U " << std::quoted(name) << " " << std::quoted(record.group) << " " << record.passwordSet << " ";
             for(auto b:record.salt) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
             out << " ";
             for(auto b:record.digest) out << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(b);
