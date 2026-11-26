@@ -138,7 +138,9 @@ std::string NexaShell::execute(const std::string& line) {
                 " ticks="+std::to_string(kernel_.systemTicks())+
                 " timer_interval="+std::to_string(kernel_.timerInterval())+
                 " timer_irqs="+std::to_string(kernel_.timerInterrupts())+
-                " pending_irqs="+std::to_string(kernel_.pendingTimerInterrupts());
+                " pending_irqs="+std::to_string(kernel_.pendingTimerInterrupts())+
+                " aging_threshold="+std::to_string(kernel_.priorityAgingThreshold())+
+                " deadlock="+(kernel_.hasDeadlock()?"yes":"no");
         }
         if(command=="ps") {
             std::string out;
