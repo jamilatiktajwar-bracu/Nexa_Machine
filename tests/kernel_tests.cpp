@@ -94,6 +94,18 @@ int main() {
     assert(shellMemoryKernel.memoryManager().swapFilePath()=="/tmp/nexa_shell_swap.img");
     assert(memoryShell.execute("memstat").find("swap_backend=disk")!=std::string::npos);
     std::remove("/tmp/nexa_shell_swap.img");
+    nexa::NexaKernel processControlKernel(256);
+    const auto framesBeforeManagedProcess=processControlKernel.memoryManager().freeFrames();
+    const auto managedPid=processControlKernel.spawn("managed-loop",looping);
+    nexa::NexaShell processShell(processControlKernel);
+    assert(processShell.execute("kill "+std::to_string(managedPid))=="process terminated");
+    auto managedProcesses=processControlKernel.processes();
+    assert(managedProcesses.size()==1&&managedProcesses.front().state==nexa::ProcessState::Halted);
+    assert(processShell.execute("reap "+std::to_string(managedPid))=="process reaped");
+    assert(processControlKernel.processes().empty());
+    assert(processControlKernel.memoryManager().freeFrames()==framesBeforeManagedProcess);
+    assert(processShell.execute("reap "+std::to_string(managedPid))=="unknown or active process");
+
     nexa::NexaKernel ipcKernel(256);
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
