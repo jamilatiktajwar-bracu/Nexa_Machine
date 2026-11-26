@@ -27,7 +27,7 @@ class NexaSecurity {
     static constexpr int iterations_ = 120000;
     static constexpr unsigned maxFailedAttempts_ = 5;
 public:
-    NexaSecurity() { users_["root"]={"root",{}, {},false}; }
+    NexaSecurity() { users_["root"]={"root",{}, {}, {},false}; }
 
     bool addUser(const std::string& name, const std::string& password) {
         if(name.empty() || name.find('/')!=std::string::npos || name.find('"')!=std::string::npos || users_.count(name) || password.size()<8) return false;
@@ -121,7 +121,7 @@ public:
         std::string header; if(!std::getline(in,header)||(header!="NEXASEC1"&&header!="NEXASEC2"&&header!="NEXASEC3"&&header!="NEXASEC4")) throw std::invalid_argument("invalid security metadata");
         const bool version2=header=="NEXASEC2"||header=="NEXASEC3";
         const bool version3=header=="NEXASEC3"||header=="NEXASEC4";\n        const bool version4=header=="NEXASEC4";
-        std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {},false}}};
+        std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {}, {},false}}};
         auto owners=std::map<std::string,FileOwner>{};
         std::set<std::string> groups = version3 ? std::set<std::string>{} : std::set<std::string>{"root"};
         bool rootSeen=false;
