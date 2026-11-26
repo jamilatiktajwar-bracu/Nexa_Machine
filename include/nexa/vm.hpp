@@ -3,9 +3,10 @@
 #include <deque>
 #include <set>
 #include <string>
+#include <map>
 #include <vector>
 namespace nexa {
-enum class Opcode : std::uint8_t { LoadImmediate, LoadBImmediate, Add, Sub, Inc, Dec, Compare, CompareImmediate, Store, Load, Print, Input, Output, Syscall, Jump, JumpZero, JumpNotZero, PushA, PushB, PopA, PopB, Call, Return, Halt };
+enum class Opcode : std::uint8_t { LoadImmediate, LoadBImmediate, Add, Sub, Inc, Dec, Compare, CompareImmediate, Store, Load, Print, Input, Output, Syscall, Jump, JumpZero, JumpNotZero, PushA, PushB, PopA, PopB, Call, Return, Interrupt, InterruptReturn, Halt };
 struct Instruction { Opcode opcode{}; std::uint16_t operand{}; };
 class VM {
 public:
@@ -22,6 +23,8 @@ public:
  void setBreakpoint(std::size_t address);
  void clearBreakpoint(std::size_t address);
  void clearBreakpoints();
+ void setInterruptVector(std::uint8_t vector,std::uint16_t address);
+ void triggerInterrupt(std::uint8_t vector);
  [[nodiscard]] bool hasBreakpoint(std::size_t address)const;
  [[nodiscard]] const std::set<std::size_t>& breakpoints()const noexcept{return breakpoints_;}
  [[nodiscard]] const std::string& deviceOutput()const noexcept{return deviceOutput_;}
@@ -50,6 +53,7 @@ private:
  std::deque<std::uint8_t>keyboard_;
  std::string deviceOutput_;
  std::set<std::size_t>breakpoints_;
+ std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
  bool halted_{false},zeroFlag_{false};
  void step();
