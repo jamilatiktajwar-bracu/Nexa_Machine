@@ -142,6 +142,12 @@ int main() {
     assert(shell.execute("ps").find("hello.nexa halted")!=std::string::npos);
     assert(shell.execute("rm hello.nexa")=="removed /apps/hello.nexa");
     assert(shell.execute("cd ..")=="/");
+    assert(shell.execute("chmod 700 /apps")=="mode updated");
+    assert(shell.execute("login guest renewed-secret")=="logged in as guest");
+    assert(shell.execute("ls /apps")=="permission denied");
+    assert(shell.execute("cd /apps")=="permission denied");
+    assert(shell.execute("touch /apps/blocked.txt")=="permission denied");
+    assert(shell.execute("login root root-secret")=="logged in as root");
     assert(shell.execute("logout")=="session closed");
     assert(shell.execute("whoami")=="(not logged in)");
     assert(shell.execute("pwd")=="session locked; login first");
