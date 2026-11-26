@@ -24,7 +24,7 @@ void VM::clearBreakpoint(std::size_t a){breakpoints_.erase(a);}
 void VM::clearBreakpoints(){breakpoints_.clear();}
 bool VM::hasBreakpoint(std::size_t a)const{return breakpoints_.contains(a);}
 void VM::setInterruptVector(std::uint8_t v,std::uint16_t a){if(a>=program_.size())throw std::out_of_range("Interrupt handler outside program");interruptVectors_[v]=a;}
-void VM::triggerInterrupt(std::uint8_t v){auto it=interruptVectors_.find(v);if(it==interruptVectors_.end())throw std::runtime_error("Unhandled interrupt vector");stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=it->second;halted_=false;}
+void VM::triggerInterrupt(std::uint8_t v){auto it=interruptVectors_.find(v);if(it==interruptVectors_.end())throw std::runtime_error("Unhandled interrupt vector");if(stack_.size()>=StackLimit)throw std::runtime_error("Stack overflow");stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=it->second;halted_=false;}
 void VM::saveState(const std::string&path)const{
  std::ofstream out(path,std::ios::binary);if(!out)throw std::runtime_error("Cannot write state file: "+path);
  const char magic[8]={'N','E','X','A','S','T','0','3'};out.write(magic,8);
@@ -43,7 +43,7 @@ void VM::loadState(const std::string&path){
  auto get=[&](auto&v){in.read(reinterpret_cast<char*>(&v),sizeof(v));if(!in)throw std::runtime_error("Truncated state file");};
  std::uint32_t ram=0,prog=0,stk=0;std::uint8_t na=0,nb=0,nh=0,nz=0;std::uint64_t npc=0,ncount=0;
  get(ram);get(prog);get(stk);get(na);get(nb);get(npc);get(ncount);get(nh);get(nz);
- if(ram==0||ram>65536||prog>65535||stk>1000000||npc>prog||nh>1||nz>1)throw std::runtime_error("Invalid state metadata");
+ if(ram==0||ram>65536||prog>65535||stk>StackLimit||npc>prog||nh>1||nz>1)throw std::runtime_error("Invalid state metadata");
  std::vector<std::uint8_t> nr(ram);in.read(reinterpret_cast<char*>(nr.data()),static_cast<std::streamsize>(nr.size()));if(!in)throw std::runtime_error("Truncated RAM in state");
  std::vector<std::uint8_t> nfb(ScreenWidth*ScreenHeight);in.read(reinterpret_cast<char*>(nfb.data()),static_cast<std::streamsize>(nfb.size()));if(!in)throw std::runtime_error("Truncated framebuffer");std::vector<Instruction> np;np.reserve(prog);
  for(std::uint32_t k=0;k<prog;++k){Instruction ins;get(ins.opcode);get(ins.operand);if(static_cast<unsigned>(ins.opcode)>static_cast<unsigned>(Opcode::Halt))throw std::runtime_error("Invalid opcode in state");np.push_back(ins);}
@@ -73,11 +73,11 @@ void VM::step(){
  case Opcode::Jump:pc_=i.operand;break;
  case Opcode::JumpZero:if(zeroFlag_)pc_=i.operand;break;
  case Opcode::JumpNotZero:if(!zeroFlag_)pc_=i.operand;break;
- case Opcode::PushA:stack_.push_back(a_);break;
- case Opcode::PushB:stack_.push_back(b_);break;
+ case Opcode::PushA:if(stack_.size()>=StackLimit)throw std::runtime_error("Stack overflow");stack_.push_back(a_);break;
+ case Opcode::PushB:if(stack_.size()>=StackLimit)throw std::runtime_error("Stack overflow");stack_.push_back(b_);break;
  case Opcode::PopA:if(stack_.empty())throw std::runtime_error("Stack underflow");a_=static_cast<std::uint8_t>(stack_.back());stack_.pop_back();zeroFlag_=a_==0;break;
  case Opcode::PopB:if(stack_.empty())throw std::runtime_error("Stack underflow");b_=static_cast<std::uint8_t>(stack_.back());stack_.pop_back();zeroFlag_=b_==0;break;
- case Opcode::Call:stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=i.operand;break;
+ case Opcode::Call:if(stack_.size()>=StackLimit)throw std::runtime_error("Stack overflow");stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=i.operand;break;
  case Opcode::Return:if(stack_.empty())throw std::runtime_error("Stack underflow on RET");pc_=stack_.back();stack_.pop_back();break;
  case Opcode::Interrupt:triggerInterrupt(static_cast<std::uint8_t>(i.operand));break;
  case Opcode::InterruptReturn:if(stack_.empty())throw std::runtime_error("Stack underflow on IRET");pc_=stack_.back();stack_.pop_back();break;
