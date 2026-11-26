@@ -12,7 +12,7 @@ NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>
 }
 std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image) {
     if(name.empty()) throw std::invalid_argument("Process name cannot be empty");
-    if(image.code.empty()||image.entryPoint>=image.code.size()||image.code.size()>65536) throw std::invalid_argument("Invalid process executable");
+    if(image.code.empty()||image.entryPoint>=image.code.size()||image.code.size()>65536/3) throw std::invalid_argument("Invalid process executable");
     const auto pid=nextPid_++;
     Process p{ProcessInfo{pid,name,ProcessState::Ready,0,{}},VM(ramBytes_)};
     p.machine.loadProgram(image.code);
@@ -29,7 +29,16 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
         codeSpaceCreated=true;
         const auto codePages=(image.code.size()+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;
         for(std::size_t page=0;page<codePages;++page)
-            memory_.mapPage(codeSpace,static_cast<std::uint8_t>(page),false,true,true);
+            memory_.mapPage(codeSpace,static_cast<std::uint8_t>(page),true,true,true);
+        for(std::size_t index=0;index<image.code.size();++index) {
+            const auto address=index*3;
+            const auto& instruction=image.code[index];
+            memory_.write(codeSpace,static_cast<std::uint16_t>(address),static_cast<std::uint8_t>(instruction.opcode),MemoryAccess::Kernel);
+            memory_.write(codeSpace,static_cast<std::uint16_t>(address+1),static_cast<std::uint8_t>(instruction.operand&0xFF),MemoryAccess::Kernel);
+            memory_.write(codeSpace,static_cast<std::uint16_t>(address+2),static_cast<std::uint8_t>(instruction.operand>>8),MemoryAccess::Kernel);
+        }
+        for(std::size_t page=0;page<codePages;++page)
+            memory_.protectPage(codeSpace,static_cast<std::uint8_t>(page),false,true,true);
     } catch(...) {
         if(codeSpaceCreated) memory_.destroyAddressSpace(codeSpace);
         memory_.destroyAddressSpace(pid);
@@ -38,8 +47,23 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.setMemoryAccessors(
         [this,pid](std::uint16_t address){return memory_.read(pid,address,MemoryAccess::User);},
         [this,pid](std::uint16_t address,std::uint8_t value){memory_.write(pid,address,value,MemoryAccess::User);});
-    p.machine.setInstructionFetchGuard([this,codeSpace](std::uint16_t address){
-        (void)memory_.canExecute(codeSpace,address,MemoryAccess::User);
+    p.machine.setInstructionFetchGuard([this,codeSpace](std::uint16_t instructionIndex){
+        const auto byteAddress=static_cast<std::size_t>(instructionIndex)*3;
+        if(byteAddress>65533) throw std::runtime_error("Instruction address exceeds code memory");
+        (void)memory_.canExecute(codeSpace,static_cast<std::uint16_t>(byteAddress),MemoryAccess::User);
+    });
+    p.machine.setInstructionReader([this,codeSpace](std::uint16_t instructionIndex){
+        const auto address=static_cast<std::size_t>(instructionIndex)*3;
+        if(address>65533) throw std::runtime_error("Instruction address exceeds code memory");
+        std::uint8_t bytes[3]{};
+        for(std::size_t offset=0;offset<3;++offset) {
+            const auto virtualAddress=static_cast<std::uint16_t>(address+offset);
+            (void)memory_.canExecute(codeSpace,virtualAddress,MemoryAccess::User);
+            bytes[offset]=memory_.read(codeSpace,virtualAddress,MemoryAccess::Kernel);
+        }
+        if(bytes[0]>static_cast<std::uint8_t>(Opcode::Halt)) throw std::runtime_error("Invalid instruction opcode in guest memory");
+        const auto operand=static_cast<std::uint16_t>(bytes[1]|(static_cast<std::uint16_t>(bytes[2])<<8));
+        return Instruction{static_cast<Opcode>(bytes[0]),operand};
     });
     processes_.emplace(pid,std::move(p));
     filePermissions_[pid] = {};
