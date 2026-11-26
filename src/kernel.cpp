@@ -3,7 +3,7 @@
 #include <exception>
 #include <stdexcept>
 namespace nexa {
-NexaKernel::NexaKernel(std::size_t n):ramBytes_(n){VM check(n);(void)check;}
+NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>(VirtualMemoryManager::PageSize,((n+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize)*VirtualMemoryManager::PageSize*16)){VM check(n);(void)check;}
 std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image) {
     if(name.empty()) throw std::invalid_argument("Process name cannot be empty");
     if(image.code.empty()||image.entryPoint>=image.code.size()) throw std::invalid_argument("Invalid process executable");
@@ -16,6 +16,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     processes_.emplace(pid,std::move(p));
+    memory_.createAddressSpace(pid);
     filePermissions_[pid] = {};
     return pid;
 }
