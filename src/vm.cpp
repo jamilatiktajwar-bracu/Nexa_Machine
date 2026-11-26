@@ -10,8 +10,8 @@ VM::VM(std::size_t n):ram_(n,0),framebuffer_(ScreenWidth*ScreenHeight,0){if(!n||
 void VM::loadProgram(std::vector<Instruction>p){program_=std::move(p);reset();}
 void VM::setProgramCounter(std::uint16_t a){if(a>=program_.size())throw std::out_of_range("Program entry outside code");pc_=a;}
 void VM::reset(){pc_=0;a_=b_=0;std::fill(ram_.begin(),ram_.end(),0);stack_.clear();keyboard_.clear();deviceOutput_.clear();std::fill(framebuffer_.begin(),framebuffer_.end(),0);graphicsX_=graphicsY_=0;graphicsColor_=1;watchpointHit_=false;halted_=false;zeroFlag_=false;instructionCount_=0;}
-std::uint8_t VM::readMemory(std::uint16_t a)const noexcept{return a<ram_.size()?ram_[a]:0;}
-void VM::writeMemory(std::uint16_t a,std::uint8_t v){if(a>=ram_.size())throw std::out_of_range("RAM address out of range");ram_[a]=v;if(watchpointEnabled_&&a==watchedAddress_)watchpointHit_=true;}
+std::uint8_t VM::readMemory(std::uint16_t a)const{if(a>=ram_.size())return 0;return memoryReader_?memoryReader_(a):ram_[a];}
+void VM::writeMemory(std::uint16_t a,std::uint8_t v){if(a>=ram_.size())throw std::out_of_range("RAM address out of range");if(memoryWriter_)memoryWriter_(a,v);else ram_[a]=v;if(watchpointEnabled_&&a==watchedAddress_)watchpointHit_=true;}
 void VM::setWatchpoint(std::uint16_t a){if(a>=ram_.size())throw std::out_of_range("Watchpoint address outside RAM");watchedAddress_=a;watchpointEnabled_=true;watchpointHit_=false;}
 void VM::clearWatchpoint(std::uint16_t a){if(watchpointEnabled_&&watchedAddress_==a)watchpointEnabled_=false;watchpointHit_=false;}
 bool VM::pixel(std::size_t x,std::size_t y)const noexcept{return x<ScreenWidth&&y<ScreenHeight&&framebuffer_[y*ScreenWidth+x]!=0;}
@@ -63,8 +63,8 @@ void VM::step(){
  case Opcode::Dec:a_=static_cast<std::uint8_t>(a_-1);zeroFlag_=a_==0;break;
  case Opcode::Compare:zeroFlag_=a_==b_;break;
  case Opcode::CompareImmediate:if(i.operand>255)throw std::runtime_error("Immediate overflow");zeroFlag_=a_==i.operand;break;
- case Opcode::Store:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");ram_[i.operand]=a_;if(watchpointEnabled_&&i.operand==watchedAddress_)watchpointHit_=true;break;
- case Opcode::Load:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");a_=ram_[i.operand];zeroFlag_=a_==0;break;
+ case Opcode::Store:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");writeMemory(i.operand,a_);break;
+ case Opcode::Load:if(i.operand>=ram_.size())throw std::runtime_error("RAM address out of range");a_=readMemory(i.operand);zeroFlag_=a_==0;break;
  case Opcode::Print:std::cout<<"Output: "<<static_cast<unsigned>(a_)<<'\n';break;
  case Opcode::Input:if(i.operand==KeyboardPort){a_=keyboard_.empty()?0:keyboard_.front();if(!keyboard_.empty())keyboard_.pop_front();zeroFlag_=a_==0;}else if(i.operand==GraphicsXPort)a_=graphicsX_;else if(i.operand==GraphicsYPort)a_=graphicsY_;else throw std::runtime_error("Unknown input port");break;
  case Opcode::Output:if(i.operand==DisplayPort){deviceOutput_.push_back(static_cast<char>(a_));std::cout.put(static_cast<char>(a_));}else if(i.operand==GraphicsXPort)graphicsX_=a_;else if(i.operand==GraphicsYPort)graphicsY_=a_;else if(i.operand==GraphicsColorPort)graphicsColor_=a_?1:0;else if(i.operand==GraphicsDrawPort){if(graphicsX_<ScreenWidth&&graphicsY_<ScreenHeight)framebuffer_[graphicsY_*ScreenWidth+graphicsX_]=graphicsColor_;}else if(i.operand==GraphicsClearPort)std::fill(framebuffer_.begin(),framebuffer_.end(),a_?1:0);else throw std::runtime_error("Unknown output port");break;
