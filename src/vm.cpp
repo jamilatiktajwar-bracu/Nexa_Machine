@@ -15,6 +15,7 @@ void VM::writeMemory(std::uint16_t a,std::uint8_t v){if(a>=ram_.size())throw std
 void VM::setWatchpoint(std::uint16_t a){if(a>=ram_.size())throw std::out_of_range("Watchpoint address outside RAM");watchedAddress_=a;watchpointEnabled_=true;watchpointHit_=false;}
 void VM::clearWatchpoint(std::uint16_t a){if(watchpointEnabled_&&watchedAddress_==a)watchpointEnabled_=false;watchpointHit_=false;}
 bool VM::pixel(std::size_t x,std::size_t y)const noexcept{return x<ScreenWidth&&y<ScreenHeight&&framebuffer_[y*ScreenWidth+x]!=0;}
+void VM::drawPixel(std::size_t x,std::size_t y,bool white)noexcept{if(x<ScreenWidth&&y<ScreenHeight)framebuffer_[y*ScreenWidth+x]=white?1:0;}
 void VM::run(std::size_t budget){std::size_t start=instructionCount_;while(!halted_){if(hasBreakpoint(pc_)||watchpointHit_)return;if(instructionCount_-start>=budget)throw std::runtime_error("Instruction budget exceeded; possible infinite loop");step();}}
 bool VM::stepInstruction(){if(halted_)return false;step();return !halted_;}
 void VM::queueKeyboardInput(const std::string& text){for(unsigned char ch:text)keyboard_.push_back(ch);}
