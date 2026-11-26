@@ -188,11 +188,11 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 
 ## Nexa OS 2.9 — Priority scheduling, timer preemption and IPC
 
-- Priority levels 0–7 with round-robin fairness among Ready processes at the same priority.
+- Priority levels 0–7 with round-robin fairness among Ready processes at the same priority, plus configurable priority aging to reduce starvation.
 - Configurable instruction quantum; deterministic preemption when a simulated timer interrupt fires.
 - Global instruction ticks, timer-interrupt and pending-interrupt counters with explicit acknowledgement.
 - `SYS Yield` voluntarily ends the current scheduling slice.
 - Bounded FIFO process inboxes, host APIs `sendMessage()` / `receiveMessage()`, and blocking guest receive with automatic wakeup.
 - Guest syscalls `SendMessage` (11) and `ReceiveMessage` (12), validated RAM descriptors, bounded payloads and scheduler deadlock detection.
-- Shell diagnostics: `ps`, `sched`, and root-only `nice PID PRIORITY`.
+- Shell diagnostics: `ps`, `sched`, root-only `nice PID PRIORITY`, and root-only `aging TICKS` (`0` disables aging).
 - See [Nexa OS 2.9 documentation](docs/NEXA_OS_2_9.md) for the guest ABI and scheduler semantics.
