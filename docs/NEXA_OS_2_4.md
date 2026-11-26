@@ -16,4 +16,4 @@
 See `include/nexa/memory_manager.hpp`. The kernel exposes `memoryManager()` for page-table operations and diagnostics.
 
 ## Scope
-This release establishes and tests the paging allocator and page protection layer. Existing VM instruction execution still uses its process-local RAM array; automatic translation of guest LOAD/STORE and syscall memory references through page tables is a planned integration step, not claimed as complete here.
+This release establishes and tests the paging allocator and page protection layer. The VM now routes guest LOAD/STORE and kernel-mediated process memory access through the process page table. Each spawned process receives mapped pages for its configured RAM; user-mode guest accesses are subject to page protection, while explicit kernel inspection/writes use supervisor access. Instruction bytes remain in the VM's executable instruction vector rather than being fetched from guest RAM.
