@@ -13,6 +13,7 @@ void VirtualMemoryManager::createAddressSpace(std::uint32_t pid) {
 }
 void VirtualMemoryManager::destroyAddressSpace(std::uint32_t pid) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
+    invalidateTlb(pid);
     for(const auto& [page,m]:it->second){(void)page;releaseFrame(m.frame);}
     spaces_.erase(it);
 }
