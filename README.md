@@ -1,47 +1,78 @@
 # Nexa Machine
 
-Nexa Machine is an experimental virtual-machine project. The first milestone is a small, portable educational VM engine; later milestones will add a desktop manager and hardware-assisted virtualization.
+Nexa Machine is an experimental virtual-machine project. Our first stage is a portable educational byte-sized VM; future stages will add a desktop manager and hardware-assisted virtualization.
 
-## Current milestone: Nexa VM 0.1
+## Nexa VM 0.2 (Assembler + Loader)
 
-- 8-bit virtual registers (A, B)
-- 256-byte virtual RAM
-- Small instruction set (LOAD, ADD, STORE, PRINT, HALT)
-- Program execution with basic error checking
-- C++20 and CMake
+- 8-bit registers A and B
+- 256 bytes of virtual RAM
+- Assembly text parser and file loader
+- CLI runs `.nexa` program files
+- Instructions: `LOAD`, `ADD`, `STORE`, `PRINT`, `HALT`
+- Decimal and hexadecimal values (e.g. `42`, `0x2A`)
+- `#` and `;` comments
+- C++20 / CMake
 
-> This initial emulator is **not** a hypervisor and cannot boot Windows or Linux. Native virtualization (KVM/WHPX) is planned for a later milestone.
+**This is an educational CPU emulator, not yet a hypervisor. It cannot boot a guest OS.**
 
 ## Build
 
-Requires CMake 3.20+ and a C++20 compiler.
+Requirements: CMake 3.20+ and a C++20 compiler.
 
-```bash
+```sh
 cmake -S . -B build
 cmake --build build
 ./build/nexa
 ```
 
-On Windows, run `build\\Debug\\nexa.exe` (or the matching build configuration).
+Windows: run the executable in the generated build directory (for example `build\\Debug\\nexa.exe`).
 
-## Run
+## Run your own assembly
 
-The first version runs a built-in demonstration program. Expected output:
+Create `example.nexa`:
+
+```asm
+LOAD A, 19
+LOAD B, 23
+ADD A, B
+PRINT A
+HALT
+```
+
+Then:
+
+```sh
+./build/nexa example.nexa
+```
+
+Expected:
 
 ```
-Nexa Machine VM starting...
+Nexa Machine VM 0.2
 Output: 42
 VM halted.
 ```
 
+### Memory example
+
+```asm
+LOAD A, 77
+STORE [10]
+LOAD A, [10]
+PRINT A
+HALT
+```
+
 ## Roadmap
 
-1. [x] Minimal VM core and demo
-2. [ ] Program loader and assembly-like text format
-3. [ ] VM configuration and virtual disk format
-4. [ ] Qt 6 desktop management UI
-5. [ ] Native virtualization backend (KVM / WHPX)
-6. [ ] Guest OS boot support
+- [x] VM execution core
+- [x] Assembly parser and file loader
+- [x] CLI program runner
+- [ ] Unit tests and instruction encoding
+- [ ] VM config / virtual disk
+- [ ] Qt 6 desktop manager
+- [ ] Hardware acceleration (KVM / WHPX)
+- [ ] Bootable guest OS support
 
 ## License
 
