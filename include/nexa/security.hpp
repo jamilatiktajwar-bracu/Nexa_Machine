@@ -149,6 +149,10 @@ public:
         requireOwner(path); if(!hasUser(user)) throw std::invalid_argument("unknown user");
         owners_.at(path).user=user; owners_.at(path).group=users_.at(user).group;
     }
+    void chgrp(const std::string& path,const std::string& group) {
+        requireOwner(path); if(!groups_.count(group)) throw std::invalid_argument("unknown group");
+        owners_.at(path).group=group;
+    }
     void forgetPath(const std::string& path) { owners_.erase(path); }
     bool can(const std::string& path,char permission) const {
         if(current_=="root") return true;
