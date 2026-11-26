@@ -43,6 +43,15 @@ int main() {
     for(const auto& p:pagingKernel.processes())
         if(p.pid==protectedPid) protectedFault=p.state==nexa::ProcessState::Faulted&&p.faultReason.find("supervisor-only")!=std::string::npos;
     assert(protectedFault);
+    nexa::NexaKernel reclaimKernel(1024);
+    const auto freeBefore=reclaimKernel.memoryManager().freeFrames();
+    const auto reclaimPid=reclaimKernel.spawn("reclaim",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,7},{nexa::Opcode::Store,9},{nexa::Opcode::Halt,0}}});
+    reclaimKernel.run();
+    assert(reclaimKernel.memoryManager().freeFrames()<freeBefore);
+    assert(reclaimKernel.reapProcess(reclaimPid));
+    assert(reclaimKernel.memoryManager().freeFrames()==freeBefore);
+    assert(reclaimKernel.processes().empty());
     nexa::NexaKernel kernel(1024);
     nexa::Executable basic{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};
     const auto first=kernel.spawn("alpha",basic);
