@@ -248,7 +248,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
