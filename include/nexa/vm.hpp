@@ -23,7 +23,7 @@ public:
  void setInstructionFetchGuard(std::function<void(std::uint16_t)> guard){instructionFetchGuard_=std::move(guard);}
  void setInstructionReader(std::function<Instruction(std::uint16_t)> reader){instructionReader_=std::move(reader);}
  void setProgramCounter(std::uint16_t address);
- void retryCurrentInstruction() noexcept{pc_=currentInstruction_;}
+ void retryCurrentInstruction() noexcept{pc_=currentInstruction_;retryInstruction_=true;}
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
  void reset();
@@ -71,7 +71,7 @@ private:
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
- bool halted_{false},zeroFlag_{false};
+ bool halted_{false},zeroFlag_{false},retryInstruction_{false};
  PrivilegeMode privilegeMode_{PrivilegeMode::User};
  void step();
 };
