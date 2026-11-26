@@ -1,36 +1,63 @@
 # Nexa Machine
-Educational C++20 virtual machine and assembly environment. Not a hypervisor; cannot boot a guest OS.
+Educational C++20 virtual machine and assembly environment. This is an interpreter/emulator project, not a hypervisor; it cannot boot a guest OS.
 
-## Features (0.4)
-- 8-bit A/B CPU, 8-bit arithmetic, 16-bit RAM addressing
-- configurable RAM up to 64 KiB
-- assembly: `LOAD A, value`, `LOAD B, value`, `LOAD A, [address]`, `STORE [address]`, `ADD A, B`, `PRINT A`, `HALT`
-- config and virtual disk API
-- interactive console: `nexa console`
-- optional Qt6 desktop editor and runner
-- CMake, tests, GitHub Actions
+## Features (0.5)
+- 8-bit A/B registers, wraparound arithmetic, 16-bit RAM addressing (up to 64 KiB)
+- CPU instructions: LOAD, STORE, ADD, SUB, INC, DEC, CMP, PRINT, HALT
+- Control flow: JMP, JZ, JNZ, CALL, RET; label support
+- Stack operations: PUSH A/B, POP A/B
+- Configurable RAM, virtual disk API, console, optional Qt6 desktop
+- Runtime instruction counter and stack depth reporting in API
+- Automated C++ tests and GitHub Actions CI
 
-## Build
+## Assembly quick reference
+```asm
+LOAD A, 5
+LOAD B, 3
+ADD A, B       # A = 8
+SUB A, B       # A = 5
+INC A
+DEC A
+CMP A, 0       # updates zero flag
+JZ done
+JNZ loop
+JMP label
+PUSH A
+POP B
+CALL function
+RET
+PRINT A
+HALT
+```
+Labels are standalone tokens ending in colon. CMP sets the zero flag if the operands match. JZ/JNZ branch based on that flag. CALL pushes the return address; RET restores it. Stack is a shared LIFO for data and return addresses.
+
+## Countdown sample
+```asm
+LOAD A, 3
+loop:
+PRINT A
+DEC A
+CMP A, 0
+JNZ loop
+HALT
+```
+
+## Build and run
 ```sh
 cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ./build/nexa
-```
-GUI auto-builds if Qt6 Widgets is installed. To explicitly disable: `-DNEXA_BUILD_GUI=OFF`.
-
-## Commands
-```sh
 ./build/nexa examples/addition.nexa
+./build/nexa examples/memory_16bit.nexa
 ./build/nexa console
 ./build/nexa --config examples/configured_machine.json examples/memory_16bit.nexa
 ```
+Qt6 Widgets is optional; if installed, CMake builds `nexa_gui`. Disable with `-DNEXA_BUILD_GUI=OFF`.
+
 Console commands: help, load FILE, run, reset, status, mem ADDRESS, disk-read OFFSET COUNT, disk-write OFFSET BYTE..., disk-save, quit.
 
-## GUI
-Run `./build/nexa_gui` on systems where Qt6 Widgets is available. GUI has assembly editor, run/reset, output and status.
-
 ## Limitations
-VM instructions currently run synchronously; no OS boot, isolation, privileged CPU, GUI device emulation or hardware virtualization.
+No privileged CPU, device emulation layer, OS boot, sandboxing, or hardware virtualization. Instructions currently execute synchronously.
 
 MIT license.
