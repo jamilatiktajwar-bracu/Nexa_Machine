@@ -149,9 +149,9 @@ This remains an educational host-side security model. Password entry is still su
 ## Nexa OS 2.4 — Virtual Memory Manager
 
 - 256-byte paging with per-process virtual address spaces and physical frame allocation.
-- Page map/unmap and protection changes (read-only, user-accessible, supervisor-only).
+- Page map/unmap and protection changes (read-only, user-accessible, supervisor-only, executable/NX).
 - User-mode and kernel-mode memory access checks with explicit page-fault errors.
 - Physical frame zeroing on allocation and reuse after unmap/address-space destruction.
 - Kernel exposes its memory manager for diagnostics and controlled page-table operations.
-- Guest LOAD/STORE and kernel-mediated process RAM access now pass through the process page table. Instruction fetch still uses the VM's separate executable instruction vector.
+- Guest LOAD/STORE and kernel-mediated process RAM access now pass through the process page table. Instruction dispatch is guarded by a separate read-only executable code address space; instruction payloads remain in the VM instruction vector.
 
