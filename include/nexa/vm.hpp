@@ -10,13 +10,14 @@
 namespace nexa {
 enum class Opcode : std::uint8_t { LoadImmediate, LoadBImmediate, Add, Sub, Inc, Dec, Compare, CompareImmediate, Store, Load, Print, Input, Output, Syscall, Jump, JumpZero, JumpNotZero, PushA, PushB, PopA, PopB, Call, Return, Interrupt, InterruptReturn, Halt };
 struct Instruction { Opcode opcode{}; std::uint16_t operand{}; };
+enum class PrivilegeMode { User, Kernel };
 class VM {
 public:
  static constexpr std::size_t DefaultRamSize=256, ScreenWidth=64, ScreenHeight=32;
  static constexpr std::uint16_t KeyboardPort=0, DisplayPort=1, GraphicsXPort=2, GraphicsYPort=3, GraphicsColorPort=4, GraphicsDrawPort=5, GraphicsClearPort=6;
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
- void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}
+ void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}\n [[nodiscard]] PrivilegeMode privilegeMode()const noexcept{return privilegeMode_;}
  void setMemoryAccessors(std::function<std::uint8_t(std::uint16_t)> reader,std::function<void(std::uint16_t,std::uint8_t)> writer){memoryReader_=std::move(reader);memoryWriter_=std::move(writer);}
  void setInstructionFetchGuard(std::function<void(std::uint16_t)> guard){instructionFetchGuard_=std::move(guard);}
  void setInstructionReader(std::function<Instruction(std::uint16_t)> reader){instructionReader_=std::move(reader);}
@@ -68,7 +69,7 @@ private:
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
- bool halted_{false},zeroFlag_{false};
+ bool halted_{false},zeroFlag_{false};\n PrivilegeMode privilegeMode_{PrivilegeMode::User};
  void step();
 };
 }
