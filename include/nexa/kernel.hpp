@@ -31,6 +31,7 @@ public:
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
     std::uint32_t spawn(const std::string& name, const Executable& image);
     bool reapProcess(std::uint32_t pid);
+    bool terminateProcess(std::uint32_t pid);
     [[nodiscard]] bool hasDeadlock() const noexcept;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setTimeQuantum(std::size_t instructions);
