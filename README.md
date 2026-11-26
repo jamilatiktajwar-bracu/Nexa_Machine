@@ -1,7 +1,7 @@
 # Nexa Machine
 Educational C++20 virtual machine and assembly environment (not a hypervisor).
 
-## Version 0.8
+## Version 0.9 (OS architecture foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
 - Assembler constants (`CONST NAME, value` or `.CONST NAME, value`), labels, hex literals, #/;/\-\- comments
 - CPU, branches, stack, calls, character I/O, `SYS` service instruction
@@ -10,7 +10,7 @@ Educational C++20 virtual machine and assembly environment (not a hypervisor).
 - Single-step debugger, instruction breakpoints, RAM watchpoints and memory editing
 - Optional Qt GUI includes a pixel framebuffer panel and RAM hex viewer
 - VM snapshot persistence, virtual disk, execution budget
-- NexaOS host shell prototype
+- Guest software interrupt vectors with `INT`/`IRET` instructions\n- Portable executable binary format (`NEXAEXE1`) and CLI compile/load\n- In-memory virtual filesystem (directories, file CRUD, path traversal rejection)\n- Interactive GUI pixel drawing (left-click/drag white, right-click/drag erase)\n- NexaOS host shell prototype
 
 ## Device ports
 | Port | Direction | Meaning |
