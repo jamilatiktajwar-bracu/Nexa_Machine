@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -168,6 +168,24 @@ std::string NexaShell::execute(const std::string& line) {
             if(security_.currentUser()!="root") return "permission denied";
             kernel_.memoryManager().setSwapFile(hostPath);
             return "disk swap configured";
+        }
+        if(command=="quantum") {
+            std::string valueText; input>>valueText;
+            if(valueText.empty()) return "usage: quantum INSTRUCTIONS";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto value=std::stoull(valueText,&used);
+            if(used!=valueText.size()||value==0||value>1000000) return "invalid quantum (1-1000000)";
+            kernel_.setTimeQuantum(static_cast<std::size_t>(value));
+            return "time quantum updated";
+        }
+        if(command=="timer") {
+            std::string valueText; input>>valueText;
+            if(valueText.empty()) return "usage: timer TICKS (0 disables)";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto value=std::stoull(valueText,&used);
+            if(used!=valueText.size()) return "invalid timer interval";
+            kernel_.setTimerInterval(value);
+            return "timer interval updated";
         }
         if(command=="aging") {
             std::string thresholdText; input>>thresholdText;
