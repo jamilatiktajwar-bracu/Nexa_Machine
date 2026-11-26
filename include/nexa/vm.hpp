@@ -8,7 +8,7 @@ class VM {
 public:
  static constexpr std::size_t DefaultRamSize=256;
  explicit VM(std::size_t ramSize=DefaultRamSize);
- void loadProgram(std::vector<Instruction>); void run(); void reset();
+ void loadProgram(std::vector<Instruction>); void run(std::size_t instructionBudget=10000000); void reset();\n void saveState(const std::string& path)const; void loadState(const std::string& path);
  [[nodiscard]] std::uint8_t accumulator()const noexcept{return a_;}
  [[nodiscard]] std::uint8_t secondRegister()const noexcept{return b_;}
  [[nodiscard]] std::uint8_t readMemory(std::uint16_t)const noexcept;
