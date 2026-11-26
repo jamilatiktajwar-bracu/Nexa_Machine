@@ -60,7 +60,7 @@ std::size_t VirtualMemoryManager::translate(std::uint32_t pid,std::uint16_t addr
     auto it=tlb_.find(key);
     if(it==tlb_.end()) {
         ++tlbMisses_;
-        const auto entry=mapping(pid,page);
+        PageMapping entry;\n        try { entry=mapping(pid,page); }\n        catch(const std::runtime_error&) {\n            if(!pageFaultHandler_) throw;\n            ++pageFaults_; pageFaultHandler_(pid,page); entry=mapping(pid,page);\n        }
         if(tlb_.size()>=TlbCapacity) tlb_.erase(tlb_.begin());
         it=tlb_.emplace(key,entry).first;
     } else ++tlbHits_;
