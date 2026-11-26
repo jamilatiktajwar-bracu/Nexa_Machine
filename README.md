@@ -155,3 +155,8 @@ This remains an educational host-side security model. Password entry is still su
 - Kernel exposes its memory manager for diagnostics and controlled page-table operations.
 - Guest LOAD/STORE and kernel-mediated process RAM access now pass through the process page table. Instruction dispatch is guarded by a separate read-only executable code address space; instruction payloads remain in the VM instruction vector.
 
+
+
+## Nexa OS 2.5 — Execute protection and NX
+
+Each process now receives separate data and code address spaces. Data pages are writable and non-executable; code pages are read-only and executable. VM instruction dispatch checks the process code page's execute permission, and violations fault only that process. The instruction payload still resides in the host-side instruction vector; see [Nexa OS 2.5](docs/NEXA_OS_2_5.md) for the current boundary and tests.
