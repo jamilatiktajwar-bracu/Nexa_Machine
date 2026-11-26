@@ -32,7 +32,17 @@ std::string NexaShell::execute(const std::string& line) {
         }
         if(command=="savefs"||command=="loadfs") {
             std::string hostPath; input>>hostPath; if(hostPath.empty()) return "usage: "+command+" HOST_PATH";
-            if(command=="savefs") kernel_.filesystem().saveImage(hostPath); else kernel_.filesystem().loadImage(hostPath);
+            constexpr const char* securityPath="/.__nexa_security_v1";
+            if(command=="savefs") {
+                auto metadata=security_.serialize();
+                if(kernel_.filesystem().exists(securityPath)) kernel_.filesystem().writeFile(securityPath,metadata);
+                else kernel_.filesystem().createFile(securityPath,metadata);
+                kernel_.filesystem().saveImage(hostPath);
+            } else {
+                kernel_.filesystem().loadImage(hostPath);
+                if(kernel_.filesystem().exists(securityPath)) security_.deserialize(kernel_.filesystem().readFile(securityPath));
+                else security_=NexaSecurity{};
+            }
             return command=="savefs"?"filesystem image saved":"filesystem image loaded";
         }
         if(command=="ls") { std::string path; input>>path; path=resolvePath(path); std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"\n"; return out; }
