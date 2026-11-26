@@ -13,10 +13,11 @@ std::string NexaShell::execute(const std::string& line) {
     std::istringstream input(line); std::string command; input>>command;
     if(command.empty()) return {};
     try {
-        if(command=="help") return "help | whoami | useradd USER | login USER | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd PASSWORD | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.currentUser();
-        if(command=="useradd") { std::string user; input>>user; if(user.empty()) return "usage: useradd USER"; return security_.addUser(user)?"created user "+user:"user already exists or invalid"; }
-        if(command=="login") { std::string user; input>>user; if(user.empty()) return "usage: login USER"; return security_.login(user)?"logged in as "+user:"unknown user"; }
+        if(command=="useradd") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: useradd USER PASSWORD (minimum 8 characters)"; if(security_.currentUser()!="root") return "permission denied"; return security_.addUser(user,password)?"created user "+user:"user exists, invalid, or password too short"; }
+        if(command=="login") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: login USER PASSWORD"; return security_.login(user,password)?"logged in as "+user:"authentication failed"; }
+        if(command=="passwd") { std::string password; input>>password; if(password.empty()) return "usage: passwd PASSWORD (minimum 8 characters)"; return security_.setPassword(password)?"password updated":"password must contain at least 8 characters"; }
         if(command=="chmod") {
             std::string mode,path; input>>mode>>path; if(mode.empty()||path.empty()) return "usage: chmod MODE PATH";
             std::size_t used=0; auto parsed=std::stoul(mode,&used,8);
