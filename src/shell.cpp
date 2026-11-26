@@ -213,7 +213,9 @@ std::string NexaShell::execute(const std::string& line) {
                     " effective_priority="+std::to_string(p.effectivePriority)+" ticks="+std::to_string(p.ticks)+
                     " wait_ticks="+std::to_string(p.readyWaitTicks)+" inbox="+std::to_string(p.pendingMessages)+
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
-                    " reason="+(p.terminationReason.empty()?"-":p.terminationReason)+"\n";
+                    " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
+                if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
+                out+="\n";
             }
             return out;
         }
