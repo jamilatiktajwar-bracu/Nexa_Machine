@@ -100,3 +100,8 @@ Guest programs can open existing VFS files through permission-checked kernel sys
 ## Nexa OS 1.6 — User-space shell and application launcher
 
 Run `nexa --os` to open the kernel-backed VFS shell. It supports `ls`, `cat`, `touch`, `mkdir`, `write`, `rm`, `run`, and `ps`. The `run` command assembles and launches guest assembly stored in the VFS. See [Nexa OS 1.6 documentation](docs/NEXA_OS_1_6.md). The VFS is in-memory by default and the shell is an educational host-side interface, not a standalone bootable OS.
+
+
+## Nexa OS 1.7 — Persistent shell workspace
+
+The shell now supports `pwd`, `cd`, relative paths, and VFS persistence through `savefs HOST_PATH` / `loadfs HOST_PATH`. See [Nexa OS 1.7 documentation](docs/NEXA_OS_1_7.md).
