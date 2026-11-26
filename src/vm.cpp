@@ -8,6 +8,7 @@
 namespace nexa {
 VM::VM(std::size_t n):ram_(n,0),framebuffer_(ScreenWidth*ScreenHeight,0){if(!n||n>65536)throw std::invalid_argument("RAM must be 1..65536 bytes");}
 void VM::loadProgram(std::vector<Instruction>p){program_=std::move(p);reset();}
+void VM::setProgramCounter(std::uint16_t a){if(a>=program_.size())throw std::out_of_range("Program entry outside code");pc_=a;}
 void VM::reset(){pc_=0;a_=b_=0;std::fill(ram_.begin(),ram_.end(),0);stack_.clear();keyboard_.clear();deviceOutput_.clear();std::fill(framebuffer_.begin(),framebuffer_.end(),0);graphicsX_=graphicsY_=0;graphicsColor_=1;watchpointHit_=false;halted_=false;zeroFlag_=false;instructionCount_=0;}
 std::uint8_t VM::readMemory(std::uint16_t a)const noexcept{return a<ram_.size()?ram_[a]:0;}
 void VM::writeMemory(std::uint16_t a,std::uint8_t v){if(a>=ram_.size())throw std::out_of_range("RAM address out of range");ram_[a]=v;if(watchpointEnabled_&&a==watchedAddress_)watchpointHit_=true;}
