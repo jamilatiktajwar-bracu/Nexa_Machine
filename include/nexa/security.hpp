@@ -29,6 +29,7 @@ public:
         requireOwner(path); if(!hasUser(user)) throw std::invalid_argument("unknown user");
         owners_.at(path).user=user; owners_.at(path).group=users_.at(user);
     }
+    void forgetPath(const std::string& path) { owners_.erase(path); }
     bool can(const std::string& path, char permission) const {
         if(current_=="root") return true;
         auto it=owners_.find(path); if(it==owners_.end()) return false;
