@@ -1,0 +1,6 @@
+{
+  "name": "Nexa-VM",
+  "ram_bytes": 256,
+  "disk_path": "nexa.disk",
+  "disk_bytes": 1048576
+}
