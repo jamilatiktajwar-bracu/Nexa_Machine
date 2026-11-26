@@ -10,7 +10,7 @@ Current kernel capabilities include:
 - User/kernel syscall transitions, persistent VFS, file permissions and authenticated shell accounts.
 - Fixed-priority scheduling, configurable instruction quanta, timer-interrupt simulation and priority aging.
 - Bounded process mailboxes, blocking guest receive, automatic wakeup, and scheduler deadlock detection.
-- Administrative process termination/reaping with automatic file-handle and mailbox cleanup; shell memory statistics and swap configuration.
+- Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
 Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
