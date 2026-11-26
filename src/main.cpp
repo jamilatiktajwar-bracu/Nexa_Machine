@@ -24,7 +24,7 @@ void miniOs(nexa::VMManager& manager,std::string& current){std::cout<<"NexaOS sh
 std::string readSecret(const std::string& prompt) {
  std::cout<<prompt<<std::flush; std::string value;
 #ifdef _WIN32
- for(;;) { int ch=_getch(); if(ch=='\\r'||ch=='\\n') break; if(ch==8) { if(!value.empty()) value.pop_back(); continue; } if(ch>=32&&ch<=126) value.push_back(static_cast<char>(ch)); }
+ for(;;) { int ch=_getch(); if(ch=='\r'||ch=='\n') break; if(ch==8) { if(!value.empty()) value.pop_back(); continue; } if(ch>=32&&ch<=126) value.push_back(static_cast<char>(ch)); }
 #else
  termios oldState{},newState{};
  if(tcgetattr(STDIN_FILENO,&oldState)==0) {
@@ -33,7 +33,7 @@ std::string readSecret(const std::string& prompt) {
   else std::getline(std::cin,value);
  } else std::getline(std::cin,value);
 #endif
- std::cout<<"\\n"; return value;
+ std::cout<<"\n"; return value;
 }
 void osConsole(){nexa::NexaKernel kernel; nexa::NexaShell shell(kernel); std::cout<<"Nexa OS 1.6 user-space shell. Type help.\n"; std::string line; while(true){std::cout<<"nexa-os$ "<<std::flush;if(!std::getline(std::cin,line))break;if(line=="exit"||line=="quit")break;std::stringstream commandStream(line); std::string command,user,extra; commandStream>>command;
  if(command=="login"||command=="useradd") { commandStream>>user>>extra; if(!user.empty()&&extra.empty()) line+=" "+readSecret(command=="login"?"Password: ":"New password: "); }
