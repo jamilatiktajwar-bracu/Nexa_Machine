@@ -4,7 +4,7 @@ Nexa OS 2.1 extends the educational account model.
 
 ## Account lockout and recovery
 
-- Five consecutive failed password attempts lock an account.
+- Five consecutive failed password attempts lock a non-root account; root is exempt so an administrative recovery path remains available.
 - A locked account cannot log in, even with the correct password.
 - Root can reset a user's password with `passwd USER NEW_PASSWORD`; this clears the lockout.
 - Root can clear lockout without changing credentials using `unlock USER`.
