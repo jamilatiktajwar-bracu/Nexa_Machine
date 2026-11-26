@@ -1,6 +1,6 @@
 #include "nexa/memory_manager.hpp"
 #include <cassert>
-#include <stdexcept>
+#include <stdexcept>\n#include <cstdio>
 int main(){
  nexa::VirtualMemoryManager mm(1024);
  assert(mm.totalFrames()==4&&mm.freeFrames()==4);
