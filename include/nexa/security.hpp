@@ -100,7 +100,7 @@ public:
         const bool version3=header=="NEXASEC3";
         std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {},false}}};
         auto owners=std::map<std::string,FileOwner>{};
-        std::set<std::string> groups{"root"};
+        std::set<std::string> groups = version3 ? std::set<std::string>{} : std::set<std::string>{"root"};
         bool rootSeen=false;
         std::string line;
         while(std::getline(in,line)) {
