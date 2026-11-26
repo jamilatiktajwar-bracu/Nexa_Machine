@@ -40,6 +40,18 @@ int main() {
     try{schedulingKernel.setPriority(peerPid,8);}catch(const std::invalid_argument&){invalidPriority=true;}
     assert(invalidPriority);
 
+    nexa::NexaKernel budgetKernel(512);
+    const auto budgetPid=budgetKernel.spawn("bounded-loop",looping);
+    budgetKernel.setTimeQuantum(3);
+    budgetKernel.setInstructionBudget(budgetPid,5);
+    budgetKernel.run();
+    auto budgetProcesses=budgetKernel.processes();
+    bool budgetStopped=false;
+    for(const auto& proc:budgetProcesses)
+        if(proc.pid==budgetPid) budgetStopped=proc.state==nexa::ProcessState::Halted&&proc.ticks==5&&proc.exitCode==124&&proc.terminationReason=="budget";
+    assert(budgetStopped);
+    assert(budgetKernel.reapProcess(budgetPid));
+
     nexa::NexaKernel agingKernel(512);
     const auto agedLowPid=agingKernel.spawn("aged-low",looping);
     const auto agingHighPid=agingKernel.spawn("always-ready-high",looping);
