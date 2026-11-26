@@ -95,10 +95,15 @@ void NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     it->second.info.priority=priority;
+    it->second.readyWaitTicks=0;
 }
 void NexaKernel::setTimeQuantum(std::size_t instructions) {
     if(instructions==0||instructions>1000000) throw std::invalid_argument("Time quantum must be between 1 and 1000000 instructions");
     timeQuantum_=instructions;
+}
+void NexaKernel::setPriorityAgingThreshold(std::uint64_t ticks) {
+    priorityAgingThreshold_=ticks;
+    for(auto& [id,proc]:processes_) { (void)id; proc.readyWaitTicks=0; }
 }
 void NexaKernel::setTimerInterval(std::uint64_t ticks) {
     timerInterval_=ticks;
@@ -131,12 +136,18 @@ bool NexaKernel::scheduleOne() {
     std::vector<std::uint32_t> ids;
     std::uint8_t highestPriority=0;
     bool haveReady=false;
+    const auto effectivePriority=[this](const Process& candidate) {
+        if(priorityAgingThreshold_==0) return candidate.info.priority;
+        const auto boost=candidate.readyWaitTicks/priorityAgingThreshold_;
+        return static_cast<std::uint8_t>(std::min<std::uint64_t>(7,static_cast<std::uint64_t>(candidate.info.priority)+boost));
+    };
     for(const auto& [id,proc]:processes_) {
         if(proc.info.state!=ProcessState::Ready) continue;
-        if(!haveReady||proc.info.priority>highestPriority) {
-            ids.clear(); highestPriority=proc.info.priority; haveReady=true;
+        const auto effective=effectivePriority(proc);
+        if(!haveReady||effective>highestPriority) {
+            ids.clear(); highestPriority=effective; haveReady=true;
         }
-        if(proc.info.priority==highestPriority) ids.push_back(id);
+        if(effective==highestPriority) ids.push_back(id);
     }
     if(ids.empty()) return false;
     auto it=std::find_if(ids.begin(),ids.end(),[&](auto id){return id>cursor_;});
@@ -144,6 +155,7 @@ bool NexaKernel::scheduleOne() {
     cursor_=pid; currentPid_=pid;
     auto& proc=processes_.at(pid);
     proc.info.state=ProcessState::Running;
+    proc.readyWaitTicks=0;
     proc.yieldRequested=false;
     for(std::size_t instruction=0;instruction<timeQuantum_;++instruction) {
         bool timerFired=false;
@@ -151,6 +163,10 @@ bool NexaKernel::scheduleOne() {
             proc.machine.stepInstruction();
             ++proc.info.ticks;
             ++systemTicks_;
+            for(auto& [waitingPid,waiting]:processes_) {
+                if(waitingPid!=pid&&waiting.info.state==ProcessState::Ready&&waiting.readyWaitTicks<UINT64_MAX)
+                    ++waiting.readyWaitTicks;
+            }
             if(timerInterval_!=0&&systemTicks_%timerInterval_==0) {
                 ++timerInterrupts_;
                 ++pendingTimerInterrupts_;
@@ -180,7 +196,15 @@ bool NexaKernel::scheduleOne() {
 void NexaKernel::run(std::size_t maxSlices) { for(std::size_t n=0;n<maxSlices&&scheduleOne();++n) {} }
 std::vector<ProcessInfo> NexaKernel::processes() const {
     std::vector<ProcessInfo> result;
-    for(const auto& [id,p]:processes_) { (void)id; auto info=p.info; info.pendingMessages=p.inbox.size(); result.push_back(std::move(info)); }
+    for(const auto& [id,p]:processes_) {
+        (void)id;
+        auto info=p.info;
+        info.pendingMessages=p.inbox.size();
+        info.readyWaitTicks=p.readyWaitTicks;
+        const auto boost=priorityAgingThreshold_==0?0:p.readyWaitTicks/priorityAgingThreshold_;
+        info.effectivePriority=static_cast<std::uint8_t>(std::min<std::uint64_t>(7,static_cast<std::uint64_t>(p.info.priority)+boost));
+        result.push_back(std::move(info));
+    }
     return result;
 }
 std::string NexaKernel::takeConsoleOutput() {
