@@ -49,7 +49,7 @@ public:
     bool login(const std::string& name, const std::string& password) {
         auto it=users_.find(name);
         if(it==users_.end() || it->second.locked || !it->second.passwordSet) return false;
-        if(!authenticate(name,password)) { if(++it->second.failedAttempts>=maxFailedAttempts_) it->second.locked=true; return false; }
+        if(!authenticate(name,password)) { if(name!="root" && ++it->second.failedAttempts>=maxFailedAttempts_) it->second.locked=true; return false; }
         it->second.failedAttempts=0;
         current_=name;
         return true;
