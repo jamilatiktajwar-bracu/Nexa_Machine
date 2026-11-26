@@ -1,11 +1,21 @@
 #include "nexa/memory_manager.hpp"
 #include <algorithm>
 #include <stdexcept>
+#include <fstream>
 namespace nexa {
 VirtualMemoryManager::VirtualMemoryManager(std::size_t bytes) {
     if(bytes<PageSize||bytes%PageSize!=0||bytes/PageSize>65536)
         throw std::invalid_argument("Physical memory must be a page-aligned size of at least 256 bytes");
     physical_.assign(bytes,0); usedFrames_.assign(bytes/PageSize,false);
+}
+void VirtualMemoryManager::setSwapFile(const std::string& hostPath) {
+    if(swappedPages_!=0) throw std::runtime_error("Cannot change swap file while pages are swapped");
+    if(hostPath.empty()) throw std::invalid_argument("Swap file path cannot be empty");
+    std::ofstream out(hostPath,std::ios::binary|std::ios::trunc);
+    if(!out) throw std::runtime_error("Cannot create swap file: "+hostPath);
+    out.write("NEXASWP1",8);
+    if(!out) throw std::runtime_error("Cannot initialize swap file");
+    swapFilePath_=hostPath;
 }
 void VirtualMemoryManager::createAddressSpace(std::uint32_t pid) {
     if(!spaces_.emplace(pid,std::map<std::uint8_t,PageMapping>{}).second)
@@ -35,8 +45,22 @@ std::uint16_t VirtualMemoryManager::allocateFrame() {
     if(!victim) throw std::runtime_error("Out of physical memory: no evictable page");
     const auto frame=victim->frame;
     const auto start=static_cast<std::size_t>(frame)*PageSize;
-    victim->swapImage.assign(physical_.begin()+static_cast<std::ptrdiff_t>(start),
-                             physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize));
+
+    if(swapFilePath_.empty()) {
+        victim->swapImage.assign(physical_.begin()+static_cast<std::ptrdiff_t>(start),
+                                 physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize));
+        victim->diskBacked=false;
+    } else {
+        std::ofstream out(swapFilePath_,std::ios::binary|std::ios::app);
+        if(!out) throw std::runtime_error("Cannot open swap file for page-out");
+        const auto offset=out.tellp();
+        if(offset<0) throw std::runtime_error("Cannot seek swap file");
+        out.write(reinterpret_cast<const char*>(physical_.data()+start),static_cast<std::streamsize>(PageSize));
+        if(!out) throw std::runtime_error("Swap page-out failed");
+        victim->swapOffset=static_cast<std::uint64_t>(offset);
+        victim->diskBacked=true;
+        victim->swapImage.clear();
+    }
     victim->resident=false;
     victim->frame=0;
     ++swappedPages_;
