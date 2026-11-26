@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(nexa
     src/main.cpp
-    src/vm.cpp
+    src/vm.cpp\n    src/assembler.cpp
 )
 
 target_include_directories(nexa PRIVATE include)
