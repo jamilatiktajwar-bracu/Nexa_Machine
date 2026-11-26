@@ -5,6 +5,7 @@ All notable Nexa Machine milestones are documented here. This is an educational 
 ## [2.9.0] — Scheduler, IPC and process lifecycle
 
 ### Added
+- Bounded VM stack (4,096 entries), controlled overflow faults, and rejection of oversized saved-state stacks.
 - Per-process instruction budgets, deterministic quota termination (exit code 124), and a root `limit PID INSTRUCTIONS` shell command.
 - Fixed-priority scheduler (0–7), round-robin selection within equal effective priorities, and configurable priority aging.
 - Configurable instruction quantum, simulated timer IRQ interval, global tick accounting and interrupt acknowledgement.
