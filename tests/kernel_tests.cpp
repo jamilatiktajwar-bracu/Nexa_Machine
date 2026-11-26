@@ -11,6 +11,22 @@ int main() {
     assert(!restoredFreshSecurity.authenticate("root", "not-configured"));
 
     nexa::NexaKernel kernel(1024);
+    const auto pagingPid=kernel.spawn("paged-load-store",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,90},{nexa::Opcode::Store,200},
+        {nexa::Opcode::Load,200},{nexa::Opcode::Output,nexa::VM::DisplayPort},
+        {nexa::Opcode::Halt,0}}});
+    assert(kernel.memoryManager().mappedPages(pagingPid)==4);
+    kernel.run();
+    assert(kernel.memoryManager().read(pagingPid,200,nexa::MemoryAccess::Kernel)==90);
+    assert(kernel.takeConsoleOutput()=="Z");
+    const auto protectedPid=kernel.spawn("protected-store",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,0},{nexa::Opcode::Halt,0}}});
+    kernel.memoryManager().protectPage(protectedPid,0,true,false);
+    kernel.run();
+    bool protectedFault=false;
+    for(const auto& p:kernel.processes())
+        if(p.pid==protectedPid) protectedFault=p.state==nexa::ProcessState::Faulted&&p.faultReason.find("supervisor-only")!=std::string::npos;
+    assert(protectedFault);
     nexa::Executable basic{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};
     const auto first=kernel.spawn("alpha",basic);
     const auto second=kernel.spawn("beta",basic);
