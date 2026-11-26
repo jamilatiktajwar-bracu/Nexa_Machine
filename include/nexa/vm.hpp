@@ -32,6 +32,7 @@ public:
  void clearDeviceOutput(){deviceOutput_.clear();}
  [[nodiscard]] const std::vector<std::uint8_t>& framebuffer()const noexcept{return framebuffer_;}
  [[nodiscard]] bool pixel(std::size_t x,std::size_t y)const noexcept;
+ void drawPixel(std::size_t x,std::size_t y,bool white=true)noexcept;
  void writeMemory(std::uint16_t address,std::uint8_t value);
  void setWatchpoint(std::uint16_t address);
  void clearWatchpoint(std::uint16_t address);
