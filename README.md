@@ -1,8 +1,17 @@
 # Nexa Machine
 
-## Nexa OS 1.0 kernel foundation
-The embeddable `NexaKernel` can spawn executable images as isolated VM processes, schedule one instruction per process in deterministic round-robin order, track Ready/Running/Halted/Faulted states, collect console output, and expose a small host-mediated syscall API. See [docs/NEXA_OS_1_0.md](docs/NEXA_OS_1_0.md). This is an educational kernel foundation; it is not yet a standalone bootable OS.
-Educational C++20 virtual machine and assembly environment (not a hypervisor).
+Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
+
+**Current development milestone: Nexa OS 2.9.0**
+
+Current kernel capabilities include:
+- Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
+- Read-only executable code pages with memory-backed instruction fetch and an ELF-inspired `NEXAELF2` binary loader (legacy `NEXAEXE1` remains supported).
+- User/kernel syscall transitions, persistent VFS, file permissions and authenticated shell accounts.
+- Fixed-priority scheduling, configurable instruction quanta, timer-interrupt simulation and priority aging.
+- Bounded process mailboxes, blocking guest receive, automatic wakeup, and scheduler deadlock detection.
+
+Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
 ## Version 1.0 (OS kernel foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
