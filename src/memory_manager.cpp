@@ -41,6 +41,7 @@ std::uint16_t VirtualMemoryManager::allocateFrame() {
     victim->frame=0;
     ++swappedPages_;
     ++swapOuts_;
+    std::fill(physical_.begin()+static_cast<std::ptrdiff_t>(start),physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize),0);
     invalidateTlb(victimPid);
     return frame;
 }
