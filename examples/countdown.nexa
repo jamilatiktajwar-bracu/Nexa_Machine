@@ -1,0 +1,7 @@
+LOAD A, 5
+loop:
+PRINT A
+DEC A
+CMP A, 0
+JNZ loop
+HALT
