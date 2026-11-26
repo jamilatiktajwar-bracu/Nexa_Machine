@@ -1,27 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
-project(NexaMachine VERSION 0.2.0 LANGUAGES CXX)
-
+project(NexaMachine VERSION 0.3.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-add_executable(nexa
-    src/main.cpp
-    src/vm.cpp
-    src/assembler.cpp
-)
-
+add_executable(nexa src/main.cpp src/vm.cpp src/assembler.cpp src/config.cpp src/virtual_disk.cpp src/vm_manager.cpp)
 target_include_directories(nexa PRIVATE include)
-
 if(MSVC)
-    target_compile_options(nexa PRIVATE /W4 /permissive-)
+ target_compile_options(nexa PRIVATE /W4 /permissive-)
 else()
-    target_compile_options(nexa PRIVATE -Wall -Wextra -Wpedantic)
+ target_compile_options(nexa PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-
 include(CTest)
 if(BUILD_TESTING)
-    add_executable(nexa_tests tests/assembler_tests.cpp src/assembler.cpp)
-    target_include_directories(nexa_tests PRIVATE include)
-    add_test(NAME nexa_assembler_tests COMMAND nexa_tests)
+ add_executable(nexa_tests tests/assembler_tests.cpp src/assembler.cpp)
+ target_include_directories(nexa_tests PRIVATE include)
+ add_test(NAME nexa_assembler_tests COMMAND nexa_tests)
+ add_executable(nexa_feature_tests tests/feature_tests.cpp src/config.cpp src/virtual_disk.cpp)
+ target_include_directories(nexa_feature_tests PRIVATE include)
+ add_test(NAME nexa_feature_tests COMMAND nexa_feature_tests)
 endif()
