@@ -160,3 +160,8 @@ This remains an educational host-side security model. Password entry is still su
 ## Nexa OS 2.5 — Execute protection and NX
 
 Each process now receives separate data and code address spaces. Data pages are writable and non-executable; code pages are read-only and executable. VM instruction dispatch checks the process code page's execute permission, and violations fault only that process. The instruction payload still resides in the host-side instruction vector; see [Nexa OS 2.5](docs/NEXA_OS_2_5.md) for the current boundary and tests.
+
+
+## Nexa OS 2.6 — TLB and demand paging
+
+A 16-entry simulated TLB now records hits/misses and invalidates stale translations after page-table changes. Process data pages are allocated on first access through a simulated page-fault handler; unmap and address-space destruction reclaim physical frames. See [Nexa OS 2.6 documentation](docs/NEXA_OS_2_6.md).
