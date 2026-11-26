@@ -111,6 +111,7 @@ bool NexaKernel::acknowledgeTimerInterrupt() noexcept {
 bool NexaKernel::sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std::uint8_t> payload) {
     auto sender=processes_.find(from),receiver=processes_.find(to);
     if(sender==processes_.end()||receiver==processes_.end()) throw std::out_of_range("Unknown IPC process id");
+    if(sender->second.info.state==ProcessState::Halted||sender->second.info.state==ProcessState::Faulted) return false;
     if(receiver->second.info.state==ProcessState::Halted||receiver->second.info.state==ProcessState::Faulted) return false;
     if(payload.size()>MaxIpcPayload||receiver->second.inbox.size()>=MaxInboxMessages) return false;
     receiver->second.inbox.push_back(IpcMessage{from,std::move(payload)});
