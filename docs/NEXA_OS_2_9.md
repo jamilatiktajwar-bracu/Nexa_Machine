@@ -4,7 +4,7 @@
 Processes now have priorities in the range 0–7; 7 is highest. The scheduler chooses the highest-priority Ready process and preserves round-robin ordering among processes at that priority. Priority aging can be enabled with `setPriorityAgingThreshold(ticks)`: each threshold of Ready-state waiting raises a process effective priority by one, up to 7. A threshold of zero disables aging. This reduces starvation while preserving fixed-priority behavior when disabled. Use `setPriority(pid, priority)` to update base priority. The root shell user can run `nice PID PRIORITY` and `aging TICKS`; `ps` displays base/effective priority, wait ticks, instruction ticks and inbox depth.
 
 ## Time slicing and timer interrupts
-`setTimeQuantum(instructions)` controls the maximum number of guest instructions executed in one scheduler slice (1–1,000,000). `setTimerInterval(ticks)` configures a simulated timer interrupt every N global guest instruction ticks; zero disables timer IRQs. A timer event preempts the active slice. The kernel exposes `systemTicks()`, `timerInterrupts()`, and `pendingTimerInterrupts()`; call `acknowledgeTimerInterrupt()` to consume one pending event. The `sched` shell command prints the scheduling policy, quantum, tick count, timer counters, aging threshold and deadlock status. `SYS Yield` ends the current process slice early.
+`setTimeQuantum(instructions)` controls the maximum number of guest instructions executed in one scheduler slice (1–1,000,000). `setTimerInterval(ticks)` configures a simulated timer interrupt every N global guest instruction ticks; zero disables timer IRQs. A timer event preempts the active slice. The kernel exposes `systemTicks()`, `timerInterrupts()`, and `pendingTimerInterrupts()`; call `acknowledgeTimerInterrupt()` to consume one pending event. The `sched` shell command prints the scheduling policy, quantum, tick count, timer counters, aging threshold and deadlock status. `ps` displays process state, base/effective priority, wait ticks and inbox depth. `SYS Yield` ends the current process slice early.
 
 ## Process-to-process message passing
 The kernel provides bounded FIFO inboxes, blocking guest receives and host APIs:
@@ -20,6 +20,9 @@ Guest ABI:
 
 ## Blocking and deadlock detection
 An empty guest receive blocks the process instead of busy-waiting. A successful send wakes a blocked receiver, which retries its receive syscall. `hasDeadlock()` reports when at least one process is blocked and no process is Ready or Running; the `ps` command shows blocked state and inbox depth. This is a scheduler-level detector, not a full wait-for-graph analysis.
+
+## Shell memory diagnostics
+`memstat` reports resident/free frames, swapped pages, swap-in/out counts, page faults, TLB hit/miss counts and the active swap backend. Root can configure disk-backed swap using `swapfile HOST_PATH`; configure it before the next swap-out activity.
 
 ## Regression coverage
 Tests cover priority choice, quantum accounting, timer IRQ delivery/acknowledgement, host FIFO IPC, payload limits and guest-to-guest message passing through the syscall ABI.
