@@ -22,7 +22,7 @@ Guest ABI:
 An empty guest receive blocks the process instead of busy-waiting. A successful send wakes a blocked receiver, which retries its receive syscall. `hasDeadlock()` reports when at least one process is blocked and no process is Ready or Running; the `ps` command shows blocked state and inbox depth. This is a scheduler-level detector, not a full wait-for-graph analysis.
 
 ## Process management
-The root shell user can use `kill PID` to halt a running or blocked process and close its file handles/mailbox. `reap PID` then destroys the process data/code address spaces, releases resident frames, discards swapped pages and removes process metadata. Processes that exit or fault also close their process-local handles and inboxes automatically.
+The root shell user can use `kill PID` to halt a running or blocked process and close its file handles/mailbox; the simulator records kill exit code 137. `reap PID` then destroys the process data/code address spaces, releases resident frames, discards swapped pages and removes process metadata. Guest `SYS Exit` stores B as the exit code; a plain `HALT` is recorded with reason `halt`, and faults record reason `fault`. `ps` shows exit code and termination reason. Processes that exit or fault also close their process-local handles and inboxes automatically.
 
 ## Shell memory diagnostics
 `memstat` reports resident/free frames, swapped pages, swap-in/out counts, page faults, TLB hit/miss counts and the active swap backend. Root can configure disk-backed swap using `swapfile HOST_PATH`; configure it before the next swap-out activity.
