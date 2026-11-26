@@ -90,3 +90,8 @@ The virtual filesystem now supports portable disk-image persistence with validat
 ## Nexa OS 1.4 — Process-scoped file permissions
 
 Processes now receive no VFS permissions by default. The kernel can grant and check Read, Write, and Execute access independently per PID; the guest `FileExists` service requires Read permission. See [Nexa OS 1.4](docs/NEXA_OS_1_4.md). This is a software policy layer, not a hardware-enforced security boundary.
+
+
+## Nexa OS 1.5 — Guest VFS file handles
+
+Guest programs can open existing VFS files through permission-checked kernel syscalls, read/write bytes, and close process-local handles. Guest paths are read from process RAM. See [Nexa OS 1.5 documentation](docs/NEXA_OS_1_5.md). The ABI is a compact educational prototype.
