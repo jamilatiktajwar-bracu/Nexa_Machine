@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | memstat | swapfile HOST_PATH | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -132,6 +132,22 @@ std::string NexaShell::execute(const std::string& line) {
                 return "invalid PID or priority (0-7)";
             kernel_.setPriority(static_cast<std::uint32_t>(pidValue),static_cast<std::uint8_t>(priorityValue));
             return "priority updated";
+        }
+        if(command=="kill") {
+            std::string pidText; input>>pidText;
+            if(pidText.empty()) return "usage: kill PID";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto pidValue=std::stoull(pidText,&used);
+            if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
+            return kernel_.terminateProcess(static_cast<std::uint32_t>(pidValue))?"process terminated":"unknown or already stopped process";
+        }
+        if(command=="reap") {
+            std::string pidText; input>>pidText;
+            if(pidText.empty()) return "usage: reap PID";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto pidValue=std::stoull(pidText,&used);
+            if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
+            return kernel_.reapProcess(static_cast<std::uint32_t>(pidValue))?"process reaped":"unknown or active process";
         }
         if(command=="memstat") {
             const auto& mm=kernel_.memoryManager();
