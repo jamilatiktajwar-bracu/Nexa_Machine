@@ -85,6 +85,8 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     if(it->second.info.state==ProcessState::Halted||it->second.info.state==ProcessState::Faulted) return false;
     it->second.machine.requestHalt();
     it->second.info.state=ProcessState::Halted;
+    it->second.info.exitCode=137;
+    it->second.info.terminationReason="killed";
     it->second.openFiles.clear();
     it->second.inbox.clear();
     if(currentPid_==pid) currentPid_=0;
@@ -192,18 +194,23 @@ bool NexaKernel::scheduleOne() {
             if(timerFired) break;
         } catch(const std::exception& e) {
             proc.info.state=ProcessState::Faulted;
+            proc.info.terminationReason="fault";
             proc.info.faultReason=e.what();
             output_+=proc.machine.deviceOutput();
             proc.machine.clearDeviceOutput();
             break;
         } catch(...) {
             proc.info.state=ProcessState::Faulted;
+            proc.info.terminationReason="fault";
             proc.info.faultReason="Unknown process fault";
             break;
         }
     }
-    if(proc.info.state!=ProcessState::Faulted&&proc.info.state!=ProcessState::Blocked)
+    if(proc.info.state!=ProcessState::Faulted&&proc.info.state!=ProcessState::Blocked) {
         proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;
+        if(proc.info.state==ProcessState::Halted&&proc.info.terminationReason.empty())
+            proc.info.terminationReason="halt";
+    }
     if(proc.info.state==ProcessState::Faulted||proc.info.state==ProcessState::Halted) {
         proc.openFiles.clear();
         proc.inbox.clear();
@@ -241,7 +248,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
