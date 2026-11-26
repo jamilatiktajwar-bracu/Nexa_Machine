@@ -143,7 +143,7 @@ std::string NexaShell::execute(const std::string& line) {
         if(command=="ps") {
             std::string out;
             for(const auto& p:kernel_.processes()) {
-                const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Halted?"halted":"faulted";
+                const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Halted?"halted":"faulted";
                 out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
                     " ticks="+std::to_string(p.ticks)+" inbox="+std::to_string(p.pendingMessages)+"\n";
             }
