@@ -10,6 +10,7 @@ Current kernel capabilities include:
 - User/kernel syscall transitions, persistent VFS, file permissions and authenticated shell accounts.
 - Fixed-priority scheduling, configurable instruction quanta, timer-interrupt simulation and priority aging.
 - Bounded process mailboxes, blocking guest receive, automatic wakeup, and scheduler deadlock detection.
+- Administrative process termination/reaping with automatic file-handle and mailbox cleanup; shell memory statistics and swap configuration.
 
 Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
@@ -203,5 +204,5 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 - `SYS Yield` voluntarily ends the current scheduling slice.
 - Bounded FIFO process inboxes, host APIs `sendMessage()` / `receiveMessage()`, and blocking guest receive with automatic wakeup.
 - Guest syscalls `SendMessage` (11) and `ReceiveMessage` (12), validated RAM descriptors, bounded payloads and scheduler deadlock detection.
-- Shell diagnostics: `ps`, `sched`, `memstat`, root-only `nice PID PRIORITY`, `aging TICKS`, and `swapfile HOST_PATH` (`0` disables aging).
+- Shell diagnostics and administration: `ps`, `sched`, `memstat`, root-only `nice PID PRIORITY`, `aging TICKS`, `swapfile HOST_PATH`, `kill PID` and `reap PID` (`aging 0` disables aging).
 - See [Nexa OS 2.9 documentation](docs/NEXA_OS_2_9.md) for the guest ABI and scheduler semantics.
