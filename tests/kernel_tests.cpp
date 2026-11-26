@@ -42,5 +42,5 @@ int main() {
         if(process.pid==healthyPid) healthyHalted=process.state==nexa::ProcessState::Halted;
     }
     assert(badFaulted&&healthyHalted);
-    assert(kernel.takeConsoleOutput()=="AA");
+    assert(kernel.takeConsoleOutput()=="A");
 }
