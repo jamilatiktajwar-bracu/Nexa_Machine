@@ -58,7 +58,9 @@ private:
  std::vector<std::uint16_t>stack_;
  std::deque<std::uint8_t>keyboard_;
  std::string deviceOutput_;
- std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;\n std::function<std::uint8_t(std::uint16_t)> memoryReader_;\n std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_;
+ std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;
+ std::function<std::uint8_t(std::uint16_t)> memoryReader_;
+ std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_;
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
