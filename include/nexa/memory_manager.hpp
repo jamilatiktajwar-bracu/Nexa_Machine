@@ -24,7 +24,8 @@ public:
     void protectPage(std::uint32_t pid,std::uint8_t virtualPage,bool writable,bool userAccessible,bool executable=true);
     [[nodiscard]] std::uint8_t read(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User) const;
     void write(std::uint32_t pid,std::uint16_t virtualAddress,std::uint8_t value,MemoryAccess access=MemoryAccess::User);
-    [[nodiscard]] bool canExecute(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User) const;\n    [[nodiscard]] bool isMapped(std::uint32_t pid,std::uint8_t virtualPage) const;
+    [[nodiscard]] bool canExecute(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User) const;
+    [[nodiscard]] bool isMapped(std::uint32_t pid,std::uint8_t virtualPage) const;
     [[nodiscard]] std::size_t mappedPages(std::uint32_t pid) const;
     [[nodiscard]] std::size_t freeFrames() const noexcept;
     [[nodiscard]] std::size_t totalFrames() const noexcept{return physical_.size()/PageSize;}
