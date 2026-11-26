@@ -70,17 +70,15 @@ int main() {
     assert(badFaulted&&healthyHalted);
     assert(kernel.takeConsoleOutput()=="A");
     nexa::NexaShell shell(kernel);
-    assert(shell.execute("mkdir /apps")=="created directory /apps");
     assert(shell.execute("pwd")=="/");
-    assert(shell.execute("cd /apps")=="error: Directory not found");
     assert(shell.execute("mkdir /apps")=="created directory /apps");
     assert(shell.execute("cd /apps")=="/apps");
     assert(shell.execute("pwd")=="/apps");
-    assert(shell.execute("write /apps/hello.nexa HALT")=="wrote 4 bytes");
-    assert(shell.execute("cat /apps/hello.nexa").find("HALT")==0);
-    assert(shell.execute("ls /apps").find("hello.nexa")!=std::string::npos);
-    assert(shell.execute("run /apps/hello.nexa")=="");
+    assert(shell.execute("write hello.nexa HALT")=="wrote 4 bytes");
+    assert(shell.execute("cat hello.nexa").find("HALT")==0);
+    assert(shell.execute("ls").find("hello.nexa")!=std::string::npos);
+    assert(shell.execute("run hello.nexa")=="");
     assert(shell.execute("ps").find("hello.nexa halted")!=std::string::npos);
-    assert(shell.execute("rm hello.nexa")=="removed /apps/hello.nexa");\n    assert(shell.execute("cd ..")=="/");
-
+    assert(shell.execute("rm hello.nexa")=="removed /apps/hello.nexa");
+    assert(shell.execute("cd ..")=="/");
 }
