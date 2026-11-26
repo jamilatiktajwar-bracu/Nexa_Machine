@@ -2,6 +2,7 @@
 #include "nexa/executable.hpp"
 #include "nexa/vfs.hpp"
 #include "nexa/vm.hpp"
+#include "nexa/memory_manager.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -27,6 +28,8 @@ public:
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
     [[nodiscard]] std::uint32_t currentPid() const noexcept { return currentPid_; }
     [[nodiscard]] VirtualFileSystem& filesystem() noexcept { return fs_; }
+    [[nodiscard]] VirtualMemoryManager& memoryManager() noexcept { return memory_; }
+    [[nodiscard]] const VirtualMemoryManager& memoryManager() const noexcept { return memory_; }
     [[nodiscard]] std::string takeConsoleOutput();
     std::uint8_t syscall(std::uint32_t pid, Syscall call, std::uint8_t argument=0);
     [[nodiscard]] std::uint8_t readProcessMemory(std::uint32_t pid, std::uint16_t address) const;
@@ -41,6 +44,7 @@ private:
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
     VirtualFileSystem fs_;
+    VirtualMemoryManager memory_;
     std::string output_;
     std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
     [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
