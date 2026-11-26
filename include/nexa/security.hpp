@@ -42,7 +42,9 @@ public:
         return diff==0;
     }
     bool login(const std::string& name, const std::string& password) {
-        if(!authenticate(name,password)) return false; current_=name; return true;
+        if(!authenticate(name,password)) return false;
+        current_=name;
+        return true;
     }
     bool setPassword(const std::string& password) {
         if(password.size()<8) return false;
@@ -69,7 +71,9 @@ public:
         std::string header; if(!std::getline(in,header)||(header!="NEXASEC1"&&header!="NEXASEC2")) throw std::invalid_argument("invalid security metadata");
         const bool version2=header=="NEXASEC2";
         std::map<std::string,UserRecord> users{{"root",UserRecord{"root",{}, {},false}}};
-        auto owners=std::map<std::string,FileOwner>{}; std::string line;
+        auto owners=std::map<std::string,FileOwner>{};
+        bool rootSeen=false;
+        std::string line;
         while(std::getline(in,line)) {
             if(line.empty()) continue;
             std::istringstream row(line); char kind{}; std::string a,b,c; row>>kind>>std::quoted(a)>>std::quoted(b);
@@ -80,9 +84,14 @@ public:
                     unsigned set{}; std::string saltHex,digestHex; row>>set>>saltHex>>digestHex;
                     if(!row||set>1||saltHex.size()!=32||digestHex.size()!=64) throw std::invalid_argument("invalid password metadata");
                     rec.passwordSet=set!=0; decodeHex(saltHex,rec.salt.data(),rec.salt.size()); decodeHex(digestHex,rec.digest.data(),rec.digest.size());
-                    if(!rec.passwordSet) throw std::invalid_argument("user password is not configured");
                 }
-                if(a=="root" || !users.emplace(a,rec).second) throw std::invalid_argument("duplicate security user");
+                if(a=="root") {
+                    if(rootSeen) throw std::invalid_argument("duplicate security user");
+                    users["root"]=rec;
+                    rootSeen=true;
+                } else if(!users.emplace(a,rec).second) {
+                    throw std::invalid_argument("duplicate security user");
+                }
             } else if(kind=='F') {
                 unsigned mode{}; row>>std::quoted(c)>>mode;
                 if(!row||mode>0777||a.empty()||users.count(b)==0) throw std::invalid_argument("invalid file metadata");
