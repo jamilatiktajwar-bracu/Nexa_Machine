@@ -15,8 +15,18 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
         if(service>static_cast<std::uint8_t>(Syscall::CloseFile)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
-    processes_.emplace(pid,std::move(p));
     memory_.createAddressSpace(pid);
+    try {
+        for(std::size_t page=0;page<(ramBytes_+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize;++page)
+            memory_.mapPage(pid,static_cast<std::uint8_t>(page),true,true);
+    } catch(...) {
+        memory_.destroyAddressSpace(pid);
+        throw;
+    }
+    p.machine.setMemoryAccessors(
+        [this,pid](std::uint16_t address){return memory_.read(pid,address,MemoryAccess::User);},
+        [this,pid](std::uint16_t address,std::uint8_t value){memory_.write(pid,address,value,MemoryAccess::User);});
+    processes_.emplace(pid,std::move(p));
     filePermissions_[pid] = {};
     return pid;
 }
@@ -113,13 +123,13 @@ std::uint8_t NexaKernel::readProcessMemory(std::uint32_t pid,std::uint16_t addre
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     if(address>=it->second.machine.ramSize()) throw std::out_of_range("Process memory address out of range");
-    return it->second.machine.readMemory(address);
+    return memory_.read(pid,address,MemoryAccess::Kernel);
 }
 void NexaKernel::writeProcessMemory(std::uint32_t pid,std::uint16_t address,std::uint8_t value) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     if(address>=it->second.machine.ramSize()) throw std::out_of_range("Process memory address out of range");
-    it->second.machine.writeMemory(address,value);
+    memory_.write(pid,address,value,MemoryAccess::Kernel);
 }
 std::string NexaKernel::readGuestPath(const VM& machine,std::uint8_t address) const {
     std::string path;
