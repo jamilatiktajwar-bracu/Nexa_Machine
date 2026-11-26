@@ -164,4 +164,4 @@ Each process now receives separate data and code address spaces. Data pages are 
 
 ## Nexa OS 2.6 — TLB and demand paging
 
-A 16-entry simulated TLB now records hits/misses and invalidates stale translations after page-table changes. Process data pages are allocated on first access through a simulated page-fault handler; unmap and address-space destruction reclaim physical frames. See [Nexa OS 2.6 documentation](docs/NEXA_OS_2_6.md).
+A 16-entry simulated TLB now records hits/misses and invalidates stale translations after page-table changes. Process data pages are allocated on first access through a simulated page-fault handler; unmap and address-space destruction reclaim physical frames; `reapProcess(pid)` cleans up terminal processes and their mappings. See [Nexa OS 2.6 documentation](docs/NEXA_OS_2_6.md).
