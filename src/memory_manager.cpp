@@ -39,8 +39,8 @@ void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     if(it==table.end()) throw std::out_of_range("Virtual page is not mapped");
     releaseFrame(it->second.frame); table.erase(it);
 }
-void VirtualMemoryManager::protectPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user) {
-    auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user;
+void VirtualMemoryManager::protectPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
+    auto& m=mapping(pid,page); m.writable=writable; m.userAccessible=user; m.executable=executable;
 }
 PageMapping& VirtualMemoryManager::mapping(std::uint32_t pid,std::uint8_t page) {
     auto s=spaces_.find(pid); if(s==spaces_.end()) throw std::out_of_range("Unknown address space");
