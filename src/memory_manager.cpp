@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
+#include <string>
 namespace nexa {
 VirtualMemoryManager::VirtualMemoryManager(std::size_t bytes) {
     if(bytes<PageSize||bytes%PageSize!=0||bytes/PageSize>65536)
@@ -78,6 +79,10 @@ void VirtualMemoryManager::pageIn(std::uint32_t pid,std::uint8_t page) {
         if(entry.diskBacked) {
             std::ifstream in(swapFilePath_,std::ios::binary);
             if(!in) throw std::runtime_error("Cannot open swap file for page-in");
+            char signature[8]{};
+            in.read(signature,8);
+            if(!in||std::string(signature,8)!="NEXASWP1"||entry.swapOffset<8)
+                throw std::runtime_error("Invalid swap file signature or page offset");
             in.seekg(static_cast<std::streamoff>(entry.swapOffset));
             in.read(reinterpret_cast<char*>(physical_.data()+start),static_cast<std::streamsize>(PageSize));
             if(!in) throw std::runtime_error("Swap page-in failed or swap image is truncated");
