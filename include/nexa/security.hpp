@@ -31,9 +31,10 @@ public:
     bool addUser(const std::string& name, const std::string& password) {
         if(name.empty() || name.find('/')!=std::string::npos || name.find('"')!=std::string::npos || users_.count(name) || password.size()<8) return false;
         UserRecord record; record.group=name; hashPassword(record,password);
-        users_.emplace(name,record); return true;
+        groups_.insert(record.group); users_.emplace(name,record); return true;
     }
     bool hasUser(const std::string& name) const { return users_.count(name)!=0; }
+    bool isLocked(const std::string& name) const { auto it=users_.find(name); return it!=users_.end()&&it->second.locked; }
     bool authenticate(const std::string& name, const std::string& password) const {
         const auto it=users_.find(name);
         if(it==users_.end() || !it->second.passwordSet || it->second.locked) return false;
@@ -116,6 +117,7 @@ public:
                     rec.passwordSet=set!=0; decodeHex(saltHex,rec.salt.data(),rec.salt.size()); decodeHex(digestHex,rec.digest.data(),rec.digest.size());
                     if(version3) { unsigned locked{}; row>>rec.failedAttempts>>locked; if(!row||rec.failedAttempts>maxFailedAttempts_||locked>1) throw std::invalid_argument("invalid account lockout metadata"); rec.locked=locked!=0; }
                 }
+                if(!version3) groups.insert(rec.group);
                 if(a=="root") {
                     if(rootSeen) throw std::invalid_argument("duplicate security user");
                     users["root"]=rec;
@@ -126,6 +128,7 @@ public:
             } else if(kind=='F') {
                 unsigned mode{}; row>>std::quoted(c)>>mode;
                 if(!row||mode>0777||a.empty()||users.count(b)==0) throw std::invalid_argument("invalid file metadata");
+                if(!version3) groups.insert(c);
                 if(!owners.emplace(a,FileOwner{b,c,static_cast<std::uint16_t>(mode)}).second) throw std::invalid_argument("duplicate file metadata");
             } else throw std::invalid_argument("unknown security metadata record");
             std::string extra; if(row>>extra) throw std::invalid_argument("extra security metadata fields");
