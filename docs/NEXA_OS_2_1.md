@@ -14,6 +14,7 @@ Nexa OS 2.1 extends the educational account model.
 
 - `groupadd GROUP` creates a group.
 - `usermod -g GROUP USER` changes a user's primary group.
+- `chgrp GROUP PATH` changes a file's group owner (root or the file owner).
 - Group membership is used by the existing owner/group/other mode-bit checks.
 - New accounts initially receive a same-named primary group.
 
