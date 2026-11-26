@@ -14,7 +14,7 @@ std::vector<Instruction>parseAssembly(const std::string&src){std::vector<Instruc
 if(op=="HALT"){if(!trim(args).empty())throw std::runtime_error("HALT takes no operands");p.push_back({Opcode::Halt,0});}
 else if(op=="PRINT"){if(v.size()!=1||upper(v[0])!="A")throw std::runtime_error("syntax: PRINT A");p.push_back({Opcode::Print,0});}
 else if(op=="ADD"){if(v.size()!=2||upper(v[0])!="A"||upper(v[1])!="B")throw std::runtime_error("syntax: ADD A, B");p.push_back({Opcode::Add,0});}
-else if(op=="LOAD"){if(v.size()!=2)throw std::runtime_error("syntax: LOAD A/B, value or LOAD A, [address]");auto reg=upper(v[0]);if(reg=="A"&&v[1].front()=='[')p.push_back({Opcode::Load,number(unbracket(v[1]),n,65535)});else if(reg=="A")p.push_back({Opcode::LoadImmediate,number(v[1],n,255)});else if(reg=="B")p.push_back({Opcode::LoadBImmediate,number(v[1],n,255)});else throw std::runtime_error("register must be A or B");}
+else if(op=="LOAD"){if(v.size()!=2||v[0].empty()||v[1].empty())throw std::runtime_error("syntax: LOAD A/B, value or LOAD A, [address]");auto reg=upper(v[0]);if(reg=="A"&&v[1].front()=='[')p.push_back({Opcode::Load,number(unbracket(v[1]),n,65535)});else if(reg=="A")p.push_back({Opcode::LoadImmediate,number(v[1],n,255)});else if(reg=="B")p.push_back({Opcode::LoadBImmediate,number(v[1],n,255)});else throw std::runtime_error("register must be A or B");}
 else if(op=="STORE"){if(v.size()!=1)throw std::runtime_error("syntax: STORE [address]");p.push_back({Opcode::Store,number(unbracket(v[0]),n,65535)});}
 else throw std::runtime_error("unknown instruction '"+op+"'");
 }catch(const std::exception&e){throw std::runtime_error("Assembly line "+std::to_string(n)+": "+e.what());}}
