@@ -144,8 +144,9 @@ int main() {
     assert(shell.execute("cd ..")=="/");
     assert(shell.execute("logout")=="session closed");
     assert(shell.execute("whoami")=="(not logged in)");
-    assert(shell.execute("pwd")=="/");
+    assert(shell.execute("pwd")=="session locked; login first");
     assert(shell.execute("ls")=="session locked; login first");
     assert(shell.execute("login guest renewed-secret")=="logged in as guest");
     assert(shell.execute("whoami")=="guest");
+    assert(shell.execute("pwd")=="/");
 }
