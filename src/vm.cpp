@@ -21,6 +21,8 @@ void VM::setBreakpoint(std::size_t a){breakpoints_.insert(a);}
 void VM::clearBreakpoint(std::size_t a){breakpoints_.erase(a);}
 void VM::clearBreakpoints(){breakpoints_.clear();}
 bool VM::hasBreakpoint(std::size_t a)const{return breakpoints_.contains(a);}
+void VM::setInterruptVector(std::uint8_t v,std::uint16_t a){if(a>=program_.size())throw std::out_of_range("Interrupt handler outside program");interruptVectors_[v]=a;}
+void VM::triggerInterrupt(std::uint8_t v){auto it=interruptVectors_.find(v);if(it==interruptVectors_.end())throw std::runtime_error("Unhandled interrupt vector");stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=it->second;halted_=false;}
 void VM::saveState(const std::string&path)const{
  std::ofstream out(path,std::ios::binary);if(!out)throw std::runtime_error("Cannot write state file: "+path);
  const char magic[8]={'N','E','X','A','S','T','0','3'};out.write(magic,8);
@@ -73,6 +75,8 @@ void VM::step(){
  case Opcode::PopB:if(stack_.empty())throw std::runtime_error("Stack underflow");b_=static_cast<std::uint8_t>(stack_.back());stack_.pop_back();zeroFlag_=b_==0;break;
  case Opcode::Call:stack_.push_back(static_cast<std::uint16_t>(pc_));pc_=i.operand;break;
  case Opcode::Return:if(stack_.empty())throw std::runtime_error("Stack underflow on RET");pc_=stack_.back();stack_.pop_back();break;
+ case Opcode::Interrupt:triggerInterrupt(static_cast<std::uint8_t>(i.operand));break;
+ case Opcode::InterruptReturn:if(stack_.empty())throw std::runtime_error("Stack underflow on IRET");pc_=stack_.back();stack_.pop_back();break;
  case Opcode::Syscall:switch(a_){case 0:halted_=true;break;case 1:deviceOutput_.push_back(static_cast<char>(b_));std::cout.put(static_cast<char>(b_));break;case 2:a_=keyboard_.empty()?0:keyboard_.front();if(!keyboard_.empty())keyboard_.pop_front();zeroFlag_=a_==0;break;case 3:std::fill(framebuffer_.begin(),framebuffer_.end(),0);break;default:throw std::runtime_error("Unknown syscall service (A=service)");}break;
  case Opcode::Halt:halted_=true;break;
  default:throw std::runtime_error("Unknown opcode");
