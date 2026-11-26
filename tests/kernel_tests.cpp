@@ -73,12 +73,14 @@ int main() {
     nexa::NexaShell shell(kernel);
     assert(shell.execute("pwd")=="/");
     assert(shell.execute("whoami")=="root");
-    assert(shell.execute("useradd guest")=="created user guest");
+    assert(shell.execute("passwd root-secret")=="password updated");
+    assert(shell.execute("useradd guest guest-secret")=="created user guest");
+    assert(shell.execute("login guest wrong-secret")=="authentication failed");
     assert(shell.execute("write /shared.txt hello")=="wrote 5 bytes");
-    assert(shell.execute("login guest")=="logged in as guest");
+    assert(shell.execute("login guest guest-secret")=="logged in as guest");
     assert(shell.execute("cat /shared.txt")=="hello");
     assert(shell.execute("write /shared.txt blocked")=="permission denied");
-    assert(shell.execute("login root")=="logged in as root");
+    assert(shell.execute("login root root-secret")=="logged in as root");
     assert(shell.execute("chmod 600 /shared.txt")=="mode updated");
     assert(shell.execute("login guest")=="logged in as guest");
     assert(shell.execute("cat /shared.txt")=="permission denied");
@@ -92,7 +94,7 @@ int main() {
     nexa::NexaShell restoredShell(restoredKernel);
     assert(restoredShell.execute("loadfs /tmp/nexa_security_test.img")=="filesystem image loaded");
     assert(restoredShell.execute("whoami")=="root");
-    assert(restoredShell.execute("login guest")=="logged in as guest");
+    assert(restoredShell.execute("login guest guest-secret")=="logged in as guest");
     assert(restoredShell.execute("cat /shared.txt")=="allowed");
     assert(restoredShell.execute("write /shared.txt persisted")=="wrote 9 bytes");
     std::remove("/tmp/nexa_security_test.img");
