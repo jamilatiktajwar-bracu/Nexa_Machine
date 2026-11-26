@@ -16,7 +16,7 @@ struct ProcessInfo {
     std::uint64_t ticks{};
     std::string faultReason;
 };
-enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5 };
+enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10 };
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
 public:
@@ -34,7 +34,8 @@ public:
     void grantFileAccess(std::uint32_t pid, const std::string& path, FilePermission permissions);
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
-    struct Process { ProcessInfo info; VM machine; };
+    struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
+    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; };
     std::size_t ramBytes_;
     std::uint32_t nextPid_{1}, currentPid_{0};
     std::map<std::uint32_t, Process> processes_;
@@ -42,5 +43,6 @@ private:
     VirtualFileSystem fs_;
     std::string output_;
     std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
+    [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
 };
 }
