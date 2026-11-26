@@ -13,7 +13,7 @@ struct Instruction { Opcode opcode{}; std::uint16_t operand{}; };
 enum class PrivilegeMode { User, Kernel };
 class VM {
 public:
- static constexpr std::size_t DefaultRamSize=256, ScreenWidth=64, ScreenHeight=32;
+ static constexpr std::size_t DefaultRamSize=256, ScreenWidth=64, ScreenHeight=32, StackLimit=4096;
  static constexpr std::uint16_t KeyboardPort=0, DisplayPort=1, GraphicsXPort=2, GraphicsYPort=3, GraphicsColorPort=4, GraphicsDrawPort=5, GraphicsClearPort=6;
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
