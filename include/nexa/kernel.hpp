@@ -30,7 +30,9 @@ public:
     [[nodiscard]] std::string takeConsoleOutput();
     std::uint8_t syscall(std::uint32_t pid, Syscall call, std::uint8_t argument=0);
     [[nodiscard]] std::uint8_t readProcessMemory(std::uint32_t pid, std::uint16_t address) const;
-    void writeProcessMemory(std::uint32_t pid, std::uint16_t address, std::uint8_t value);\n    void grantFileAccess(std::uint32_t pid, const std::string& path, FilePermission permissions);\n    [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
+    void writeProcessMemory(std::uint32_t pid, std::uint16_t address, std::uint8_t value);
+    void grantFileAccess(std::uint32_t pid, const std::string& path, FilePermission permissions);
+    [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct Process { ProcessInfo info; VM machine; };
     std::size_t ramBytes_;
@@ -38,6 +40,7 @@ private:
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
     VirtualFileSystem fs_;
-    std::string output_;\n    std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
+    std::string output_;
+    std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
 };
 }
