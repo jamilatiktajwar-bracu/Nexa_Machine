@@ -14,7 +14,12 @@ Educational C++20 virtual machine and assembly environment (not a hypervisor).
 - Optional Qt GUI includes a pixel framebuffer panel and RAM hex viewer
 - VM snapshot persistence, virtual disk, execution budget
 - Guest software interrupt vectors with `INT`/`IRET` instructions
-- Portable executable binary format (`NEXAEXE1`) and CLI compile/load\n- In-memory virtual filesystem (directories, file CRUD, path traversal rejection)\n- Interactive GUI pixel drawing (left-click/drag white, right-click/drag erase)\n- NexaKernel process lifecycle, per-process VM isolation and round-robin scheduler\n- Kernel console output and host-mediated syscall API\n- NexaOS host shell prototype
+- Portable executable binary format (`NEXAEXE1`) and CLI compile/load
+- In-memory virtual filesystem (directories, file CRUD, path traversal rejection)
+- Interactive GUI pixel drawing (left-click/drag white, right-click/drag erase)
+- NexaKernel process lifecycle, per-process VM isolation and round-robin scheduler
+- Kernel console output and host-mediated syscall API
+- NexaOS host shell prototype
 
 ## Device ports
 | Port | Direction | Meaning |
@@ -179,3 +184,14 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 - Host-mediated syscalls enter a scoped simulated Kernel privilege mode and reliably restore the previous mode after completion or exception.
 - Guest memory access continues through User-mode page permissions; supervisor-only pages are blocked.
 - See [Nexa OS 2.8 documentation](docs/NEXA_OS_2_8.md). This remains an educational simulator, not a hardware-enforced security boundary or standards-compliant ELF loader.
+
+
+## Nexa OS 2.9 — Priority scheduling, timer preemption and IPC
+
+- Priority levels 0–7 with round-robin fairness among Ready processes at the same priority.
+- Configurable instruction quantum; deterministic preemption when a simulated timer interrupt fires.
+- Global instruction ticks, timer-interrupt and pending-interrupt counters with explicit acknowledgement.
+- `SYS Yield` voluntarily ends the current scheduling slice.
+- Bounded FIFO process inboxes and host APIs `sendMessage()` / `receiveMessage()`.
+- Guest syscalls `SendMessage` (11) and `ReceiveMessage` (12), with validated RAM descriptors and bounded payloads.
+- See [Nexa OS 2.9 documentation](docs/NEXA_OS_2_9.md) for the guest ABI and scheduler semantics.
