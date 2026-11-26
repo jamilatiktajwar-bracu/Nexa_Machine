@@ -13,7 +13,7 @@ std::string NexaShell::execute(const std::string& line) {
     std::istringstream input(line); std::string command; input>>command;
     if(command.empty()) return {};
     try {
-        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.currentUser();
         if(command=="useradd") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: useradd USER PASSWORD (minimum 8 characters)"; if(security_.currentUser()!="root") return "permission denied"; return security_.addUser(user,password)?"created user "+user:"user exists, invalid, or password too short"; }
         if(command=="login") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: login USER PASSWORD"; const bool ok=security_.login(user,password); if(ok) return "logged in as "+user; return security_.isLocked(user)?"account locked; contact root":"authentication failed"; }
@@ -36,6 +36,7 @@ std::string NexaShell::execute(const std::string& line) {
             path=resolvePath(path); security_.chmod(path,static_cast<std::uint16_t>(parsed)); return "mode updated";
         }
         if(command=="chown") { std::string user,path; input>>user>>path; if(user.empty()||path.empty()) return "usage: chown USER PATH"; security_.chown(resolvePath(path),user); return "owner updated"; }
+        if(command=="chgrp") { std::string group,path; input>>group>>path; if(group.empty()||path.empty()) return "usage: chgrp GROUP PATH"; security_.chgrp(resolvePath(path),group); return "group updated"; }
         if(command=="pwd") return currentDirectory_;
         if(command=="cd") {
             std::string path; input>>path; if(path.empty()) path="/";
