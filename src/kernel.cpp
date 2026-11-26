@@ -1,0 +1,12 @@
+#include "nexa/kernel.hpp"
+#include <algorithm>
+#include <stdexcept>
+namespace nexa {
+NexaKernel::NexaKernel(std::size_t n):ramBytes_(n){VM check(n);(void)check;}
+std::uint32_t NexaKernel::spawn(const std::string&name,const Executable&image){if(name.empty())throw std::invalid_argument("Process name cannot be empty");if(image.code.empty()||image.entryPoint>=image.code.size())throw std::invalid_argument("Invalid process executable");auto pid=nextPid_++;Process p{ProcessInfo{pid,name,ProcessState::Ready,0},VM(ramBytes_)};p.machine.loadProgram(image.code);p.machine.setProgramCounter(image.entryPoint);processes_.emplace(pid,std::move(p));return pid;}
+bool NexaKernel::scheduleOne(){if(processes_.empty())return false;std::vector<std::uint32_t>ids;for(auto&[id,p]:processes_)if(p.info.state==ProcessState::Ready)ids.push_back(id);if(ids.empty())return false;auto it=std::find_if(ids.begin(),ids.end(),[&](auto id){return id>cursor_;});auto pid=it==ids.end()?ids.front():*it;cursor_=pid;currentPid_=pid;auto&proc=processes_.at(pid);proc.info.state=ProcessState::Running;try{proc.machine.stepInstruction();++proc.info.ticks;output_+=proc.machine.deviceOutput();proc.machine.clearDeviceOutput();proc.info.state=proc.machine.halted()?ProcessState::Halted:ProcessState::Ready;}catch(...){proc.info.state=ProcessState::Faulted;throw;}return true;}
+void NexaKernel::run(std::size_t maxTicks){for(std::size_t n=0;n<maxTicks&&scheduleOne();++n){}}
+std::vector<ProcessInfo>NexaKernel::processes()const{std::vector<ProcessInfo>v;for(auto&[id,p]:processes_)v.push_back(p.info);return v;}
+std::string NexaKernel::takeConsoleOutput(){auto s=std::move(output_);output_.clear();return s;}
+std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg){auto it=processes_.find(pid);if(it==processes_.end())throw std::out_of_range("Unknown process id");switch(call){case Syscall::Exit:it->second.info.state=ProcessState::Halted;return 0;case Syscall::Write:output_.push_back(static_cast<char>(arg));return 0;case Syscall::Read:return it->second.machine.readMemory(arg);case Syscall::GetPid:return static_cast<std::uint8_t>(pid&255);case Syscall::Yield:if(it->second.info.state==ProcessState::Running)it->second.info.state=ProcessState::Ready;return 0;case Syscall::FileExists:return fs_.exists("/"+std::to_string(arg))?1:0;}return 255;}
+}
