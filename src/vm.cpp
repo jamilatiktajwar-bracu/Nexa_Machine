@@ -54,7 +54,7 @@ void VM::loadState(const std::string&path){
 void VM::step(){
  if(pc_>=program_.size())throw std::runtime_error("Program counter beyond program; missing HALT?");
  if(instructionFetchGuard_){if(pc_>65535)throw std::runtime_error("Instruction address exceeds virtual address space");instructionFetchGuard_(static_cast<std::uint16_t>(pc_));}
- auto i=program_[pc_++];++instructionCount_;
+ auto i=instructionReader_?instructionReader_(static_cast<std::uint16_t>(pc_)):program_[pc_];++pc_;++instructionCount_;
  switch(i.opcode){
  case Opcode::LoadImmediate:if(i.operand>255)throw std::runtime_error("Immediate overflow");a_=static_cast<std::uint8_t>(i.operand);zeroFlag_=a_==0;break;
  case Opcode::LoadBImmediate:if(i.operand>255)throw std::runtime_error("Immediate overflow");b_=static_cast<std::uint8_t>(i.operand);zeroFlag_=b_==0;break;
