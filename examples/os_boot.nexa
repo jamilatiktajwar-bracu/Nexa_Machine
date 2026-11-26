@@ -1,0 +1,20 @@
+# Nexa guest startup demo (currently assembled to the executable format)
+LOAD A, 78
+OUT A, 1
+LOAD A, 69
+OUT A, 1
+LOAD A, 88
+OUT A, 1
+LOAD A, 65
+OUT A, 1
+LOAD A, 32
+OUT A, 1
+LOAD A, 48
+OUT A, 1
+LOAD A, 46
+OUT A, 1
+LOAD A, 57
+OUT A, 1
+LOAD A, 10
+OUT A, 1
+HALT
