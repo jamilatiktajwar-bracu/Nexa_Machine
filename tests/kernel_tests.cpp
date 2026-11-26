@@ -102,6 +102,13 @@ int main() {
     assert(shell.execute("login guest renewed-secret")=="logged in as guest");
     assert(shell.execute("login root root-secret")=="logged in as root");
     assert(shell.execute("groupadd developers")=="created group developers");
+    assert(shell.execute("groupadd qa")=="created group qa");
+    assert(shell.execute("usermod -aG qa guest")=="supplementary group added");
+    assert(shell.execute("groups guest")=="developers qa");
+    assert(shell.execute("usermod -aG qa guest")=="unknown user/group or membership exists");
+    assert(shell.execute("usermod -rG qa guest")=="supplementary group removed");
+    assert(shell.execute("groups guest")=="developers");
+    assert(shell.execute("usermod -aG qa guest")=="supplementary group added");
     assert(shell.execute("usermod -g developers guest")=="primary group updated");
     assert(shell.execute("write /team.txt team-data")=="wrote 9 bytes");
     assert(shell.execute("chgrp developers /team.txt")=="group updated");
@@ -134,4 +141,10 @@ int main() {
     assert(shell.execute("ps").find("hello.nexa halted")!=std::string::npos);
     assert(shell.execute("rm hello.nexa")=="removed /apps/hello.nexa");
     assert(shell.execute("cd ..")=="/");
+    assert(shell.execute("logout")=="session closed");
+    assert(shell.execute("whoami")=="(not logged in)");
+    assert(shell.execute("pwd")=="/");
+    assert(shell.execute("ls")=="session locked; login first");
+    assert(shell.execute("login guest renewed-secret")=="logged in as guest");
+    assert(shell.execute("whoami")=="guest");
 }
