@@ -13,11 +13,22 @@ std::string NexaShell::execute(const std::string& line) {
     std::istringstream input(line); std::string command; input>>command;
     if(command.empty()) return {};
     try {
-        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd PASSWORD | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.currentUser();
         if(command=="useradd") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: useradd USER PASSWORD (minimum 8 characters)"; if(security_.currentUser()!="root") return "permission denied"; return security_.addUser(user,password)?"created user "+user:"user exists, invalid, or password too short"; }
-        if(command=="login") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: login USER PASSWORD"; return security_.login(user,password)?"logged in as "+user:"authentication failed"; }
-        if(command=="passwd") { std::string password; input>>password; if(password.empty()) return "usage: passwd PASSWORD (minimum 8 characters)"; return security_.setPassword(password)?"password updated":"password must contain at least 8 characters"; }
+        if(command=="login") { std::string user,password; input>>user>>password; if(user.empty()||password.empty()) return "usage: login USER PASSWORD"; const bool ok=security_.login(user,password); if(ok) return "logged in as "+user; return security_.isLocked(user)?"account locked; contact root":"authentication failed"; }
+        if(command=="passwd") {
+            std::string first,second; input>>first>>second;
+            if(first.empty()) return "usage: passwd [USER] PASSWORD";
+            if(!second.empty()) {
+                if(security_.currentUser()!="root") return "permission denied";
+                return security_.resetPassword(first,second)?"password reset":"unknown user or password too short";
+            }
+            return security_.setPassword(first)?"password updated":"password must contain at least 8 characters";
+        }
+        if(command=="unlock") { std::string user; input>>user; if(user.empty()) return "usage: unlock USER"; if(security_.currentUser()!="root") return "permission denied"; return security_.unlockUser(user)?"account unlocked":"unknown user"; }
+        if(command=="groupadd") { std::string group; input>>group; if(group.empty()) return "usage: groupadd GROUP"; if(security_.currentUser()!="root") return "permission denied"; return security_.addGroup(group)?"created group "+group:"group exists or invalid"; }
+        if(command=="usermod") { std::string option,group,user; input>>option>>group>>user; if(option!="-g"||group.empty()||user.empty()) return "usage: usermod -g GROUP USER"; if(security_.currentUser()!="root") return "permission denied"; return security_.setPrimaryGroup(user,group)?"primary group updated":"unknown user or group"; }
         if(command=="chmod") {
             std::string mode,path; input>>mode>>path; if(mode.empty()||path.empty()) return "usage: chmod MODE PATH";
             std::size_t used=0; auto parsed=std::stoul(mode,&used,8);
