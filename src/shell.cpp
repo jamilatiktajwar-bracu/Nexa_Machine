@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | aging TICKS | sched | memstat | swapfile HOST_PATH | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -132,6 +132,26 @@ std::string NexaShell::execute(const std::string& line) {
                 return "invalid PID or priority (0-7)";
             kernel_.setPriority(static_cast<std::uint32_t>(pidValue),static_cast<std::uint8_t>(priorityValue));
             return "priority updated";
+        }
+        if(command=="memstat") {
+            const auto& mm=kernel_.memoryManager();
+            return "frames_used="+std::to_string(mm.residentPages())+
+                " frames_total="+std::to_string(mm.totalFrames())+
+                " frames_free="+std::to_string(mm.freeFrames())+
+                " swapped_pages="+std::to_string(mm.swappedPages())+
+                " swap_ins="+std::to_string(mm.swapIns())+
+                " swap_outs="+std::to_string(mm.swapOuts())+
+                " page_faults="+std::to_string(mm.pageFaults())+
+                " tlb_hits="+std::to_string(mm.tlbHits())+
+                " tlb_misses="+std::to_string(mm.tlbMisses())+
+                " swap_backend="+(mm.swapFilePath().empty()?"memory":"disk");
+        }
+        if(command=="swapfile") {
+            std::string hostPath; input>>hostPath;
+            if(hostPath.empty()) return "usage: swapfile HOST_PATH";
+            if(security_.currentUser()!="root") return "permission denied";
+            kernel_.memoryManager().setSwapFile(hostPath);
+            return "disk swap configured";
         }
         if(command=="aging") {
             std::string thresholdText; input>>thresholdText;
