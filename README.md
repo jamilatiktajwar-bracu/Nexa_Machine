@@ -115,3 +115,8 @@ The shell now supports `useradd`, `login`, `whoami`, `chmod`, and `chown`, with 
 ## Nexa OS 1.9 — Persistent account and permission metadata
 
 VFS disk images now preserve shell users and file ownership/mode metadata. savefs stores versioned security metadata alongside the filesystem; loadfs restores it and resets the active session to root. Older images without metadata remain compatible. This is educational metadata persistence, not password authentication or cryptographic protection. See [Nexa OS 1.9](docs/NEXA_OS_1_9.md).
+
+
+## Nexa OS 2.0 — Password authentication
+
+Shell accounts now use salted PBKDF2-HMAC-SHA256 password digests, password-verified login, and persistent credential metadata in VFS images. Account commands: `useradd USER PASSWORD`, `login USER PASSWORD`, and `passwd PASSWORD`. OpenSSL Crypto is a build dependency. This remains an educational shell; command-line passwords are not hidden and disk images are not cryptographically authenticated. See [Nexa OS 2.0](docs/NEXA_OS_2_0.md).
