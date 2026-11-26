@@ -73,7 +73,6 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
     case Syscall::Yield: return 0;
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
-    }
     case Syscall::OpenRead:
     case Syscall::OpenWrite: {
         const auto path=readGuestPath(it->second.machine,arg);
@@ -106,6 +105,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::CloseFile:
         if(!it->second.openFiles.erase(arg)) throw std::runtime_error("Invalid file handle");
         return 0;
+    }
     return 255;
 }
 std::uint8_t NexaKernel::readProcessMemory(std::uint32_t pid,std::uint16_t address) const {
