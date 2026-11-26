@@ -23,6 +23,7 @@ public:
  void setInstructionFetchGuard(std::function<void(std::uint16_t)> guard){instructionFetchGuard_=std::move(guard);}
  void setInstructionReader(std::function<Instruction(std::uint16_t)> reader){instructionReader_=std::move(reader);}
  void setProgramCounter(std::uint16_t address);
+ void retryCurrentInstruction() noexcept{pc_=currentInstruction_;}
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
  void reset();
@@ -57,7 +58,7 @@ public:
 private:
  std::vector<std::uint8_t>ram_,framebuffer_;
  std::uint8_t a_{0},b_{0},graphicsX_{0},graphicsY_{0},graphicsColor_{1};
- std::size_t pc_{0},instructionCount_{0};
+ std::size_t pc_{0},instructionCount_{0},currentInstruction_{0};
  std::vector<Instruction>program_;
  std::vector<std::uint16_t>stack_;
  std::deque<std::uint8_t>keyboard_;
