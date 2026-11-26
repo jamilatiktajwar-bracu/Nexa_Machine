@@ -211,7 +211,9 @@ std::string NexaShell::execute(const std::string& line) {
                 const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Halted?"halted":"faulted";
                 out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
                     " effective_priority="+std::to_string(p.effectivePriority)+" ticks="+std::to_string(p.ticks)+
-                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" inbox="+std::to_string(p.pendingMessages)+"\n";
+                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" inbox="+std::to_string(p.pendingMessages)+
+                    " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
+                    " reason="+(p.terminationReason.empty()?"-":p.terminationReason)+"\n";
             }
             return out;
         }
