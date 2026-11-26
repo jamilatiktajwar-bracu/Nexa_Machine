@@ -61,7 +61,8 @@ private:
  std::string deviceOutput_;
  std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;
  std::function<std::uint8_t(std::uint16_t)> memoryReader_;
- std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_;\n std::function<void(std::uint16_t)> instructionFetchGuard_;
+ std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_; 
+ std::function<void(std::uint16_t)> instructionFetchGuard_;
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
