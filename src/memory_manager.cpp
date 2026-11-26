@@ -19,11 +19,45 @@ void VirtualMemoryManager::destroyAddressSpace(std::uint32_t pid) {
 }
 std::uint16_t VirtualMemoryManager::allocateFrame() {
     for(std::size_t i=0;i<usedFrames_.size();++i) if(!usedFrames_[i]) {
-        usedFrames_[i]=true; const auto start=i*PageSize;
+        usedFrames_[i]=true;
+        const auto start=i*PageSize;
         std::fill(physical_.begin()+static_cast<std::ptrdiff_t>(start),physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize),0);
         return static_cast<std::uint16_t>(i);
     }
-    throw std::runtime_error("Out of physical memory");
+    std::uint32_t victimPid=0;
+    PageMapping* victim=nullptr;
+    for(auto& [pid,table]:spaces_) for(auto& [page,entry]:table) {
+        (void)page;
+        if(entry.resident&&(!victim||entry.lastUsed<victim->lastUsed)) {
+            victim=&entry; victimPid=pid;
+        }
+    }
+    if(!victim) throw std::runtime_error("Out of physical memory: no evictable page");
+    const auto frame=victim->frame;
+    const auto start=static_cast<std::size_t>(frame)*PageSize;
+    victim->swapImage.assign(physical_.begin()+static_cast<std::ptrdiff_t>(start),
+                             physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize));
+    victim->resident=false;
+    victim->frame=0;
+    ++swappedPages_;
+    ++swapOuts_;
+    invalidateTlb(victimPid);
+    return frame;
+}
+void VirtualMemoryManager::pageIn(std::uint32_t pid,std::uint8_t page) {
+    auto& entry=mapping(pid,page);
+    if(entry.resident) return;
+    const auto frame=allocateFrame();
+    const auto start=static_cast<std::size_t>(frame)*PageSize;
+    if(entry.swapImage.size()!=PageSize) throw std::runtime_error("Corrupt swap image");
+    std::copy(entry.swapImage.begin(),entry.swapImage.end(),physical_.begin()+static_cast<std::ptrdiff_t>(start));
+    entry.frame=frame;
+    entry.resident=true;
+    entry.lastUsed=++accessClock_;
+    entry.swapImage.clear();
+    if(swappedPages_) --swappedPages_;
+    ++swapIns_;
+    invalidateTlb(pid);
 }
 void VirtualMemoryManager::releaseFrame(std::uint16_t frame) {
     if(frame>=usedFrames_.size()||!usedFrames_[frame]) throw std::runtime_error("Invalid physical frame release");
