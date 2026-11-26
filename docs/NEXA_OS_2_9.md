@@ -14,7 +14,7 @@ The kernel provides bounded FIFO inboxes, blocking guest receives and host APIs:
 Each inbox holds at most 64 messages; payloads are limited to 251 bytes. Sending from or to a finished process, or sending to a full inbox, fails without silently dropping an existing message. A blocked guest receiver becomes Ready when a message arrives.
 
 Guest ABI:
-- `SYS SendMessage` (service 11), B points to `[targetPidLow, targetPidHigh, length, payload...]`
+- `SYS SendMessage` (service 11), B points to `[targetPidLow, targetPidHigh, length, payload...]`; returns 1 on delivery and 0 when the target is absent, stopped or its inbox is full
 - `SYS ReceiveMessage` (service 12), B points to an output buffer. On success it writes `[senderPid byte0..byte3, length, payload...]` and returns 1. If the inbox is empty, the calling process blocks and retries the receive syscall after a sender wakes it.
 - Payload is at most 251 bytes. All descriptors and payloads must fit in the guest process RAM. A too-small receive buffer leaves the message queued. An empty inbox blocks the guest process and the syscall is retried when a sender wakes it.
 
