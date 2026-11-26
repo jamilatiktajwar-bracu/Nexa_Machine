@@ -1,0 +1,6 @@
+# Demonstrate RAM address 300 (requires at least 512 bytes RAM)
+LOAD A, 77
+STORE [300]
+LOAD A, [300]
+PRINT A
+HALT
