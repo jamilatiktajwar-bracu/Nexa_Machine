@@ -74,8 +74,23 @@ void VirtualMemoryManager::pageIn(std::uint32_t pid,std::uint8_t page) {
     if(entry.resident) return;
     const auto frame=allocateFrame();
     const auto start=static_cast<std::size_t>(frame)*PageSize;
-    if(entry.swapImage.size()!=PageSize) throw std::runtime_error("Corrupt swap image");
-    std::copy(entry.swapImage.begin(),entry.swapImage.end(),physical_.begin()+static_cast<std::ptrdiff_t>(start));
+    try {
+        if(entry.diskBacked) {
+            std::ifstream in(swapFilePath_,std::ios::binary);
+            if(!in) throw std::runtime_error("Cannot open swap file for page-in");
+            in.seekg(static_cast<std::streamoff>(entry.swapOffset));
+            in.read(reinterpret_cast<char*>(physical_.data()+start),static_cast<std::streamsize>(PageSize));
+            if(!in) throw std::runtime_error("Swap page-in failed or swap image is truncated");
+            entry.diskBacked=false;
+            entry.swapOffset=0;
+        } else {
+            if(entry.swapImage.size()!=PageSize) throw std::runtime_error("Corrupt swap image");
+            std::copy(entry.swapImage.begin(),entry.swapImage.end(),physical_.begin()+static_cast<std::ptrdiff_t>(start));
+        }
+    } catch(...) {
+        releaseFrame(frame);
+        throw;
+    }
     entry.frame=frame;
     entry.resident=true;
     entry.lastUsed=++accessClock_;
