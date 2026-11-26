@@ -17,6 +17,7 @@ public:
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
  void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}
+ void setMemoryAccessors(std::function<std::uint8_t(std::uint16_t)> reader,std::function<void(std::uint16_t,std::uint8_t)> writer){memoryReader_=std::move(reader);memoryWriter_=std::move(writer);}
  void setProgramCounter(std::uint16_t address);
  void run(std::size_t instructionBudget=10000000);
  bool stepInstruction();
@@ -43,7 +44,7 @@ public:
  [[nodiscard]] std::uint16_t watchedAddress()const noexcept{return watchedAddress_;}
  [[nodiscard]] std::uint8_t accumulator()const noexcept{return a_;}
  [[nodiscard]] std::uint8_t secondRegister()const noexcept{return b_;}
- [[nodiscard]] std::uint8_t readMemory(std::uint16_t)const noexcept;
+ [[nodiscard]] std::uint8_t readMemory(std::uint16_t)const;
  [[nodiscard]] std::size_t ramSize()const noexcept{return ram_.size();}
  [[nodiscard]] std::size_t instructionsExecuted()const noexcept{return instructionCount_;}
  [[nodiscard]] bool halted()const noexcept{return halted_;}
@@ -57,7 +58,7 @@ private:
  std::vector<std::uint16_t>stack_;
  std::deque<std::uint8_t>keyboard_;
  std::string deviceOutput_;
- std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;
+ std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;\n std::function<std::uint8_t(std::uint16_t)> memoryReader_;\n std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_;
  std::set<std::size_t>breakpoints_;
  std::map<std::uint8_t,std::uint16_t>interruptVectors_;
  std::uint16_t watchedAddress_{0};bool watchpointEnabled_{false},watchpointHit_{false};
