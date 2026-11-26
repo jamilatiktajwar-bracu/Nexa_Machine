@@ -2,7 +2,8 @@
 #include <cassert>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>\n#include <cstdio>
+#include <stdexcept>
+#include <cstdio>
 int main(){
  const auto p=nexa::parseAssembly("LOAD A, 0x10\nLOAD B, 2\nADD A, B\nSTORE [5]\nLOAD A, [5]\nPRINT A\nHALT\n");
  assert(p.size()==7);assert(p[0].opcode==nexa::Opcode::LoadImmediate&&p[0].operand==16);assert(p[1].opcode==nexa::Opcode::LoadBImmediate&&p[1].operand==2);assert(p[2].opcode==nexa::Opcode::Add);assert(p[3].opcode==nexa::Opcode::Store&&p[3].operand==5);assert(p[4].opcode==nexa::Opcode::Load&&p[4].operand==5);assert(p[5].opcode==nexa::Opcode::Print);assert(p[6].opcode==nexa::Opcode::Halt);
