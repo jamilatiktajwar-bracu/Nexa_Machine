@@ -39,4 +39,18 @@ int main(){
  swapped.destroyAddressSpace(7);
  assert(swapped.freeFrames()==swapped.totalFrames());
 
+ nexa::VirtualMemoryManager diskSwap(512);
+ diskSwap.setSwapFile("nexa_swap_test.bin");
+ diskSwap.createAddressSpace(9);
+ diskSwap.mapPage(9,0); diskSwap.mapPage(9,1);
+ diskSwap.write(9,0,0xC3); diskSwap.write(9,256,0xD4);
+ (void)diskSwap.read(9,0);
+ diskSwap.mapPage(9,2);
+ assert(diskSwap.swappedPages()==1);
+ assert(diskSwap.read(9,256)==0xD4);
+ assert(diskSwap.swapIns()==1&&diskSwap.swapOuts()>=2);
+ diskSwap.destroyAddressSpace(9);
+ assert(diskSwap.freeFrames()==diskSwap.totalFrames());
+ std::remove("nexa_swap_test.bin");
+
 }
