@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <string>
 
 namespace nexa {
 enum class MemoryAccess { User, Kernel };
@@ -16,12 +17,16 @@ struct PageMapping {
     bool resident{true};
     std::uint64_t lastUsed{};
     std::vector<std::uint8_t> swapImage;
+    std::uint64_t swapOffset{};
+    bool diskBacked{};
 };
 
 class VirtualMemoryManager {
 public:
     static constexpr std::size_t PageSize=256;
     explicit VirtualMemoryManager(std::size_t physicalBytes);
+    void setSwapFile(const std::string& hostPath);
+    [[nodiscard]] const std::string& swapFilePath() const noexcept{return swapFilePath_;}
     void createAddressSpace(std::uint32_t pid);
     void destroyAddressSpace(std::uint32_t pid);
     void mapPage(std::uint32_t pid,std::uint8_t virtualPage,bool writable=true,bool userAccessible=true,bool executable=true);
@@ -54,6 +59,7 @@ private:
     mutable std::size_t pageFaults_{0};
     mutable std::uint64_t accessClock_{0};
     std::size_t swappedPages_{0},swapIns_{0},swapOuts_{0};
+    std::string swapFilePath_;
     std::function<void(std::uint32_t,std::uint8_t)> pageFaultHandler_;
     static constexpr std::size_t TlbCapacity=16;
     [[nodiscard]] PageMapping& mapping(std::uint32_t pid,std::uint8_t page);
