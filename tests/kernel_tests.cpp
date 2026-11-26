@@ -15,9 +15,11 @@ int main() {
         {nexa::Opcode::LoadImmediate,90},{nexa::Opcode::Store,200},
         {nexa::Opcode::Load,200},{nexa::Opcode::Output,nexa::VM::DisplayPort},
         {nexa::Opcode::Halt,0}}});
-    assert(pagingKernel.memoryManager().mappedPages(pagingPid)==4);
+    assert(pagingKernel.memoryManager().mappedPages(pagingPid)==0);
     pagingKernel.run();
     assert(pagingKernel.memoryManager().read(pagingPid,200,nexa::MemoryAccess::Kernel)==90);
+    assert(pagingKernel.memoryManager().mappedPages(pagingPid)==1);
+    assert(pagingKernel.memoryManager().pageFaults()>=1);
     assert(pagingKernel.takeConsoleOutput()=="Z");
     const auto executeFaultPid=pagingKernel.spawn("execute-protection",nexa::Executable{0,{
         {nexa::Opcode::Halt,0}}});
@@ -34,7 +36,8 @@ int main() {
     assert(executeFault);
     const auto protectedPid=pagingKernel.spawn("protected-store",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,0},{nexa::Opcode::Halt,0}}});
-    pagingKernel.memoryManager().protectPage(protectedPid,0,true,false);
+    pagingKernel.memoryManager().mapPage(protectedPid,0,true,false,false);
+    pagingKernel.memoryManager().protectPage(protectedPid,0,true,false,false);
     pagingKernel.run();
     bool protectedFault=false;
     for(const auto& p:pagingKernel.processes())
