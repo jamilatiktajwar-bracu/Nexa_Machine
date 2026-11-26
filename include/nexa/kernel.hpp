@@ -22,6 +22,8 @@ struct ProcessInfo {
     std::size_t pendingMessages{0};
     std::uint8_t effectivePriority{0};
     std::uint64_t readyWaitTicks{0};
+    std::optional<std::uint8_t> exitCode{};
+    std::string terminationReason;
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
