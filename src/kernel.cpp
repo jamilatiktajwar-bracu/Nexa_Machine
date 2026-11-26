@@ -16,6 +16,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     processes_.emplace(pid,std::move(p));
+    filePermissions_[pid] = {};
     return pid;
 }
 bool NexaKernel::scheduleOne() {
@@ -71,7 +72,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
     case Syscall::Yield: return 0;
-    case Syscall::FileExists: return fs_.exists("/"+std::to_string(arg))?1:0;
+    case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     }
     return 255;
 }
@@ -88,3 +89,21 @@ void NexaKernel::writeProcessMemory(std::uint32_t pid,std::uint16_t address,std:
     it->second.machine.writeMemory(address,value);
 }
 }
+void NexaKernel::grantFileAccess(std::uint32_t pid,const std::string& path,FilePermission permissions) {
+    if(!processes_.contains(pid)) throw std::out_of_range("Unknown process id");
+    if(path.empty() || path.front()!='/' || path.find("..")!=std::string::npos)
+        throw std::invalid_argument("File permission path must be an absolute normalized VFS path");
+    if(!fs_.exists(path)) throw std::out_of_range("VFS path does not exist");
+    filePermissions_[pid][path]=static_cast<std::uint8_t>(permissions);
+}
+bool NexaKernel::hasFileAccess(std::uint32_t pid,const std::string& path,FilePermission permission) const {
+    if(!processes_.contains(pid)) throw std::out_of_range("Unknown process id");
+    if(path.empty() || path.front()!='/' || path.find("..")!=std::string::npos) return false;
+    const auto processIt=filePermissions_.find(pid);
+    if(processIt==filePermissions_.end()) return false;
+    const auto accessIt=processIt->second.find(path);
+    if(accessIt==processIt->second.end()) return false;
+    const auto requested=static_cast<std::uint8_t>(permission);
+    return requested!=0 && (accessIt->second & requested)==requested;
+}
+
