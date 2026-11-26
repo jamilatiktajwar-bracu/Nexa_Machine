@@ -13,7 +13,7 @@ int main(){
  auto oldImage=nexa::loadExecutable(p);assert(oldImage.code.size()==1&&oldImage.code[0].opcode==nexa::Opcode::Halt);std::remove(p);
  bool enteredKernel=false;
  nexa::VM privilegeVm;
- privilegeVm.loadProgram({{nexa::Opcode::LoadImmediate,3},{nexa::Opcode::Syscall,0}});
+ privilegeVm.loadProgram({{nexa::Opcode::LoadImmediate,3},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}});
  privilegeVm.setSyscallHandler([&](std::uint8_t service,std::uint8_t){assert(service==3);enteredKernel=privilegeVm.privilegeMode()==nexa::PrivilegeMode::Kernel;return std::uint8_t{0};});
  privilegeVm.run();assert(enteredKernel&&privilegeVm.privilegeMode()==nexa::PrivilegeMode::User);
  nexa::VM vm;vm.loadProgram(nexa::parseAssembly("INT 1\nHALT\nLOAD A, 99\nIRET\n"));vm.setInterruptVector(1,2);vm.stepInstruction();assert(vm.programCounter()==2);vm.run();assert(vm.halted()&&vm.accumulator()==99);
