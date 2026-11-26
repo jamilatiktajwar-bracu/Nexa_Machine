@@ -10,104 +10,55 @@ std::string NexaShell::resolvePath(const std::string& path) const {
     return currentDirectory_=="/"?"/"+path:currentDirectory_+"/"+path;
 }
 std::string NexaShell::execute(const std::string& line) {
-    std::istringstream input(line);
-    std::string command;
-    input >> command;
+    std::istringstream input(line); std::string command; input>>command;
     if(command.empty()) return {};
     try {
-        if(command=="help")
-            return "help | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | useradd USER | login USER | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="whoami") return security_.currentUser();
+        if(command=="useradd") { std::string user; input>>user; if(user.empty()) return "usage: useradd USER"; return security_.addUser(user)?"created user "+user:"user already exists or invalid"; }
+        if(command=="login") { std::string user; input>>user; if(user.empty()) return "usage: login USER"; return security_.login(user)?"logged in as "+user:"unknown user"; }
+        if(command=="chmod") {
+            std::string mode,path; input>>mode>>path; if(mode.empty()||path.empty()) return "usage: chmod MODE PATH";
+            std::size_t used=0; auto parsed=std::stoul(mode,&used,8);
+            if(used!=mode.size()||parsed>0777) return "invalid mode (use octal, e.g. 755)";
+            path=resolvePath(path); security_.chmod(path,static_cast<std::uint16_t>(parsed)); return "mode updated";
+        }
+        if(command=="chown") { std::string user,path; input>>user>>path; if(user.empty()||path.empty()) return "usage: chown USER PATH"; security_.chown(resolvePath(path),user); return "owner updated"; }
         if(command=="pwd") return currentDirectory_;
         if(command=="cd") {
             std::string path; input>>path; if(path.empty()) path="/";
-            if(path=="..") {
-                if(currentDirectory_!="/") { auto pos=currentDirectory_.find_last_of('/'); currentDirectory_=pos==0?"/":currentDirectory_.substr(0,pos); }
-                return currentDirectory_;
-            }
-            const auto target=resolvePath(path);
-            (void)kernel_.filesystem().list(target);
-            currentDirectory_=target;
-            return currentDirectory_;
+            if(path=="..") { if(currentDirectory_!="/") { auto pos=currentDirectory_.find_last_of('/'); currentDirectory_=pos==0?"/":currentDirectory_.substr(0,pos); } return currentDirectory_; }
+            currentDirectory_=resolvePath(path); (void)kernel_.filesystem().list(currentDirectory_); return currentDirectory_;
         }
-        if(command=="savefs" || command=="loadfs") {
-            std::string hostPath; input>>hostPath;
-            if(hostPath.empty()) return "usage: "+command+" HOST_PATH";
-            if(command=="savefs") kernel_.filesystem().saveImage(hostPath);
-            else kernel_.filesystem().loadImage(hostPath);
+        if(command=="savefs"||command=="loadfs") {
+            std::string hostPath; input>>hostPath; if(hostPath.empty()) return "usage: "+command+" HOST_PATH";
+            if(command=="savefs") kernel_.filesystem().saveImage(hostPath); else kernel_.filesystem().loadImage(hostPath);
             return command=="savefs"?"filesystem image saved":"filesystem image loaded";
         }
-        if(command=="ls") {
-            std::string path; input>>path; path=resolvePath(path);
-            std::string result;
-            for(const auto& item:kernel_.filesystem().list(path)) result+=item+"\n";
-            return result;
-        }
-        if(command=="cat") {
-            std::string path; input>>path;
-            if(path.empty()) return "usage: cat PATH";
-            const auto bytes=kernel_.filesystem().readFile(resolvePath(path));
-            return std::string(bytes.begin(),bytes.end());
-        }
-        if(command=="touch") {
-            std::string path; input>>path;
-            if(path.empty()) return "usage: touch PATH";
-            path=resolvePath(path);
-            if(kernel_.filesystem().exists(path)) return "already exists";
-            kernel_.filesystem().createFile(path);
-            return "created "+path;
-        }
-        if(command=="mkdir") {
-            std::string path; input>>path;
-            if(path.empty()) return "usage: mkdir PATH";
-            path=resolvePath(path);
-            kernel_.filesystem().createDirectory(path);
-            return "created directory "+path;
-        }
+        if(command=="ls") { std::string path; input>>path; path=resolvePath(path); std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"\n"; return out; }
+        if(command=="cat") { std::string path; input>>path; if(path.empty()) return "usage: cat PATH"; path=resolvePath(path); if(!security_.can(path,'r')) return "permission denied"; auto bytes=kernel_.filesystem().readFile(path); return std::string(bytes.begin(),bytes.end()); }
+        if(command=="touch") { std::string path; input>>path; if(path.empty()) return "usage: touch PATH"; path=resolvePath(path); if(kernel_.filesystem().exists(path)) return "already exists"; kernel_.filesystem().createFile(path); security_.registerPath(path,0644); return "created "+path; }
+        if(command=="mkdir") { std::string path; input>>path; if(path.empty()) return "usage: mkdir PATH"; path=resolvePath(path); kernel_.filesystem().createDirectory(path); security_.registerPath(path,0755); return "created directory "+path; }
         if(command=="write") {
-            std::string path; input>>path;
-            std::string content; std::getline(input,content);
-            if(path.empty()||content.empty()) return "usage: write PATH TEXT";
-            if(content.front()==' ') content.erase(content.begin());
-            path=resolvePath(path);
-            std::vector<std::uint8_t> bytes(content.begin(),content.end());
+            std::string path; input>>path; std::string data; std::getline(input,data);
+            if(path.empty()||data.empty()) return "usage: write PATH TEXT"; if(data.front()==' ') data.erase(data.begin());
+            path=resolvePath(path); if(kernel_.filesystem().exists(path)&&!security_.can(path,'w')) return "permission denied";
+            std::vector<std::uint8_t> bytes(data.begin(),data.end());
             if(kernel_.filesystem().exists(path)) kernel_.filesystem().writeFile(path,bytes);
-            else kernel_.filesystem().createFile(path,bytes);
+            else { kernel_.filesystem().createFile(path,bytes); security_.registerPath(path,0644); }
             return "wrote "+std::to_string(bytes.size())+" bytes";
         }
-        if(command=="rm") {
-            std::string path; input>>path;
-            if(path.empty()) return "usage: rm PATH";
-            path=resolvePath(path);
-            kernel_.filesystem().removeFile(path);
-            return "removed "+path;
-        }
+        if(command=="rm") { std::string path; input>>path; if(path.empty()) return "usage: rm PATH"; path=resolvePath(path); if(!security_.can(path,'w')) return "permission denied"; kernel_.filesystem().removeFile(path); security_.forgetPath(path); return "removed "+path; }
         if(command=="run") {
-            std::string path; input>>path;
-            if(path.empty()) return "usage: run PATH";
-            path=resolvePath(path);
-            const auto bytes=kernel_.filesystem().readFile(path);
-            const std::string source(bytes.begin(),bytes.end());
-            Executable image{0,parseAssembly(source)};
-            const auto pid=kernel_.spawn(path,image);
-            kernel_.run();
-            auto result=kernel_.takeConsoleOutput();
-            const auto processes=kernel_.processes();
-            const auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
-            if(found!=processes.end()&&found->state==ProcessState::Faulted)
-                result+="\nprocess fault: "+found->faultReason;
-            return result;
+            std::string path; input>>path; if(path.empty()) return "usage: run PATH"; path=resolvePath(path);
+            if(!security_.can(path,'x')) return "permission denied";
+            auto bytes=kernel_.filesystem().readFile(path); std::string source(bytes.begin(),bytes.end());
+            Executable image{0,parseAssembly(source)}; auto pid=kernel_.spawn(path,image); kernel_.run(); auto out=kernel_.takeConsoleOutput();
+            auto processes=kernel_.processes(); auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
+            if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="\nprocess fault: "+found->faultReason; return out;
         }
-        if(command=="ps") {
-            std::string result;
-            for(const auto& process:kernel_.processes()) {
-                const char* state=process.state==ProcessState::Ready?"ready":process.state==ProcessState::Running?"running":process.state==ProcessState::Halted?"halted":"faulted";
-                result+=std::to_string(process.pid)+" "+process.name+" "+state+" ticks="+std::to_string(process.ticks)+"\n";
-            }
-            return result;
-        }
+        if(command=="ps") { std::string out; for(const auto& p:kernel_.processes()) { const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Halted?"halted":"faulted"; out+=std::to_string(p.pid)+" "+p.name+" "+state+" ticks="+std::to_string(p.ticks)+"\n"; } return out; }
         return "unknown command: "+command+" (type help)";
-    } catch(const std::exception& error) {
-        return std::string("error: ")+error.what();
-    }
+    } catch(const std::exception& e) { return std::string("error: ")+e.what(); }
 }
 }
