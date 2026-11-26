@@ -25,7 +25,7 @@ std::vector<Instruction>parseAssembly(const std::string&src){
  try{
  if(op=="HALT"){if(!trim(args).empty())throw std::runtime_error("HALT takes no operands");p.push_back({Opcode::Halt,0});}
  else if(op=="PRINT"){if(v.size()!=1||upper(v[0])!="A")throw std::runtime_error("syntax: PRINT A");p.push_back({Opcode::Print,0});}
- else if(op=="ADD"||op=="SUB"||op=="CMP"){if(v.size()!=2||upper(v[0])!="A"||upper(v[1])!="B")throw std::runtime_error("syntax: "+op+" A, B");p.push_back({op=="ADD"?Opcode::Add:op=="SUB"?Opcode::Sub:Opcode::Compare,0});}
+ else if(op=="ADD"||op=="SUB"){if(v.size()!=2||upper(v[0])!="A"||upper(v[1])!="B")throw std::runtime_error("syntax: "+op+" A, B");p.push_back({op=="ADD"?Opcode::Add:Opcode::Sub,0});}
  else if(op=="INC"||op=="DEC"){if(v.size()!=1||upper(v[0])!="A")throw std::runtime_error("syntax: "+op+" A");p.push_back({op=="INC"?Opcode::Inc:Opcode::Dec,0});}
  else if(op=="LOAD"){if(v.size()!=2||v[0].empty()||v[1].empty())throw std::runtime_error("syntax: LOAD A/B, value or LOAD A, [address]");auto reg=upper(v[0]);if(reg=="A"&&v[1].front()=='[')p.push_back({Opcode::Load,number(unbracket(v[1]),ln.n,65535)});else if(reg=="A")p.push_back({Opcode::LoadImmediate,number(v[1],ln.n,255)});else if(reg=="B")p.push_back({Opcode::LoadBImmediate,number(v[1],ln.n,255)});else throw std::runtime_error("register must be A or B");}
  else if(op=="CMP"){if(v.size()==2&&upper(v[0])=="A"&&upper(v[1])=="B")p.push_back({Opcode::Compare,0});else if(v.size()==2&&upper(v[0])=="A")p.push_back({Opcode::CompareImmediate,number(v[1],ln.n,255)});else throw std::runtime_error("syntax: CMP A, B or CMP A, value");}
