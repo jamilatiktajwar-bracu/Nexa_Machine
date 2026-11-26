@@ -1,0 +1,8 @@
+LOAD A, 40
+CALL add_two
+PRINT A
+HALT
+add_two:
+INC A
+INC A
+RET
