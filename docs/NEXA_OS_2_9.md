@@ -21,6 +21,9 @@ Guest ABI:
 ## Blocking and deadlock detection
 An empty guest receive blocks the process instead of busy-waiting. A successful send wakes a blocked receiver, which retries its receive syscall. `hasDeadlock()` reports when at least one process is blocked and no process is Ready or Running; the `ps` command shows blocked state and inbox depth. This is a scheduler-level detector, not a full wait-for-graph analysis.
 
+## VM stack hardening
+The VM call/data stack is capped at 4,096 entries. PUSH, CALL and interrupt entry check the bound before changing the stack and raise a controlled `Stack overflow` fault. State files containing oversized stacks are rejected during load.
+
 ## Process resource budgets
 Each process may have an optional instruction budget configured with `setInstructionBudget(pid, instructions)`. A value of zero disables the budget. When the process reaches its exact instruction limit, it is stopped with exit code 124 and termination reason `budget`; resources are closed automatically. Root can set a limit from the shell using `limit PID INSTRUCTIONS`. This is a deterministic CPU-instruction quota, not a wall-clock timeout.
 
