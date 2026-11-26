@@ -25,4 +25,4 @@ An empty guest receive blocks the process instead of busy-waiting. A successful 
 Tests cover priority choice, quantum accounting, timer IRQ delivery/acknowledgement, host FIFO IPC, payload limits and guest-to-guest message passing through the syscall ABI.
 
 ## Simulator boundaries
-This scheduler is deterministic cooperative-at-instruction-boundary preemption, not a real hardware timer or SMP scheduler. It schedules whole VM processes, not independent POSIX-style threads. IPC is local in-memory messaging, not shared memory or a network protocol. Fixed priorities do not include aging, priority inheritance or deadline scheduling.
+This scheduler is deterministic cooperative-at-instruction-boundary preemption, not a real hardware timer or SMP scheduler. It schedules whole VM processes, not independent POSIX-style threads. IPC is local in-memory messaging, not shared memory or a network protocol. Priority inheritance and deadline scheduling are not implemented.
