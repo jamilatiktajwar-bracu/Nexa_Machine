@@ -160,6 +160,21 @@ int main() {
         throw std::runtime_error(diagnostic);
     }
 
+    nexa::NexaKernel unavailableIpcKernel(256);
+    const auto unavailableSender=unavailableIpcKernel.spawn("unavailable-sender",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,0xFF},{nexa::Opcode::Store,100},
+        {nexa::Opcode::LoadImmediate,0xFF},{nexa::Opcode::Store,101},
+        {nexa::Opcode::LoadImmediate,0},{nexa::Opcode::Store,102},
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::SendMessage)},
+        {nexa::Opcode::LoadBImmediate,100},{nexa::Opcode::Syscall,0},
+        {nexa::Opcode::Store,104},{nexa::Opcode::Halt,0}}});
+    unavailableIpcKernel.run();
+    assert(unavailableIpcKernel.readProcessMemory(unavailableSender,104)==0);
+    bool unavailableSenderHalted=false;
+    for(const auto& proc:unavailableIpcKernel.processes())
+        if(proc.pid==unavailableSender) unavailableSenderHalted=proc.state==nexa::ProcessState::Halted;
+    assert(unavailableSenderHalted);
+
     nexa::NexaKernel blockedKernel(256);
     const auto waitingPid=blockedKernel.spawn("waiting-reader",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::ReceiveMessage)},
