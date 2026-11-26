@@ -69,10 +69,19 @@ int main() {
         {nexa::Opcode::LoadImmediate,'Z'},{nexa::Opcode::Store,103},
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::SendMessage)},
         {nexa::Opcode::LoadBImmediate,100},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});
-    guestIpcKernel.setPriority(guestSender,7);
-    guestIpcKernel.setPriority(guestReceiver,1);
+    guestIpcKernel.setPriority(guestSender,1);
+    guestIpcKernel.setPriority(guestReceiver,7);
     guestIpcKernel.setTimeQuantum(32);
     assert(guestIpcKernel.scheduleOne());
+    auto guestIpcProcesses=guestIpcKernel.processes();
+    bool receiverBlocked=false;
+    for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)receiverBlocked=proc.state==nexa::ProcessState::Blocked;
+    assert(receiverBlocked);
+    assert(guestIpcKernel.scheduleOne());
+    guestIpcProcesses=guestIpcKernel.processes();
+    bool receiverWoken=false;
+    for(const auto& proc:guestIpcProcesses)if(proc.pid==guestReceiver)receiverWoken=proc.state==nexa::ProcessState::Ready;
+    assert(receiverWoken);
     guestIpcKernel.run();
     assert(guestIpcKernel.takeConsoleOutput()=="Z");
 
