@@ -78,7 +78,8 @@ std::vector<Instruction> parseAssembly(const std::string& source) {
                     throw std::runtime_error("syntax: ADD A, B");
                 program.push_back({Opcode::Add, 0});
             } else if (mnemonic == "LOAD") {
-                if (operands.size() != 2) throw std::runtime_error("syntax: LOAD A, value or LOAD A, [address]");
+                if (operands.size() != 2 || operands[0].empty() || operands[1].empty())
+                    throw std::runtime_error("syntax: LOAD A, value or LOAD A, [address]");
                 const auto reg = upper(operands[0]);
                 if (reg == "A" && operands[1].front() == '[') {
                     program.push_back({Opcode::Load, static_cast<std::uint8_t>(parseByte(unbracket(operands[1]), lineNumber))});
