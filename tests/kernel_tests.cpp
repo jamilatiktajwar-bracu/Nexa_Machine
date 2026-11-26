@@ -40,6 +40,25 @@ int main() {
     try{schedulingKernel.setPriority(peerPid,8);}catch(const std::invalid_argument&){invalidPriority=true;}
     assert(invalidPriority);
 
+    nexa::NexaKernel agingKernel(512);
+    const auto agedLowPid=agingKernel.spawn("aged-low",looping);
+    const auto agingHighPid=agingKernel.spawn("always-ready-high",looping);
+    agingKernel.setPriority(agedLowPid,0);
+    agingKernel.setPriority(agingHighPid,7);
+    agingKernel.setPriorityAgingThreshold(1);
+    agingKernel.setTimeQuantum(1);
+    for(int tick=0;tick<7;++tick) assert(agingKernel.scheduleOne());
+    auto agedProcesses=agingKernel.processes();
+    bool agingReachedMaximum=false;
+    for(const auto& proc:agedProcesses)if(proc.pid==agedLowPid)
+        agingReachedMaximum=proc.effectivePriority==7&&proc.readyWaitTicks==7;
+    assert(agingReachedMaximum);
+    assert(agingKernel.scheduleOne());
+    agedProcesses=agingKernel.processes();
+    bool agedProcessRan=false;
+    for(const auto& proc:agedProcesses)if(proc.pid==agedLowPid)agedProcessRan=proc.ticks==1;
+    assert(agedProcessRan);
+
     nexa::NexaShell schedulerShell(schedulingKernel);
     assert(schedulerShell.execute("nice "+std::to_string(lowPid)+" 2")=="priority updated");
     assert(schedulerShell.execute("sched").find("policy=fixed-priority-round-robin")!=std::string::npos);
