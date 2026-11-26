@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <vector>
+#include <vector>\n#include <string>
 namespace nexa {
 enum class Opcode : std::uint8_t { LoadImmediate, LoadBImmediate, Add, Sub, Inc, Dec, Compare, CompareImmediate, Store, Load, Print, Jump, JumpZero, JumpNotZero, PushA, PushB, PopA, PopB, Call, Return, Halt };
 struct Instruction { Opcode opcode{}; std::uint16_t operand{}; };
