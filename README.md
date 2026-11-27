@@ -324,3 +324,7 @@ The portable `SessionManager` API creates independent VM instances with stable s
 ## Native frontend bridge
 
 A portable C ABI (`include/nexa/c_api.h`) is now available for Swift/Objective-C++, Kotlin/JNI, and other FFI clients. It exposes opaque contexts, session lifecycle, bounded execution, status, RAM access, and snapshots with error strings. C API tests are part of CMake/CTest. Native mobile apps are still not implemented.
+
+## Standalone portable core
+
+The reusable static target `nexa_vm_core` now contains the VM, assembler, cooperative session registry, and C ABI. It can be configured without host CLI/OpenSSL or Qt dependencies using `-DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF`. See [C API guide](docs/C_API.md) for Swift/Objective-C++ and JNI integration notes.
