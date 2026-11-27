@@ -46,7 +46,8 @@ public:
     static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxInboxBytes=8192,MaxPendingSignals=32;
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
     std::uint32_t spawn(const std::string& name, const Executable& image);
-    bool reapProcess(std::uint32_t pid);\n    std::size_t reapTerminatedProcesses();
+    bool reapProcess(std::uint32_t pid);
+    std::size_t reapTerminatedProcesses();
     bool terminateProcess(std::uint32_t pid);
     bool sendSignal(std::uint32_t pid,ProcessSignal signal);
     [[nodiscard]] std::optional<ProcessSignal> receiveSignal(std::uint32_t pid);
