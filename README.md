@@ -2,7 +2,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.16.0**
+**Current development milestone: Nexa OS 2.17.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
@@ -14,7 +14,7 @@ Current kernel capabilities include:
 - Process signals: TERM/KILL termination, STOP/CONT lifecycle control, bounded FIFO USR1/USR2 delivery, and guest `SYS GetSignal` polling.
 - Signal queue diagnostics in `ps` and root-only `signal PID SIGNAL` administration.
 - Kernel synchronization, priority inheritance, and syncstat diagnostics: bounded counting semaphores and FIFO mutex handoff, blocking guest waits and syscalls 14–17.
-- Kernel-managed shared-memory segments plus guest syscalls 18–21 for attach, detach, byte read/write through checked descriptors; `shmstat` diagnostics.
+- Kernel-managed shared-memory segments plus guest syscalls 18–21 and 25 for read/write or read-only attach, detach, byte read/write through checked descriptors; `shmstat` diagnostics.
 - Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
 Start with the [Nexa OS 2.14 guide](docs/NEXA_OS_2_15.md) or the [Nexa OS 2.12 guide](docs/NEXA_OS_2_12.md) or the [Nexa OS 2.11 guide](docs/NEXA_OS_2_11.md) or the [Nexa OS 2.10 guide](docs/NEXA_OS_2_10.md) or the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
