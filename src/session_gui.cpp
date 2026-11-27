@@ -27,6 +27,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <cstdint>
+#include <QStringList>
 namespace nexa {
 namespace {
 struct DiskEntry { std::unique_ptr<VirtualDisk> disk; QString path; };
