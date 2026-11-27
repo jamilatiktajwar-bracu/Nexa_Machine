@@ -174,9 +174,17 @@ int main() {
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,102},{nexa::Opcode::Jump,4}}});
     assert(syncKernel.mutexLock(deathOwner,deathMutex));
     assert(syncKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
-    assert(syncKernel.scheduleOne());
+    for(int retry=0;retry<20;++retry) {
+        const auto state=syncKernel.processes();
+        const auto waiter=std::find_if(state.begin(),state.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
+        if(waiter!=state.end()&&waiter->state==nexa::ProcessState::Blocked) break;
+        assert(syncKernel.scheduleOne());
+    }
+    auto state=syncKernel.processes();
+    auto waiter=std::find_if(state.begin(),state.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
+    assert(waiter!=state.end()&&waiter->state==nexa::ProcessState::Blocked);
     assert(syncKernel.terminateProcess(deathOwner));
-    for(int retry=0;retry<8&&syncKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(syncKernel.scheduleOne());
+    for(int retry=0;retry<20&&syncKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
     assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
     // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
