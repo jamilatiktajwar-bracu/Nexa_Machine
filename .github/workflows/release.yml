@@ -2,6 +2,8 @@ name: Nexa release packaging
 on:
   workflow_dispatch:
   push:
+    branches:
+      - release-verification
     tags:
       - "v*"
 permissions:
