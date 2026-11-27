@@ -63,6 +63,12 @@ public:
             if (request.session == session && request.device == device) return true;
         return false;
     }
+    bool cancel(uint64_t requestId) {
+        for (auto it = pending_.begin(); it != pending_.end(); ++it) {
+            if (it->requestId == requestId) { pending_.erase(it); return true; }
+        }
+        return false;
+    }
     void clearSession(uint64_t session) {
         std::deque<GuestDiskRequest> kept;
         while (!pending_.empty()) {
