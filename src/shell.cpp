@@ -241,7 +241,7 @@ std::string NexaShell::execute(const std::string& line) {
                 const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Stopped?"stopped":p.state==ProcessState::Halted?"halted":"faulted";
                 out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
                     " effective_priority="+std::to_string(p.effectivePriority)+" ticks="+std::to_string(p.ticks)+
-                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" budget="+std::to_string(p.instructionBudget)+" inbox="+std::to_string(p.pendingMessages)+"/"+std::to_string(p.pendingMessageBytes)+"B files="+std::to_string(p.openFileHandles)+" shm="+std::to_string(p.sharedMemoryAttachments)+" signals="+std::to_string(p.pendingSignals)+
+                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" budget="+std::to_string(p.instructionBudget)+" inbox="+std::to_string(p.pendingMessages)+"/"+std::to_string(p.pendingMessageBytes)+"B files="+std::to_string(p.openFileHandles)+" shm="+std::to_string(p.sharedMemoryAttachments)+" mem="+std::to_string(p.residentBytes)+"B/"+std::to_string(p.virtualPages*VirtualMemoryManager::PageSize)+"B pages="+std::to_string(p.residentPages)+"/"+std::to_string(p.virtualPages)+" swapped="+std::to_string(p.swappedPages)+" signals="+std::to_string(p.pendingSignals)+
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
                     " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
                 if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
