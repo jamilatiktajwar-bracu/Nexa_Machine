@@ -537,6 +537,9 @@ int main() {
     for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==32); assert(proc.pendingMessageBytes==32*nexa::NexaKernel::MaxIpcPayload); }
     std::vector<std::uint8_t> oversized(252,0);
     assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,std::move(oversized)));
+    // Leave the shared test kernel empty for the following 64-message FIFO test.
+    for(std::size_t n=0;n<32;++n) assert(ipcKernel.receiveMessage(ipcReceiver).has_value());
+    assert(!ipcKernel.receiveMessage(ipcReceiver));
 
     nexa::NexaKernel guestIpcKernel(256);
     const auto guestReceiver=guestIpcKernel.spawn("guest-receiver",nexa::Executable{0,{
