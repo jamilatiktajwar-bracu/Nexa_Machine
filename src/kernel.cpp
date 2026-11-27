@@ -7,7 +7,8 @@
 namespace nexa {
 NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>(VirtualMemoryManager::PageSize,((n+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize)*VirtualMemoryManager::PageSize*16)){
     VM check(n); (void)check;
-    memory_.setAllocationRecoveryHandler([this]{ (void)reapTerminatedProcesses(); });\n    memory_.setPageFaultHandler([this](std::uint32_t pid,std::uint8_t page){
+    memory_.setAllocationRecoveryHandler([this]{ (void)reapTerminatedProcesses(); });
+    memory_.setPageFaultHandler([this](std::uint32_t pid,std::uint8_t page){
         if((pid&0x80000000u)!=0) throw std::runtime_error("Execute address space page fault");
         memory_.mapPage(pid,page,true,true,false);
     });
