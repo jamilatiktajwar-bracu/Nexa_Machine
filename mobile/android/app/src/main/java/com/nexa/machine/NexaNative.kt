@@ -10,6 +10,8 @@ object NexaNative {
     external fun step(context: Long, session: Long): Int
     external fun pause(context: Long, session: Long): Int
     external fun reset(context: Long, session: Long): Int
+    external fun stop(context: Long, session: Long): Int
+    external fun console(context: Long, session: Long): String
     external fun sendInput(context: Long, session: Long, input: String): Int
     external fun lastError(context: Long): String
 }
