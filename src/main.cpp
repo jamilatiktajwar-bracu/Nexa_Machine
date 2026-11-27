@@ -13,6 +13,8 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <cctype>
 #ifdef _WIN32
 #include <conio.h>
 #else
@@ -21,6 +23,7 @@
 #endif
 namespace {
 const char* demo="LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n";
+bool safeProfileName(const std::string& name){return !name.empty()&&name.size()<=48&&std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c)||c=='-'||c=='_';});}
 std::string readFile(const std::string&p){std::ifstream f(p);if(!f)throw std::runtime_error("Cannot open file: "+p);return {std::istreambuf_iterator<char>(f),{}};}
 void miniOs(nexa::VMManager& manager,std::string& current){std::cout<<"NexaOS shell prototype. Type help.\n";std::string line;while(true){std::cout<<"nexa-os$ "<<std::flush;if(!std::getline(std::cin,line))return;std::stringstream ss(line);std::string cmd;ss>>cmd;if(cmd=="exit"||cmd=="quit")return;else if(cmd=="help")std::cout<<"help | echo TEXT | clear | run FILE | mem ADDRESS | exit\n";else if(cmd=="echo"){std::string rest;std::getline(ss,rest);if(!rest.empty()&&rest.front()==' ')rest.erase(0,1);std::cout<<rest<<"\n";}else if(cmd=="clear")std::cout<<"\033[2J\033[H";else if(cmd=="mem"){unsigned a;ss>>a;if(ss&&a<manager.machine().ramSize())std::cout<<unsigned(manager.machine().readMemory(a))<<"\n";else std::cout<<"address invalid\n";}else if(cmd=="run"){std::string file;ss>>file;try{current=readFile(file);manager.loadAssembly(current);manager.start();}catch(const std::exception&e){std::cerr<<e.what()<<"\n";}}else if(!cmd.empty())std::cout<<"Unknown command. Type help.\n";}}
 std::string readSecret(const std::string& prompt) {
@@ -50,7 +53,7 @@ int main(int argc,char**argv){
   if(argc==4&&std::string(argv[1])=="--compile"){auto source=readFile(argv[2]);nexa::Executable e{0,nexa::parseAssembly(source)};nexa::saveExecutable(e,argv[3]);std::cout<<"Compiled "<<e.code.size()<<" instructions to "<<argv[3]<<"\n";return 0;}
   if(argc==3&&std::string(argv[1])=="--exe"){auto e=nexa::loadExecutable(argv[2]);nexa::VM vm;vm.loadProgram(e.code);vm.setProgramCounter(e.entryPoint);vm.run();std::cout<<"Executable halted. Instructions="<<vm.instructionsExecuted()<<"\n";return 0;}
   if(argc==3&&std::string(argv[1])=="--profile-create"){auto path=nexa::WorkspacePaths::discover().createProfile(argv[2]);std::cout<<"Profile created: "<<path.string()<<"\n";return 0;}
-  if(argc==4&&std::string(argv[1])=="--profile-run"){auto paths=nexa::WorkspacePaths::discover();auto profilePath=paths.profiles/(std::string(argv[2])+".json");if(!std::filesystem::exists(profilePath))throw std::runtime_error("Profile not found: "+std::string(argv[2]));auto config=nexa::MachineConfig::load(profilePath.string());auto source=readFile(argv[3]);nexa::VMManager manager(config);manager.loadAssembly(source);manager.start();std::cout<<"Profile "<<config.name<<" halted. Instructions="<<manager.machine().instructionsExecuted()<<" RAM="<<manager.machine().ramSize()<<" disk="<<config.diskPath<<"\n";return 0;}
+  if(argc==4&&std::string(argv[1])=="--profile-run"){auto paths=nexa::WorkspacePaths::discover();if(!safeProfileName(argv[2]))throw std::invalid_argument("Invalid profile name");auto profilePath=paths.profiles/(std::string(argv[2])+".json");if(!std::filesystem::exists(profilePath))throw std::runtime_error("Profile not found: "+std::string(argv[2]));auto config=nexa::MachineConfig::load(profilePath.string());auto source=readFile(argv[3]);nexa::VMManager manager(config);manager.loadAssembly(source);manager.start();std::cout<<"Profile "<<config.name<<" halted. Instructions="<<manager.machine().instructionsExecuted()<<" RAM="<<manager.machine().ramSize()<<" disk="<<config.diskPath<<"\n";return 0;}
   if(argc==3&&std::string(argv[1])=="--profile-show"){auto paths=nexa::WorkspacePaths::discover();auto profilePath=paths.profiles/(std::string(argv[2])+".json");if(!std::filesystem::exists(profilePath))throw std::runtime_error("Profile not found: "+std::string(argv[2]));auto config=nexa::MachineConfig::load(profilePath.string());std::cout<<"Name: "<<config.name<<"\nRAM: "<<config.ramBytes<<" bytes\nDisk: "<<config.diskPath<<"\nDisk size: "<<config.diskBytes<<" bytes\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--profile-list"){auto names=nexa::WorkspacePaths::discover().listProfiles();if(names.empty())std::cout<<"No profiles yet. Create one with --profile-create NAME.\n";else for(const auto& name:names)std::cout<<name<<"\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--workspace"){std::cout<<nexa::WorkspacePaths::discover().summary()<<"\n";return 0;}
