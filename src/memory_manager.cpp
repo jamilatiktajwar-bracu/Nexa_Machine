@@ -52,14 +52,18 @@ std::uint16_t VirtualMemoryManager::allocateFrame() {
     }
     if(!victim) {
         if(allocationRecoveryHandler_&&!allocationRecoveryInProgress_) {
-            allocationRecoveryInProgress_=true;\n            try { allocationRecoveryHandler_(); } catch(...) { allocationRecoveryInProgress_=false; throw; }
+            allocationRecoveryInProgress_=true;
+            try { allocationRecoveryHandler_(); } catch(...) { allocationRecoveryInProgress_=false; throw; }
             allocationRecoveryInProgress_=false;
             for(std::size_t i=0;i<usedFrames_.size();++i) if(!usedFrames_[i]) {
-                usedFrames_[i]=true;\n                const auto start=i*PageSize;
-                std::fill(physical_.begin()+static_cast<std::ptrdiff_t>(start),physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize),0);\n                return static_cast<std::uint16_t>(i);
+                usedFrames_[i]=true;
+                const auto start=i*PageSize;
+                std::fill(physical_.begin()+static_cast<std::ptrdiff_t>(start),physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize),0);
+                return static_cast<std::uint16_t>(i);
             }
         }
-        throw std::runtime_error("Out of physical memory: no evictable page");\n    }
+        throw std::runtime_error("Out of physical memory: no evictable page");
+    }
     const auto frame=victim->frame;
     const auto start=static_cast<std::size_t>(frame)*PageSize;
 
