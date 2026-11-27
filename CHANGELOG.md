@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.21.1] - 2026-11-27
+- Fixed synchronization cleanup for TERM/KILL signal exits so dead waiters are removed and abandoned semaphore grants are recovered consistently.
+- Added regression tests for signal-driven semaphore and mutex waiter termination.
+
+
 ## [2.21.0] - 2026-11-27
 - Added process-exit cleanup for semaphore and mutex wait queues, preventing terminated waiters from lingering in synchronization diagnostics.
 - Semaphore permits already handed to a process that exits before consuming them are transferred to the next live waiter or returned to the bounded semaphore count.
