@@ -321,6 +321,36 @@ int main() {
     assert(syncKernel.sharedMemoryInfo().front().attachments==0);
     assert(syncKernel.destroySharedMemory(cleanupSegment));
     bool invalidSharedSize=false;try{(void)syncKernel.createSharedMemory(0);}catch(const std::invalid_argument&){invalidSharedSize=true;}assert(invalidSharedSize);
+    // Repeated multi-process shared-memory lifecycle stress: aliases must be
+    // removed and every physical frame returned after each destroy.
+    nexa::NexaKernel sharedStressKernel(2048);
+    const auto stressA=sharedStressKernel.spawn("shm-stress-a",looping);
+    const auto stressB=sharedStressKernel.spawn("shm-stress-b",looping);
+    const auto stressFreeFrames=sharedStressKernel.memoryManager().freeFrames();
+    for(int cycle=0;cycle<40;++cycle) {
+        const auto stressId=sharedStressKernel.createSharedMemory(300); // two frames
+        assert(sharedStressKernel.memoryManager().freeFrames()==stressFreeFrames-2);
+        assert(sharedStressKernel.attachSharedMemory(stressA,stressId));
+        assert(sharedStressKernel.attachSharedMemory(stressB,stressId));
+        const auto baseA=static_cast<std::uint8_t>(20+(cycle%20)*2);
+        const auto baseB=static_cast<std::uint8_t>(70+(cycle%20)*2);
+        assert(sharedStressKernel.mapSharedMemory(stressA,stressId,baseA));
+        assert(sharedStressKernel.mapSharedMemory(stressB,stressId,baseB));
+        const auto addressA=static_cast<std::uint16_t>(baseA* n e x a::VirtualMemoryManager::PageSize);
+        (void)addressA;
+        assert(sharedStressKernel.writeSharedMemory(stressA,stressId,299,static_cast<std::uint8_t>(cycle)));
+        assert(sharedStressKernel.readSharedMemory(stressB,stressId,299)==static_cast<std::uint8_t>(cycle));
+        assert(sharedStressKernel.unmapSharedMemory(stressA,stressId));
+        assert(sharedStressKernel.unmapSharedMemory(stressB,stressId));
+        assert(!sharedStressKernel.memoryManager().isMapped(stressA,baseA));
+        assert(!sharedStressKernel.memoryManager().isMapped(stressB,baseB));
+        assert(sharedStressKernel.detachSharedMemory(stressA,stressId));
+        assert(sharedStressKernel.detachSharedMemory(stressB,stressId));
+        assert(sharedStressKernel.destroySharedMemory(stressId));
+        assert(sharedStressKernel.sharedMemoryInfo().empty());
+        assert(sharedStressKernel.memoryManager().freeFrames()==stressFreeFrames);
+    }
+
     const auto mutex2=syncKernel.createMutex();
     assert(syncKernel.mutexLock(ownerPid,mutex2));
     assert(!syncKernel.mutexLock(ownerPid,mutex2));
