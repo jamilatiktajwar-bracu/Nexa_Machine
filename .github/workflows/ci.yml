@@ -4,9 +4,10 @@ on:
   pull_request:
 concurrency:
   group: nexa-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   desktop:
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +89,7 @@ jobs:
         if: runner.os == 'Windows'
         run: .\\install-root\\bin\\nexa.exe
   mobile:
+    timeout-minutes: 75
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -127,6 +129,7 @@ jobs:
           script: gradle -p mobile/android connectedDebugAndroidTest
 
   ios-simulator:
+    timeout-minutes: 60
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
