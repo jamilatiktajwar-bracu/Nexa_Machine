@@ -435,6 +435,18 @@ bool NexaKernel::writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t
     if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.size)return false;
     memory_.writeSharedFrame(s->second.frames[offset/VirtualMemoryManager::PageSize],offset%VirtualMemoryManager::PageSize,value);return true;
 }
+std::optional<std::uint8_t> NexaKernel::sharedAtomicAdd(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t delta) {
+    const auto previous=readSharedMemory(pid,id,offset);
+    if(!previous)return std::nullopt;
+    if(!writeSharedMemory(pid,id,offset,static_cast<std::uint8_t>(*previous+delta)))return std::nullopt;
+    return previous;
+}
+std::optional<std::uint8_t> NexaKernel::sharedCompareSwap(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t expected,std::uint8_t replacement) {
+    const auto previous=readSharedMemory(pid,id,offset);
+    if(!previous)return std::nullopt;
+    if(*previous==expected&&!writeSharedMemory(pid,id,offset,replacement))return std::nullopt;
+    return previous;
+}
 bool NexaKernel::mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage) {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
     if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id))return false;
@@ -544,6 +556,25 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
         const auto offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
         const auto value=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2));
         return writeSharedMemory(pid,segment,offset,value)?1:0;
+    }
+    case Syscall::SharedAtomicAdd: {
+        if(static_cast<std::size_t>(arg)+3>it->second.machine.ramSize()) throw std::runtime_error("Shared atomic-add descriptor outside process RAM");
+        const auto segment=it->second.machine.readMemory(arg);
+        const auto offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto delta=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2));
+        const auto previous=sharedAtomicAdd(pid,segment,offset,delta);
+        if(!previous)throw std::runtime_error("Shared atomic-add denied or out of bounds");
+        return *previous;
+    }
+    case Syscall::SharedCompareSwap: {
+        if(static_cast<std::size_t>(arg)+4>it->second.machine.ramSize()) throw std::runtime_error("Shared compare-swap descriptor outside process RAM");
+        const auto segment=it->second.machine.readMemory(arg);
+        const auto offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto expected=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2));
+        const auto replacement=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+3));
+        const auto previous=sharedCompareSwap(pid,segment,offset,expected,replacement);
+        if(!previous)throw std::runtime_error("Shared compare-swap denied or out of bounds");
+        return *previous;
     }
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     case Syscall::OpenRead:
