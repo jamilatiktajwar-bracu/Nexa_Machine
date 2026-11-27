@@ -22,7 +22,11 @@ struct GuestDiskRequest {
 // The caller owns execution and disk-device resolution; pop() never performs I/O.
 class GuestDiskQueue {
 public:
+    static constexpr size_t MaxPendingRequests = 1024;
+
     GuestDiskRequest submit(const VM& vm, uint64_t session, uint16_t descriptor, uint8_t vector) {
+        if (pending_.size() >= MaxPendingRequests)
+            throw std::runtime_error("Guest disk request queue is full");
         if (static_cast<size_t>(descriptor) + 11 > vm.ramSize())
             throw std::out_of_range("Disk descriptor exceeds guest RAM");
         auto byte = [&](size_t n) { return vm.readMemory(static_cast<uint16_t>(descriptor + n)); };
@@ -54,6 +58,11 @@ public:
     }
     bool empty() const noexcept { return pending_.empty(); }
     size_t size() const noexcept { return pending_.size(); }
+    bool hasDevice(uint64_t session, uint32_t device) const noexcept {
+        for (const auto& request : pending_)
+            if (request.session == session && request.device == device) return true;
+        return false;
+    }
     void clearSession(uint64_t session) {
         std::deque<GuestDiskRequest> kept;
         while (!pending_.empty()) {
