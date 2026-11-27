@@ -40,6 +40,7 @@ int nexa_session_info(NexaContext*c,uint64_t id,NexaSessionInfo*out){return guar
 int nexa_memory_read(NexaContext*c,uint64_t id,uint16_t a,uint8_t*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Memory output pointer is null");*out=c->sessions.machine(session(c,id)).readMemory(a);});}
 int nexa_memory_write(NexaContext*c,uint64_t id,uint16_t a,uint8_t v){return guard(c,[&]{c->sessions.machine(session(c,id)).writeMemory(a,v);});}
 int nexa_keyboard_input(NexaContext*c,uint64_t id,const char*text){return guard(c,[&]{if(!text)throw std::invalid_argument("Keyboard text is null");c->sessions.machine(session(c,id)).queueKeyboardInput(text);});}
+int nexa_console_read(NexaContext*c,uint64_t id,char*out,size_t capacity,size_t*required){return guard(c,[&]{if(!required)throw std::invalid_argument("Console required-size pointer is null");const auto&text=c->sessions.machine(session(c,id)).deviceOutput();*required=text.size()+1;if(!out&&capacity==0)return;if(!out||capacity<*required)throw std::length_error("Console output buffer is too small");std::memcpy(out,text.c_str(),*required);});}
 int nexa_breakpoint_set(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).setBreakpoint(a);});}
 int nexa_breakpoint_clear(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).clearBreakpoint(a);});}
 int nexa_interrupt_vector_set(NexaContext*c,uint64_t id,uint8_t vector,uint16_t address){return guard(c,[&]{c->sessions.machine(session(c,id)).setInterruptVector(vector,address);});}
