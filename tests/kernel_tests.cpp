@@ -125,6 +125,7 @@ int main() {
     assert(processShell.execute("reap "+std::to_string(managedPid))=="unknown or active process");
 
     nexa::NexaKernel syncKernel(512);
+    syncKernel.setTimeQuantum(3);
     const auto semId=syncKernel.createSemaphore(0,2);
     const auto waiterPid=syncKernel.spawn("semaphore-waiter",nexa::Executable{0,{
         {nexa::Opcode::LoadBImmediate,semId},
