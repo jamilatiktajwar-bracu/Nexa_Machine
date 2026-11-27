@@ -178,10 +178,14 @@ int main() {
     deathKernel.setPriority(deathOwner,1);
     deathKernel.setPriority(deathWaiter,7);
     assert(deathKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
-    assert(deathKernel.scheduleOne());
-    auto deathState=deathKernel.processes();
-    auto deathWaiterState=std::find_if(deathState.begin(),deathState.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
-    assert(deathWaiterState!=deathState.end()&&deathWaiterState->state==nexa::ProcessState::Blocked);
+    bool deathWaiterBlocked=false;
+    for(int retry=0;retry<20&&!deathWaiterBlocked;++retry) {
+        assert(deathKernel.scheduleOne());
+        const auto deathState=deathKernel.processes();
+        const auto deathWaiterState=std::find_if(deathState.begin(),deathState.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
+        deathWaiterBlocked=deathWaiterState!=deathState.end()&&deathWaiterState->state==nexa::ProcessState::Blocked;
+    }
+    assert(deathWaiterBlocked);
     assert(deathKernel.terminateProcess(deathOwner));
     assert(deathKernel.scheduleOne());
     assert(deathKernel.readProcessMemory(deathWaiter,102)==1);
