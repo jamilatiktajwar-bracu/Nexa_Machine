@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0] - 2026-11-27
+- Added reference-counted shared physical frames and guest virtual-page aliases.
+- Shared segments map into guest address spaces, with user read/write and non-executable permissions; detach/exit unmaps.
+- Added guest SharedCreate syscall (22) and high virtual address loads/stores via VMM-backed VM accessors.
+- Shared pages are currently non-pageable; physical-frame exhaustion is reported.
+
+
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
 ## [2.14.0] - 2026-11-27
