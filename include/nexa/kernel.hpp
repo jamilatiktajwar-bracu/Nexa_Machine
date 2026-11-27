@@ -71,6 +71,8 @@ public:
     bool destroySharedMemory(std::uint8_t id);
     bool attachSharedMemory(std::uint32_t pid,std::uint8_t id);
     bool detachSharedMemory(std::uint32_t pid,std::uint8_t id);
+    bool mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage);
+    bool unmapSharedMemory(std::uint32_t pid,std::uint8_t id);
     [[nodiscard]] std::optional<std::uint8_t> readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const;
     bool writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value);
     [[nodiscard]] std::vector<SharedMemoryInfo> sharedMemoryInfo() const;
@@ -86,7 +88,7 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::set<std::uint8_t> sharedAttachments; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; std::deque<std::uint8_t> semaphoreGrants,mutexGrants; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
+    struct Process { ProcessInfo info; VM machine; std::set<std::uint8_t> sharedAttachments; std::map<std::uint8_t,std::uint8_t> sharedMappings; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; std::deque<std::uint8_t> semaphoreGrants,mutexGrants; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
     struct Semaphore { std::uint16_t count{},maximum{}; std::deque<std::uint32_t> waiters; };
     struct Mutex { std::optional<std::uint32_t> owner{}; std::deque<std::uint32_t> waiters; };
     std::size_t ramBytes_;
@@ -102,7 +104,7 @@ private:
     std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
     std::map<std::uint8_t,Semaphore> semaphores_;
     std::map<std::uint8_t,Mutex> mutexes_;
-    struct SharedSegment { std::vector<std::uint8_t> bytes; std::set<std::uint32_t> attached; };
+    struct SharedSegment { std::size_t size{}; std::vector<std::uint16_t> frames; std::set<std::uint32_t> attached; };
     std::map<std::uint8_t,SharedSegment> sharedSegments_;
     std::uint16_t nextSemaphore_{1},nextMutex_{1},nextSharedSegment_{1};
     static constexpr std::size_t MaxSyncObjects=255;
