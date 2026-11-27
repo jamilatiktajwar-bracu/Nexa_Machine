@@ -74,7 +74,8 @@ public:
     bool mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage);
     bool unmapSharedMemory(std::uint32_t pid,std::uint8_t id);
     [[nodiscard]] std::optional<std::uint8_t> readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const;
-    bool writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value);\n    [[nodiscard]] std::optional<std::uint8_t> sharedAtomicAdd(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t delta);\n    [[nodiscard]] std::optional<std::uint8_t> sharedCompareSwap(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t expected,std::uint8_t replacement);
+    bool writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value);
+    [[nodiscard] std::optional<std::uint8_t> sharedAtomicAdd(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t delta);\n    [[nodiscard]] std::optional<std::uint8_t> sharedCompareSwap(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t expected,std::uint8_t replacement);
     [[nodiscard]] std::vector<SharedMemoryInfo> sharedMemoryInfo() const;
     [[nodiscard]] std::uint32_t currentPid() const noexcept { return currentPid_; }
     [[nodiscard]] VirtualFileSystem& filesystem() noexcept { return fs_; }
