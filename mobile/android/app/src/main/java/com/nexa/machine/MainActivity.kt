@@ -55,7 +55,7 @@ private fun NexaScreen() {
         OutlinedTextField(source, { source = it }, label = { Text("Guest assembly") }, modifier = Modifier.fillMaxWidth().height(190.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Button(onClick = { val rc = NexaNative.loadAssembly(context, session, source); status = if (rc == 0) "Program loaded" else NexaNative.lastError(context) }) { Text("Load") }
-            Button(onClick = { running = true }) { Text("Start") }
+            Button(onClick = { val rc = NexaNative.start(context, session); if (rc == 0) { running = true; status = "Running" } else status = NexaNative.lastError(context) }) { Text("Start") }
             Button(onClick = { running = false; NexaNative.pause(context, session); status = "Paused" }) { Text("Pause") }
             Button(onClick = { running = false; NexaNative.stop(context, session); status = "Stopped" }) { Text("Stop") }
         }
