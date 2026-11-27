@@ -308,6 +308,16 @@ void NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
     it->second.info.priority=priority;
     it->second.readyWaitTicks=0;
 }
+void NexaKernel::setMemoryPageLimit(std::uint32_t pid,std::size_t pages) {
+    const auto process=processes_.find(pid);
+    if(process==processes_.end()) throw std::out_of_range("Unknown process id");
+    const auto codeSpace=pid|0x80000000u;
+    const auto codePages=memory_.mappedPages(codeSpace);
+    const auto currentPages=memory_.mappedPages(pid)+codePages;
+    if(pages!=0&&pages<currentPages) throw std::invalid_argument("Memory page limit is below current process usage");
+    memory_.setPageLimit(pid,pages==0?0:pages-codePages);
+    process->second.info.memoryPageLimit=pages;
+}
 void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructions) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
@@ -602,6 +612,7 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         info.residentPages=memory_.residentPages(id)+memory_.residentPages(codeSpace);
         info.swappedPages=memory_.swappedPages(id)+memory_.swappedPages(codeSpace);
         info.residentBytes=info.residentPages*VirtualMemoryManager::PageSize;
+        info.memoryPageLimit=p.info.memoryPageLimit;
         info.readyWaitTicks=p.readyWaitTicks;
         info.effectivePriority=effectivePriority(id);
         result.push_back(std::move(info));
