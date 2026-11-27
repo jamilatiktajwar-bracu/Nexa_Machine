@@ -29,6 +29,7 @@ final class NexaSessionModel: ObservableObject {
             }
             guard rc == 0 else { status = errorText(); return }
             session = handle
+            refreshRecoveryReport()
             let persistentDisk = root.deletingLastPathComponent().appendingPathComponent("guest.disk")
             if FileManager.default.fileExists(atPath: persistentDisk.path) {
                 let attributes = try FileManager.default.attributesOfItem(atPath: persistentDisk.path)
@@ -100,7 +101,7 @@ final class NexaSessionModel: ObservableObject {
             let root = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false).appendingPathComponent("Nexa/Snapshot", isDirectory: true)
             let vm = root.appendingPathComponent("session.vm").path
             let rc = vm.withCString { vmPath in root.path.withCString { diskPath in nexa_snapshot_restore_bundle(context, session, vmPath, diskPath) } }
-            update(rc); refreshConsole()
+            update(rc); refreshConsole(); refreshRecoveryReport()
         } catch { status = "Snapshot error: \(error.localizedDescription)" }
     }
     private func refreshRecoveryReport() {
