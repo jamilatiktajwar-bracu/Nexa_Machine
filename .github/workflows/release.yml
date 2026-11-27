@@ -74,7 +74,7 @@ jobs:
           echo "NEXA_ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "NEXA_ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
       - name: Build signed Android release
-        if: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 != '' }}
+        if: env.NEXA_ANDROID_SIGNING_READY == 'true'
         run: gradle -p mobile/android bundleRelease assembleRelease
       - name: Build unsigned Android preview
         if: env.NEXA_ANDROID_SIGNING_READY != 'true'
