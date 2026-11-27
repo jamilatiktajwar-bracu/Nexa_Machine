@@ -16,6 +16,24 @@
 using DiskRequest=nexa::GuestDiskRequest;
 struct NexaContext {nexa::GuestDiskQueue diskQueue;std::map<uint64_t,DiskRequest> diskRequests;std::deque<uint64_t> diskRequestOrder;nexa::SessionManager sessions;std::map<uint64_t,std::string> ids;std::map<uint64_t,std::map<uint32_t,std::unique_ptr<nexa::VirtualDisk>>> disks;std::map<uint64_t,std::map<uint32_t,std::string>> diskPaths;uint64_t next{1};std::string error;};
 namespace {
+constexpr size_t MaxDiskRequestHistory = 4096;
+void rememberDiskRequest(NexaContext* c, const DiskRequest& request) {
+    auto [it, inserted] = c->diskRequests.emplace(request.requestId, request);
+    if (!inserted) {
+        it->second = request;
+        return;
+    }
+    c->diskRequestOrder.push_back(request.requestId);
+    while (c->diskRequestOrder.size() > MaxDiskRequestHistory) {
+        const auto oldest = c->diskRequestOrder.front();
+        c->diskRequestOrder.pop_front();
+        auto entry = c->diskRequests.find(oldest);
+        if (entry != c->diskRequests.end() && entry->second.status == 0)
+            c->diskRequestOrder.push_back(oldest);
+        else if (entry != c->diskRequests.end())
+            c->diskRequests.erase(entry);
+    }
+}
 template<class F>int guard(NexaContext*c,F&&fn){if(!c)return -1;try{fn();c->error.clear();return 0;}catch(const std::exception&e){c->error=e.what();return -1;}catch(...){c->error="Unknown Nexa error";return -1;}}
 std::string session(NexaContext*c,uint64_t id){auto it=c->ids.find(id);if(it==c->ids.end())throw std::out_of_range("Unknown C API session handle");return it->second;}
 uint64_t checksumFile(const std::filesystem::path& path){std::ifstream in(path,std::ios::binary);if(!in)throw std::runtime_error("Cannot open snapshot file for checksum: "+path.string());uint64_t hash=14695981039346656037ull;char buffer[8192];while(in){in.read(buffer,sizeof(buffer));for(std::streamsize i=0;i<in.gcount();++i){hash^=static_cast<unsigned char>(buffer[i]);hash*=1099511628211ull;}}if(!in.eof())throw std::runtime_error("Snapshot checksum read failed");return hash;}
