@@ -151,7 +151,7 @@ Run `nexa console`, then type `os`. Commands: help, echo, clear, mem, run FILE, 
 
 ## VM profiles
 
-Create a profile with `nexa --profile-create NAME [RAM_BYTES DISK_BYTES]`; sizes default to 256 bytes RAM and 1 MiB disk. Use `nexa --profile-list` to enumerate profiles and `nexa --profile-show NAME` to inspect them. Run assembly with a profile using `nexa --profile-run NAME SOURCE.nexa`. Profile values are validated and stored as JSON with a dedicated virtual disk path. Clone using `nexa --profile-clone SOURCE DEST` (creates a fresh disk), and remove a profile definition using `nexa --profile-delete NAME`; deletion intentionally retains its disk image. Names are restricted to safe filename characters and duplicate creation is rejected.
+Create a profile with `nexa --profile-create NAME [RAM_BYTES DISK_BYTES]`; sizes default to 256 bytes RAM and 1 MiB disk (RAM limit 64 KiB; disk limit 128 MiB). Use `nexa --profile-list` to enumerate profiles and `nexa --profile-show NAME` to inspect them. Run assembly with a profile using `nexa --profile-run NAME SOURCE.nexa`. Profile values are validated and stored as JSON with a dedicated virtual disk path. Clone using `nexa --profile-clone SOURCE DEST` (creates a fresh disk), and remove a profile definition using `nexa --profile-delete NAME`; deletion intentionally retains its disk image. Names are restricted to safe filename characters and duplicate creation is rejected.
 
 ## Portable workspace
 
