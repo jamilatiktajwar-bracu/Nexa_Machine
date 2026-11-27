@@ -63,6 +63,8 @@ public:
     bool scheduleOne();
     void run(std::size_t maxSlices=100000);
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
+    [[nodiscard]] std::uint8_t effectivePriority(std::uint32_t pid) const;
+    [[nodiscard]] std::string syncDiagnostics() const;
     [[nodiscard]] std::uint32_t currentPid() const noexcept { return currentPid_; }
     [[nodiscard]] VirtualFileSystem& filesystem() noexcept { return fs_; }
     [[nodiscard]] VirtualMemoryManager& memoryManager() noexcept { return memory_; }
