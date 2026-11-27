@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <string>
+#include <limits>
 namespace nexa {
 VirtualMemoryManager::VirtualMemoryManager(std::size_t bytes) {
     if(bytes<PageSize||bytes%PageSize!=0||bytes/PageSize>65536)
@@ -26,7 +27,7 @@ void VirtualMemoryManager::setPageLimit(std::uint32_t pid,std::size_t pages) {
     const auto it=spaces_.find(pid);
     if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     if(pages!=0&&it->second.size()>pages) throw std::invalid_argument("Page limit is below current address-space usage");
-    if(pages==0) pageLimits_.erase(pid); else pageLimits_[pid]=pages;
+    if(pages==std::numeric_limits<std::size_t>::max()) pageLimits_.erase(pid); else pageLimits_[pid]=pages;
 }
 void VirtualMemoryManager::destroyAddressSpace(std::uint32_t pid) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
