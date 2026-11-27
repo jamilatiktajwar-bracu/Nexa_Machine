@@ -48,6 +48,7 @@ int main(){
  recovery.setAllocationRecoveryHandler([&]{++recoveries; recovery.releaseSharedFrame(pinnedB);});
  recovery.mapPage(42,0);
  assert(recoveries==1&&recovery.freeFrames()==0);
+ assert(recovery.allocationRecoveryAttempts()==1&&recovery.allocationRecoverySuccesses()==1&&recovery.allocationRecoveryFailures()==0);
  assert(recovery.read(42,0)==0);
  recovery.destroyAddressSpace(42);
  recovery.releaseSharedFrame(pinnedA);
