@@ -42,6 +42,13 @@
 
 # Nexa Machine
 
+## Nexa OS 2.29 — Memory pressure diagnostics
+
+- Added `oomstat`, a read-only system memory pressure snapshot with used/free/total frames, swap activity and a simple pressure classification.
+- Pressure is `critical` when no free frames remain, `high` at or below 10% free frames, and `normal` otherwise; swapping availability is reported separately, not treated as a guarantee of recovery.
+- Added regression coverage for command output and pressure classification.
+
+
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
 **Current development milestone: Nexa OS 2.26.0**
