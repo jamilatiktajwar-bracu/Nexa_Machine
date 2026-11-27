@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.29.0] - 2026-11-27
+- Added `oomstat` system memory pressure diagnostics: free-frame ratio classification, resident/swapped pages, and swap counters.
+- Defined pressure labels as normal (>10% free), high (<=10% free), and critical (zero free frames); these are advisory diagnostics, not automatic OOM recovery.
+- Added tests for snapshot output and pressure classification.
+
+
 ## [2.28.0] - 2026-11-27
 - Added configurable per-process memory page quotas covering executable and data mappings, including shared-memory mappings.
 - Added the root-only `memlimit PID PAGES` command (`0` disables the limit) and exposed configured limits in `ps`.
