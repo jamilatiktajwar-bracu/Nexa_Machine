@@ -224,6 +224,17 @@ int main() {
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(!syncKernel.readSharedMemory(shmGuestPid,guestSegment,4));
     assert(syncKernel.destroySharedMemory(guestSegment));
+    // Guest can allocate a shared segment through syscall 22.
+    nexa::NexaKernel createKernel;
+    const auto createPid=createKernel.spawn("guest-shm-create",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,16},{nexa::Opcode::Store,50},{nexa::Opcode::LoadImmediate,0},{nexa::Opcode::Store,51},
+        {nexa::Opcode::LoadBImmediate,50},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedCreate)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,52},{nexa::Opcode::Halt,0}}});
+    createKernel.run();
+    const auto createdSegment=createKernel.readProcessMemory(createPid,52);
+    assert(createdSegment!=0);
+    const auto createdInfo=createKernel.sharedMemoryInfo();
+    assert(createdInfo.size()==1&&createdInfo.front().id==createdSegment&&createdInfo.front().size==16);
+    assert(createKernel.destroySharedMemory(createdSegment));
     // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
     const auto sharedId=syncKernel.createSharedMemory(32);
     assert(syncKernel.attachSharedMemory(ownerPid,sharedId));
