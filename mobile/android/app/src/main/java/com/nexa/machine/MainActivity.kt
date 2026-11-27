@@ -53,7 +53,12 @@ private fun NexaScreen() {
     DisposableEffect(Unit) {
         val ctx = NexaNative.createContext()
         context = ctx
-        session = if (ctx != 0L) NexaNative.createSession(ctx, "Android session", 4096) else 0L
+        val snapshotRoot = File(appContext.filesDir, "nexa/snapshot")
+        snapshotRoot.mkdirs()
+        val vmState = File(snapshotRoot, "session.vm")
+        session = if (ctx != 0L) NexaNative.createRecoveringSession(
+            ctx, "Android session", 4096, vmState.absolutePath, snapshotRoot.absolutePath
+        ) else 0L
         status = if (session != 0L) "Ready" else "Core initialization failed"
         onDispose {
             running = false
