@@ -5,6 +5,7 @@ object NexaNative {
     external fun createContext(): Long
     external fun destroyContext(context: Long)
     external fun createSession(context: Long, name: String, ramBytes: Int): Long
+    external fun createRecoveringSession(context: Long, name: String, ramBytes: Int, vmPath: String, diskDirectory: String): Long
     external fun loadAssembly(context: Long, session: Long, source: String): Int
     external fun run(context: Long, session: Long, budget: Int): Int
     external fun start(context: Long, session: Long): Int
