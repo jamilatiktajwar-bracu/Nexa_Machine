@@ -316,3 +316,7 @@ The desktop UI now supports selecting and creating VM profiles, loading assembly
 ## Desktop manager updates
 
 The Qt frontend now has cooperative timer-driven Start/Pause/Resume/Stop controls, instruction-level monitoring, breakpoint-aware execution, disk image inspection/flush/import/export, profile lifecycle controls, and snapshot actions. Mobile frontend remains architecture/documentation only. See [GUI manager guide](docs/GUI_VM_MANAGER.md).
+
+## VM session manager core
+
+The portable `SessionManager` API creates independent VM instances with stable session IDs, per-session RAM, lifecycle state, cooperative execution budgets, breakpoints, stepping, reset, stop, and VM-state snapshots. A regression suite checks session isolation and state transitions. The Qt frontend is not yet wired to this registry; multi-session GUI tabs remain planned.
