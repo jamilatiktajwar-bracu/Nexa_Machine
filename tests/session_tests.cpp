@@ -1,6 +1,7 @@
 #include "nexa/session_manager.hpp"
 #include <cassert>
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 int main(){
@@ -12,6 +13,6 @@ int main(){
  manager.reset(one);assert(manager.info(one).state==nexa::SessionState::Ready);manager.start(one);manager.machine(one).setBreakpoint(1);assert(manager.run(one,10)==nexa::SessionState::Paused);assert(manager.info(one).pc==1);manager.machine(one).clearBreakpoints();assert(manager.run(one,10)==nexa::SessionState.Halted);
  manager.stop(two);assert(manager.info(two).state==nexa::SessionState::Stopped);manager.reset(two);assert(manager.info(two).state==nexa::SessionState::Ready);
  bool threw=false;try{manager.info("missing");}catch(const std::out_of_range&){threw=true;}assert(threw);assert(manager.remove(two));assert(manager.list().size()==1);
- const char*state="/tmp/nexa-session-test.state";manager.saveSnapshot(one,state);manager.reset(one);manager.loadSnapshot(one,state);assert(manager.info(one).pc==4);std::remove(state);
+ auto state=(std::filesystem::temp_directory_path()/"nexa-session-test.state").string();manager.saveSnapshot(one,state);manager.reset(one);manager.loadSnapshot(one,state);assert(manager.info(one).pc==4);std::remove(state.c_str());
  std::cout<<"Session manager tests passed\n";
 }
