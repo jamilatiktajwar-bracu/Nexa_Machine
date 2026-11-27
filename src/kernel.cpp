@@ -590,6 +590,7 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         (void)id;
         auto info=p.info;
         info.pendingMessages=p.inbox.size();
+        for(const auto& message:p.inbox) info.pendingMessageBytes+=message.payload.size();
         info.pendingSignals=p.signals.size();
         info.readyWaitTicks=p.readyWaitTicks;
         info.effectivePriority=effectivePriority(id);
