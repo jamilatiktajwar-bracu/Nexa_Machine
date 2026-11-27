@@ -180,6 +180,20 @@ int main() {
     assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
     assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
+    // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
+    const auto sharedId=syncKernel.createSharedMemory(32);
+    assert(syncKernel.attachSharedMemory(ownerPid,sharedId));
+    assert(syncKernel.attachSharedMemory(lockWaiterPid,sharedId));
+    assert(syncKernel.writeSharedMemory(ownerPid,sharedId,7,0xA5));
+    assert(syncKernel.readSharedMemory(lockWaiterPid,sharedId,7)==0xA5);
+    assert(!syncKernel.readSharedMemory(deathWaiter,sharedId,7));
+    assert(!syncKernel.writeSharedMemory(ownerPid,sharedId,32,1));
+    assert(syncKernel.detachSharedMemory(ownerPid,sharedId));
+    assert(!syncKernel.readSharedMemory(ownerPid,sharedId,7));
+    assert(syncKernel.sharedMemoryInfo().front().attachments==1);
+    assert(syncKernel.destroySharedMemory(sharedId));
+    assert(syncKernel.sharedMemoryInfo().empty());
+    bool invalidSharedSize=false;try{(void)syncKernel.createSharedMemory(0);}catch(const std::invalid_argument&){invalidSharedSize=true;}assert(invalidSharedSize);
     const auto mutex2=syncKernel.createMutex();
     assert(syncKernel.mutexLock(ownerPid,mutex2));
     assert(!syncKernel.mutexLock(ownerPid,mutex2));
