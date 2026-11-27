@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 namespace nexa {
-enum class ProcessState { Ready, Running, Blocked, Halted, Faulted };
+enum class ProcessState { Ready, Running, Blocked, Stopped, Halted, Faulted };
 struct ProcessInfo {
     std::uint32_t pid{};
     std::string name;
@@ -25,8 +25,10 @@ struct ProcessInfo {
     std::optional<std::uint8_t> exitCode{};
     std::string terminationReason;
     std::uint64_t instructionBudget{0};
+    std::size_t pendingSignals{0};
 };
-enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12 };
+enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13 };
+enum class ProcessSignal : std::uint8_t { Terminate=1, Kill=2, Stop=3, Continue=4, User1=10, User2=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
@@ -35,6 +37,8 @@ public:
     std::uint32_t spawn(const std::string& name, const Executable& image);
     bool reapProcess(std::uint32_t pid);
     bool terminateProcess(std::uint32_t pid);
+    bool sendSignal(std::uint32_t pid,ProcessSignal signal);
+    [[nodiscard]] std::optional<ProcessSignal> receiveSignal(std::uint32_t pid);
     [[nodiscard]] bool hasDeadlock() const noexcept;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setInstructionBudget(std::uint32_t pid,std::uint64_t instructions);
@@ -65,14 +69,14 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
+    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
     std::size_t ramBytes_;
     std::uint32_t nextPid_{1}, currentPid_{0};
     std::map<std::uint32_t, Process> processes_;
     std::uint32_t cursor_{0};
     std::size_t timeQuantum_{1};
     std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0},priorityAgingThreshold_{0};
-    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251;
+    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxPendingSignals=32;
     VirtualFileSystem fs_;
     VirtualMemoryManager memory_;
     std::string output_;
