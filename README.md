@@ -1,5 +1,11 @@
 
 
+## Nexa OS 2.25 — IPC mailbox memory quota
+
+- Each process inbox is capped at 8,192 queued payload bytes in addition to the existing 64-message and 251-byte-per-message limits.
+- `sendMessage()` rejects a message that would exceed the byte quota; dequeue immediately releases quota for subsequent sends.
+- `pendingMessageBytes` exposes current payload usage. Tests cover quota rejection and capacity recovery after receive.
+
 ## Nexa OS 2.24 — IPC mailbox accounting
 
 - `ProcessInfo::pendingMessages` reports queued inbox message count and the new `pendingMessageBytes` reports the total queued payload bytes.
@@ -17,7 +23,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.24.0**
+**Current development milestone: Nexa OS 2.25.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
