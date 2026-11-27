@@ -42,5 +42,4 @@ jobs:
         run: ./build/nexa
       - name: Run demo (Windows)
         if: runner.os == 'Windows'
-        run: .\build\Release
-exa.exe
+        run: .\build\Release\nexa.exe
