@@ -26,6 +26,8 @@ int nexa_session_list(NexaContext*,NexaSessionInfo* out_items,size_t capacity,si
 int nexa_memory_read(NexaContext*,uint64_t id,uint16_t address,uint8_t* out_value);
 int nexa_memory_write(NexaContext*,uint64_t id,uint16_t address,uint8_t value);
 int nexa_keyboard_input(NexaContext*,uint64_t id,const char* text);
+/* Read captured guest console output. required receives bytes including NUL. */
+int nexa_console_read(NexaContext*,uint64_t id,char* out,size_t capacity,size_t* required);
 int nexa_breakpoint_set(NexaContext*,uint64_t id,size_t address);
 int nexa_breakpoint_clear(NexaContext*,uint64_t id,size_t address);
 int nexa_interrupt_vector_set(NexaContext*,uint64_t id,uint8_t vector,uint16_t handler_address);
