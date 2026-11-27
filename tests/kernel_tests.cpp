@@ -1,5 +1,6 @@
 #include "nexa/kernel.hpp"
 #include "nexa/shell.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <stdexcept>
