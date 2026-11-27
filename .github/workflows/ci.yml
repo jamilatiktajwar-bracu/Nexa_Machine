@@ -117,6 +117,8 @@ jobs:
   mobile:
     timeout-minutes: 75
     runs-on: ubuntu-24.04
+    env:
+      NEXA_ANDROID_SIGNING_CONFIGURED: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 != '' && secrets.NEXA_ANDROID_STORE_PASSWORD != '' && secrets.NEXA_ANDROID_KEY_ALIAS != '' && secrets.NEXA_ANDROID_KEY_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Android SDK/NDK setup
@@ -160,7 +162,7 @@ jobs:
           disable-animations: true
           script: gradle -p mobile/android connectedDebugAndroidTest
       - name: Build signed Android APK and AAB
-        if: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 != '' && secrets.NEXA_ANDROID_STORE_PASSWORD != '' && secrets.NEXA_ANDROID_KEY_ALIAS != '' && secrets.NEXA_ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ env.NEXA_ANDROID_SIGNING_CONFIGURED == 'true' }}
         env:
           NEXA_ANDROID_KEYSTORE_BASE64: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 }}
           NEXA_ANDROID_STORE_PASSWORD: ${{ secrets.NEXA_ANDROID_STORE_PASSWORD }}
@@ -182,6 +184,8 @@ jobs:
   ios-simulator:
     timeout-minutes: 60
     runs-on: macos-latest
+    env:
+      NEXA_IOS_SIGNING_CONFIGURED: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 != '' && secrets.NEXA_IOS_CERTIFICATE_PASSWORD != '' && secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.NEXA_IOS_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -207,7 +211,7 @@ jobs:
           name: nexa-ios-simulator
           path: mobile/ios/nexa-ios-simulator.zip
       - name: Archive signed iOS application
-        if: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 != '' && secrets.NEXA_IOS_CERTIFICATE_PASSWORD != '' && secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.NEXA_IOS_TEAM_ID != '' }}
+        if: ${{ env.NEXA_IOS_SIGNING_CONFIGURED == 'true' }}
         env:
           NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           NEXA_IOS_CERTIFICATE_PASSWORD: ${{ secrets.NEXA_IOS_CERTIFICATE_PASSWORD }}
