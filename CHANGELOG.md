@@ -2,6 +2,10 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.13.0] - 2026-11-27
+- Added kernel-managed shared memory segments with attach/detach, byte read/write APIs, lifecycle cleanup and diagnostics.
+- Shared memory remains host-accessible through kernel API; it is not yet mapped into guest virtual address spaces.
+
 ## [2.12.0] - 2026-11-27
 - Added transitive priority inheritance for mutex owners, preventing priority inversion across nested lock chains.
 - Added `syncstat` shell diagnostics for semaphore/mutex state, owners, wait queues, and effective priorities.
