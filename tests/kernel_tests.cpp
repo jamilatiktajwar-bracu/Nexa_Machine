@@ -194,6 +194,13 @@ int main() {
     const auto guestSegment=syncKernel.createSharedMemory(16);
     assert(syncKernel.attachSharedMemory(ownerPid,guestSegment));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,4,0x33));
+    assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,8,0x10));
+    assert(syncKernel.sharedAtomicAdd(ownerPid,guestSegment,8,3)==0x10);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,8)==0x13);
+    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,8,0x13,0x44)==0x13);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,8)==0x44);
+    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,8,0x13,0x55)==0x44);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,8)==0x44);
     const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,41},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,4},{nexa::Opcode::Store,41},
