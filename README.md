@@ -149,6 +149,10 @@ Run `nexa console`, then type `os`. Commands: help, echo, clear, mem, run FILE, 
 - `examples/keyboard_echo.nexa`
 - `examples/boot_message.nexa`
 
+## Host diagnostics
+
+Run `nexa --platform` to inspect host OS, CPU architecture, compiler, build mode, and byte order without starting a VM or reading guest files.
+
 ## Build
 ```sh
 cmake -S . -B build
