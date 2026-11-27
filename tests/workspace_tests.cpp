@@ -1,4 +1,5 @@
 #include "nexa/workspace.hpp"
+#include "nexa/config.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
@@ -17,7 +18,7 @@ int main(){
  assert(std::filesystem::is_directory(paths.disks));
  assert(std::filesystem::is_directory(paths.snapshots));
  assert(std::filesystem::is_directory(paths.logs));
- auto profile=paths.createProfile("portable_dev"); assert(std::filesystem::exists(profile));
+ auto profile=paths.createProfile("portable_dev"); assert(std::filesystem::exists(profile));\n auto cfg=nexa::MachineConfig::load(profile.string()); assert(cfg.name=="portable_dev" && cfg.ramBytes==256 && cfg.diskBytes==1048576); assert(cfg.diskPath.find("portable_dev.disk")!=std::string::npos);
  auto names=paths.listProfiles(); assert(names.size()==1 && names[0]=="portable_dev");
  bool rejected=false; try{paths.createProfile("../bad");}catch(const std::invalid_argument&){rejected=true;} assert(rejected);
  bool duplicate=false; try{paths.createProfile("portable_dev");}catch(const std::runtime_error&){duplicate=true;} assert(duplicate);
