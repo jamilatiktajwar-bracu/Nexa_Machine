@@ -92,6 +92,7 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     releaseSharedAttachments(pid);
     it->second.inbox.clear();
     it->second.signals.clear();
+    cleanupSynchronizationState(pid);
     releaseOwnedMutexes(pid);
     if(currentPid_==pid) currentPid_=0;
     return true;
@@ -208,6 +209,33 @@ void NexaKernel::releaseSharedAttachments(std::uint32_t pid) {
     auto p=processes_.find(pid);if(p==processes_.end())return;
     for(auto id:p->second.sharedAttachments){unmapSharedMemory(pid,id);auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
     p->second.sharedAttachments.clear();
+}
+void NexaKernel::cleanupSynchronizationState(std::uint32_t pid) {
+    for(auto& [id,sem]:semaphores_) {
+        sem.waiters.erase(std::remove(sem.waiters.begin(),sem.waiters.end(),pid),sem.waiters.end());
+        auto process=processes_.find(pid);
+        if(process==processes_.end()) continue;
+        auto grant=std::find(process->second.semaphoreGrants.begin(),process->second.semaphoreGrants.end(),id);
+        if(grant==process->second.semaphoreGrants.end()) continue;
+        process->second.semaphoreGrants.erase(grant);
+        bool handedOff=false;
+        while(!sem.waiters.empty()) {
+            const auto next=sem.waiters.front();sem.waiters.pop_front();
+            auto waiter=processes_.find(next);
+            if(waiter==processes_.end()||waiter->second.info.state!=ProcessState::Blocked) continue;
+            waiter->second.semaphoreGrants.push_back(id);
+            waiter->second.info.state=ProcessState::Ready;
+            handedOff=true;
+            break;
+        }
+        if(!handedOff&&sem.count<sem.maximum) ++sem.count;
+    }
+    for(auto& [id,mutex]:mutexes_)
+        mutex.waiters.erase(std::remove(mutex.waiters.begin(),mutex.waiters.end(),pid),mutex.waiters.end());
+    if(auto process=processes_.find(pid);process!=processes_.end()) {
+        process->second.semaphoreGrants.clear();
+        process->second.mutexGrants.clear();
+    }
 }
 void NexaKernel::releaseOwnedMutexes(std::uint32_t pid) {
     for(auto& [id,mutex]:mutexes_) {
