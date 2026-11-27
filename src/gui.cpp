@@ -12,36 +12,61 @@
 #include <QImage>
 #include <QPixmap>
 #include <QMouseEvent>
+#include <QComboBox>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QFile>
+#include <QStringList>
 #include <functional>
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include "nexa/assembler.hpp"
 #include "nexa/vm.hpp"
+#include "nexa/config.hpp"
+#include "nexa/workspace.hpp"
 class PixelCanvas:public QLabel {
 public: std::function<void(int,int,bool)> paintPixel;
-protected: void mousePressEvent(QMouseEvent*e)override{paint(e);} void mouseMoveEvent(QMouseEvent*e)override{if(e->buttons()&(Qt::LeftButton|Qt::RightButton))paint(e);}
-private: void paint(QMouseEvent*e){double scale=std::min(width()/64.0,height()/32.0);double ox=(width()-64*scale)/2,oy=(height()-32*scale)/2;int x=int((e->position().x()-ox)/scale),y=int((e->position().y()-oy)/scale);if(x>=0&&x<64&&y>=0&&y<32&&paintPixel)paintPixel(x,y,e->button()!=Qt::RightButton&&!(e->buttons()&Qt::RightButton));}
+protected:
+ void mousePressEvent(QMouseEvent*e)override{paint(e);}
+ void mouseMoveEvent(QMouseEvent*e)override{if(e->buttons()&(Qt::LeftButton|Qt::RightButton))paint(e);}
+private:
+ void paint(QMouseEvent*e){double scale=std::min(width()/64.0,height()/32.0);if(scale<=0)return;double ox=(width()-64*scale)/2,oy=(height()-32*scale)/2;int x=int((e->position().x()-ox)/scale),y=int((e->position().y()-oy)/scale);if(x>=0&&x<64&&y>=0&&y<32&&paintPixel)paintPixel(x,y,e->button()!=Qt::RightButton&&!(e->buttons()&Qt::RightButton));}
 };
 class NexaWindow:public QMainWindow {
 public:
  NexaWindow(){
-  setWindowTitle("Nexa Machine 0.9");resize(1050,760);
+  paths=nexa::WorkspacePaths::discover();paths.initialize();setWindowTitle("Nexa Machine — VM Manager");resize(1180,800);
   auto*w=new QWidget;auto*l=new QVBoxLayout(w);auto*bar=new QHBoxLayout;
-  auto*run=new QPushButton("Run");auto*step=new QPushButton("Step");auto*reset=new QPushButton("Reset");
-  auto*bp=new QLineEdit;bp->setPlaceholderText("Breakpoint instruction address");auto*setBp=new QPushButton("Set breakpoint");status=new QLabel("Ready");
-  bar->addWidget(run);bar->addWidget(step);bar->addWidget(reset);bar->addWidget(bp);bar->addWidget(setBp);bar->addWidget(status);l->addLayout(bar);
+  profiles=new QComboBox;profiles->setMinimumWidth(180);auto*refresh=new QPushButton("Refresh");auto*create=new QPushButton("New profile");auto*loadFile=new QPushButton("Open .nexa");
+  auto*saveSnap=new QPushButton("Save snapshot");auto*restoreSnap=new QPushButton("Restore snapshot");auto*run=new QPushButton("Run");auto*step=new QPushButton("Step");auto*reset=new QPushButton("Reset");
+  auto*bp=new QLineEdit;bp->setPlaceholderText("Breakpoint address");bp->setMaximumWidth(150);auto*setBp=new QPushButton("Set breakpoint");status=new QLabel("Ready");
+  bar->addWidget(profiles);bar->addWidget(refresh);bar->addWidget(create);bar->addWidget(loadFile);bar->addWidget(saveSnap);bar->addWidget(restoreSnap);bar->addWidget(run);bar->addWidget(step);bar->addWidget(reset);bar->addWidget(bp);bar->addWidget(setBp);bar->addWidget(status);l->addLayout(bar);
   editor=new QPlainTextEdit;editor->setPlainText("LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n");l->addWidget(editor,2);
-  auto*panels=new QHBoxLayout;output=new QTextEdit;output->setReadOnly(true);memory=new QTextEdit;memory->setReadOnly(true);memory->setMaximumWidth(330);graphics=new PixelCanvas;graphics->setMinimumSize(320,160);graphics->setAlignment(Qt::AlignCenter);graphics->paintPixel=[this](int x,int y,bool white){vm.drawPixel(x,y,white);refreshGraphics();};panels->addWidget(output,2);panels->addWidget(memory,1);panels->addWidget(graphics,1);l->addLayout(panels,1);setCentralWidget(w);
+  auto*panels=new QHBoxLayout;output=new QTextEdit;output->setReadOnly(true);memory=new QTextEdit;memory->setReadOnly(true);memory->setMaximumWidth(330);graphics=new PixelCanvas;graphics->setMinimumSize(320,160);graphics->setAlignment(Qt::AlignCenter);panels->addWidget(output,2);panels->addWidget(memory,1);panels->addWidget(graphics,1);l->addLayout(panels,1);setCentralWidget(w);
+  connect(refresh,&QPushButton::clicked,this,[this](){refreshProfiles();});
+  connect(create,&QPushButton::clicked,this,[this](){createProfile();});
+  connect(profiles,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int){selectProfile();});
+  connect(loadFile,&QPushButton::clicked,this,[this](){auto file=QFileDialog::getOpenFileName(this,"Open assembly",QString(),"Nexa Assembly (*.nexa *.asm *.txt);;All files (*)");if(!file.isEmpty()){QFile f(file);if(f.open(QIODevice::ReadOnly|QIODevice::Text))editor->setPlainText(QString::fromUtf8(f.readAll()));loaded=false;status->setText("Source loaded");}});
+  connect(saveSnap,&QPushButton::clicked,this,[this](){saveSnapshot();});
+  connect(restoreSnap,&QPushButton::clicked,this,[this](){restoreSnapshot();});
   connect(run,&QPushButton::clicked,this,[this](){execute(false);});
   connect(step,&QPushButton::clicked,this,[this](){execute(true);});
-  connect(reset,&QPushButton::clicked,this,[this](){vm.reset();loaded=false;editor->setPlainText("LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n");output->clear();status->setText("Ready");refreshMemory();});
-  connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm.setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint address");});
+  connect(reset,&QPushButton::clicked,this,[this](){vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
+  connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm->setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint");});
+  refreshProfiles();
  }
 private:
- void execute(bool singleStep){try{if(!loaded){vm.loadProgram(nexa::parseAssembly(editor->toPlainText().toStdString()));loaded=true;}std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());try{if(singleStep)vm.stepInstruction();else vm.run();}catch(...){std::cout.rdbuf(old);throw;}std::cout.rdbuf(old);output->append(QString::fromStdString(capture.str()));status->setText(QString("PC=%1 A=%2 B=%3 | %4 | %5 instructions").arg(vm.programCounter()).arg(vm.accumulator()).arg(vm.secondRegister()).arg(vm.halted()?"Halted":vm.hasBreakpoint(vm.programCounter())?"Breakpoint":"Paused").arg(vm.instructionsExecuted()));refreshMemory();}catch(const std::exception&e){output->setPlainText(e.what());status->setText("Error");}}
- void refreshGraphics(){QImage img(nexa::VM::ScreenWidth,nexa::VM::ScreenHeight,QImage::Format_RGB32);for(int y=0;y<int(nexa::VM::ScreenHeight);++y)for(int x=0;x<int(nexa::VM::ScreenWidth);++x)img.setPixel(x,y,vm.pixel(x,y)?qRgb(255,255,255):qRgb(0,0,0));graphics->setPixmap(QPixmap::fromImage(img).scaled(graphics->size(),Qt::KeepAspectRatio));}
- void refreshMemory(){refreshGraphics();QString text;for(unsigned row=0;row<64;row+=16){text+=QString("%1: ").arg(row,4,16,QChar('0'));for(unsigned col=0;col<16;++col)text+=QString("%1 ").arg(vm.readMemory(row+col),2,16,QChar('0'));text+="\n";}memory->setPlainText(text.toUpper());}
- QPlainTextEdit*editor{};QTextEdit*output{};QTextEdit*memory{};QLabel*status{};PixelCanvas*graphics{};nexa::VM vm;bool loaded=false;
+ void refreshProfiles(){QString current=profiles->currentText();profiles->blockSignals(true);profiles->clear();for(const auto&name:paths.listProfiles())profiles->addItem(QString::fromStdString(name));int idx=profiles->findText(current);if(idx>=0)profiles->setCurrentIndex(idx);profiles->blockSignals(false);if(profiles->count()==0){vm=std::make_unique<nexa::VM>();ramBytes=256;activeProfile.clear();status->setText("No profile selected — default VM");refreshMemory();}else{if(profiles->currentIndex()<0)profiles->setCurrentIndex(0);selectProfile();}}
+ void createProfile(){bool ok=false;QString name=QInputDialog::getText(this,"Create profile","Profile name:",QLineEdit::Normal,"Nexa",&ok);if(!ok||name.trimmed().isEmpty())return;try{paths.createProfile(name.trimmed().toStdString());refreshProfiles();int idx=profiles->findText(name.trimmed());if(idx>=0)profiles->setCurrentIndex(idx);}catch(const std::exception&e){QMessageBox::warning(this,"Profile error",e.what());}}
+ void selectProfile(){QString name=profiles->currentText();if(name.isEmpty())return;try{auto cfg=nexa::MachineConfig::load((paths.profiles/(name.toStdString()+".json")).string());ramBytes=cfg.ramBytes;vm=std::make_unique<nexa::VM>(ramBytes);activeProfile=name.toStdString();loaded=false;output->clear();status->setText(QString("Profile %1 | RAM %2 bytes").arg(name).arg(ramBytes));refreshMemory();}catch(const std::exception&e){QMessageBox::warning(this,"Profile load error",e.what());}}
+ void saveSnapshot(){if(activeProfile.empty()){QMessageBox::information(this,"Snapshot","Create or select a profile first.");return;}bool ok=false;QString name=QInputDialog::getText(this,"Save snapshot","Snapshot name:",QLineEdit::Normal,"checkpoint",&ok);if(!ok||name.trimmed().isEmpty())return;try{auto path=paths.snapshotPath(activeProfile,name.trimmed().toStdString());vm->saveState(path.string());status->setText("Snapshot saved: "+name);}catch(const std::exception&e){QMessageBox::warning(this,"Snapshot error",e.what());}}
+ void restoreSnapshot(){if(activeProfile.empty())return;auto names=paths.listSnapshots(activeProfile);if(names.empty()){QMessageBox::information(this,"Snapshots","No snapshots found for this profile.");return;}QStringList list;for(auto&n:names)list<<QString::fromStdString(n);bool ok=false;QString name=QInputDialog::getItem(this,"Restore snapshot","Snapshot:",list,0,false,&ok);if(!ok)return;try{vm->loadState(paths.snapshotPath(activeProfile,name.toStdString()).string());loaded=true;status->setText("Snapshot restored: "+name);refreshMemory();}catch(const std::exception&e){QMessageBox::warning(this,"Restore error",e.what());}}
+ void execute(bool singleStep){try{if(!loaded){vm->loadProgram(nexa::parseAssembly(editor->toPlainText().toStdString()));loaded=true;}std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());try{if(singleStep)vm->stepInstruction();else vm->run();}catch(...){std::cout.rdbuf(old);throw;}std::cout.rdbuf(old);output->append(QString::fromStdString(capture.str()));status->setText(QString("PC=%1 A=%2 B=%3 | %4 | %5 instructions").arg(vm->programCounter()).arg(vm->accumulator()).arg(vm->secondRegister()).arg(vm->halted()?"Halted":vm->hasBreakpoint(vm->programCounter())?"Breakpoint":"Paused").arg(vm->instructionsExecuted()));refreshMemory();}catch(const std::exception&e){output->setPlainText(e.what());status->setText("Error");}}
+ void refreshGraphics(){QImage img(nexa::VM::ScreenWidth,nexa::VM::ScreenHeight,QImage::Format_RGB32);for(int y=0;y<int(nexa::VM::ScreenHeight);++y)for(int x=0;x<int(nexa::VM::ScreenWidth);++x)img.setPixel(x,y,vm->pixel(x,y)?qRgb(255,255,255):qRgb(0,0,0));graphics->setPixmap(QPixmap::fromImage(img).scaled(graphics->size(),Qt::KeepAspectRatio));}
+ void refreshMemory(){if(!vm)return;refreshGraphics();QString text;for(unsigned row=0;row<64&&row<ramBytes;row+=16){text+=QString("%1: ").arg(row,4,16,QChar('0'));for(unsigned col=0;col<16&&row+col<ramBytes;++col)text+=QString("%1 ").arg(vm->readMemory(row+col),2,16,QChar('0'));text+="\n";}memory->setPlainText(text.toUpper());}
+ nexa::WorkspacePaths paths;std::string activeProfile;std::size_t ramBytes{256};std::unique_ptr<nexa::VM>vm{std::make_unique<nexa::VM>()};QComboBox*profiles{};QPlainTextEdit*editor{};QTextEdit*output{};QTextEdit*memory{};QLabel*status{};PixelCanvas*graphics{};bool loaded=false;
 };
 int main(int argc,char**argv){QApplication app(argc,argv);NexaWindow w;w.show();return app.exec();}
