@@ -1,5 +1,12 @@
 
 
+## Nexa OS 2.27 — Per-process memory accounting
+
+- `ProcessInfo` now reports each process's combined data/code virtual pages, resident pages, swapped pages, and resident bytes.
+- `ps` displays resident versus virtual memory, page counts, and swapped-page counts alongside existing process resources.
+- Memory values are calculated from the live page tables; shared mappings are counted in each address space that maps them, while physical `memstat` remains system-wide.
+- Regression tests verify accounting before and after a process triggers demand paging.
+
 ## Nexa OS 2.26 — Per-process resource accounting
 
 - `ProcessInfo` reports live open-file handle and shared-memory attachment counts for each process.
