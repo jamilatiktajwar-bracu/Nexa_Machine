@@ -224,7 +224,8 @@ std::string NexaShell::execute(const std::string& line) {
             kernel_.setPriorityAgingThreshold(threshold);
             return "priority aging updated";
         }
-        if(command=="syncstat") return kernel_.syncDiagnostics();\n        if(command=="sched") {
+        if(command=="syncstat") return kernel_.syncDiagnostics();
+        if(command=="sched") {
             return "policy=fixed-priority-round-robin quantum="+std::to_string(kernel_.timeQuantum())+
                 " ticks="+std::to_string(kernel_.systemTicks())+
                 " timer_interval="+std::to_string(kernel_.timerInterval())+
