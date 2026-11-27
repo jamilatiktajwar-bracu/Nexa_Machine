@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <chrono>
+#include <vector>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
