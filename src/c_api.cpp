@@ -29,6 +29,11 @@ int nexa_session_run(NexaContext*c,uint64_t id,size_t budget,NexaSessionState*ou
 int nexa_session_info(NexaContext*c,uint64_t id,NexaSessionInfo*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Info output pointer is null");auto s=c->sessions.info(session(c,id));std::memset(out,0,sizeof(*out));out->id=id;std::strncpy(out->name,s.name.c_str(),sizeof(out->name)-1);out->state=state(s.state);out->pc=s.pc;out->instructions=s.instructions;out->ram_bytes=s.ramBytes;out->halted=s.halted?1:0;});}
 int nexa_memory_read(NexaContext*c,uint64_t id,uint16_t a,uint8_t*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Memory output pointer is null");*out=c->sessions.machine(session(c,id)).readMemory(a);});}
 int nexa_memory_write(NexaContext*c,uint64_t id,uint16_t a,uint8_t v){return guard(c,[&]{c->sessions.machine(session(c,id)).writeMemory(a,v);});}
+int nexa_keyboard_input(NexaContext*c,uint64_t id,const char*text){return guard(c,[&]{if(!text)throw std::invalid_argument("Keyboard text is null");c->sessions.machine(session(c,id)).queueKeyboardInput(text);});}
+int nexa_breakpoint_set(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).setBreakpoint(a);});}
+int nexa_breakpoint_clear(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).clearBreakpoint(a);});}
+int nexa_framebuffer_get(NexaContext*c,uint64_t id,size_t x,size_t y,int*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Pixel output pointer is null");if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");*out=c->sessions.machine(session(c,id)).pixel(x,y)?1:0;});}
+int nexa_framebuffer_draw(NexaContext*c,uint64_t id,size_t x,size_t y,int white){return guard(c,[&]{if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");c->sessions.machine(session(c,id)).drawPixel(x,y,white!=0);});}
 int nexa_snapshot_save(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.saveSnapshot(session(c,id),path);});}
 int nexa_snapshot_load(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.loadSnapshot(session(c,id),path);});}
 }
