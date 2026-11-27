@@ -191,7 +191,12 @@ process fault: "+found->faultReason; return out;
             if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
             return kernel_.reapProcess(static_cast<std::uint32_t>(pidValue))?"process reaped":"unknown or active process";
         }
-        if(command=="oomreap") {\n            if(security_.currentUser()!="root") return "permission denied";\n            const auto count=kernel_.reapTerminatedProcesses();\n            return "reaped_processes="+std::to_string(count)+" frames_free="+std::to_string(kernel_.memoryManager().freeFrames());\n        }\n        if(command=="oomstat") {
+        if(command=="oomreap") {
+            if(security_.currentUser()!="root") return "permission denied";
+            const auto count=kernel_.reapTerminatedProcesses();
+            return "reaped_processes="+std::to_string(count)+" frames_free="+std::to_string(kernel_.memoryManager().freeFrames());
+        }
+        if(command=="oomstat") {
             const auto& mm=kernel_.memoryManager();
             const auto total=mm.totalFrames(),free=mm.freeFrames();
             const auto pressure=free==0?"critical":(free*10<=total?"high":"normal");
