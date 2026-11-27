@@ -39,7 +39,7 @@ std::uint16_t VirtualMemoryManager::allocateFrame() {
     PageMapping* victim=nullptr;
     for(auto& [pid,table]:spaces_) for(auto& [page,entry]:table) {
         (void)page;
-        if(entry.resident&&(!victim||entry.lastUsed<victim->lastUsed)) {
+        if(entry.resident&&!sharedFrameMappings_.contains(entry.frame)&&(!victim||entry.lastUsed<victim->lastUsed)) {
             victim=&entry; victimPid=pid;
         }
     }
@@ -106,6 +106,13 @@ void VirtualMemoryManager::pageIn(std::uint32_t pid,std::uint8_t page) {
 }
 void VirtualMemoryManager::releaseFrame(std::uint16_t frame) {
     if(frame>=usedFrames_.size()||!usedFrames_[frame]) throw std::runtime_error("Invalid physical frame release");
+    auto shared=sharedFrameMappings_.find(frame);
+    if(shared!=sharedFrameMappings_.end()) {
+        if(shared->second==0) throw std::runtime_error("Shared frame reference underflow");
+        --shared->second;
+        if(shared->second==0&&!ownedSharedFrames_.contains(frame)) { sharedFrameMappings_.erase(shared); usedFrames_[frame]=false; }
+        return;
+    }
     usedFrames_[frame]=false;
 }
 void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
@@ -114,6 +121,35 @@ void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writ
     const auto frame=allocateFrame();
     it->second.emplace(page,PageMapping{frame,writable,user,executable,true,++accessClock_,{}});
     invalidateTlb(pid);
+}
+std::uint16_t VirtualMemoryManager::createSharedFrame() {
+    const auto frame=allocateFrame();
+    sharedFrameMappings_[frame]=0;
+    ownedSharedFrames_.insert(frame);
+    return frame;
+}
+void VirtualMemoryManager::releaseSharedFrame(std::uint16_t frame) {
+    auto it=sharedFrameMappings_.find(frame);
+    if(it==sharedFrameMappings_.end()||!ownedSharedFrames_.erase(frame)) throw std::invalid_argument("Invalid shared frame");
+    if(it->second==0) { sharedFrameMappings_.erase(it); usedFrames_[frame]=false; }
+}
+void VirtualMemoryManager::mapSharedFrame(std::uint32_t pid,std::uint8_t page,std::uint16_t frame,bool writable,bool user) {
+    auto space=spaces_.find(pid);
+    if(space==spaces_.end()) throw std::out_of_range("Unknown address space");
+    if(space->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
+    auto refs=sharedFrameMappings_.find(frame);
+    if(refs==sharedFrameMappings_.end()||!usedFrames_[frame]) throw std::invalid_argument("Frame is not shared");
+    ++refs->second;
+    space->second.emplace(page,PageMapping{frame,writable,user,false,true,++accessClock_,{}});
+    invalidateTlb(pid);
+}
+std::uint8_t VirtualMemoryManager::readSharedFrame(std::uint16_t frame,std::size_t offset) const {
+    if(!sharedFrameMappings_.contains(frame)||offset>=PageSize) throw std::out_of_range("Shared frame access outside bounds");
+    return physical_[static_cast<std::size_t>(frame)*PageSize+offset];
+}
+void VirtualMemoryManager::writeSharedFrame(std::uint16_t frame,std::size_t offset,std::uint8_t value) {
+    if(!sharedFrameMappings_.contains(frame)||offset>=PageSize) throw std::out_of_range("Shared frame access outside bounds");
+    physical_[static_cast<std::size_t>(frame)*PageSize+offset]=value;
 }
 void VirtualMemoryManager::unmapPage(std::uint32_t pid,std::uint8_t page) {
     auto& table=spaces_.at(pid); auto it=table.find(page);
