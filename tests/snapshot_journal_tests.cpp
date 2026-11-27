@@ -50,7 +50,8 @@ int main(int argc, char** argv) {
         nexa::snapshot::syncFile(a);
         std::_Exit(85);
     }
-\n    for (const std::string phase : {"after-disk-replacement", "after-vm-load"}) {
+
+    for (const std::string phase : {"after-disk-replacement", "after-vm-load"}) {
         write(target, "pre-crash-placeholder");
         const std::string command = "\"" + std::string(argv[0]) + "\" --crash-child " + phase;
         const int status = std::system(command.c_str());
@@ -177,8 +178,8 @@ int main(int argc, char** argv) {
     const auto publicationJournal=root/"publication.journal";
     const auto publicationTemp=fs::path(publicationJournal.string()+".tmp");
     write(publicationTarget,"publication-original");
-    const std::string publicationCommand="\\""+std::string(argv[0])+"\\" --publication-crash-child \\""+
-        publicationJournal.string()+"\\"";
+    const std::string publicationCommand="\""+std::string(argv[0])+"\" --publication-crash-child \""+
+        publicationJournal.string()+"\"";
     const int publicationStatus=std::system(publicationCommand.c_str());
 #ifdef _WIN32
     const int expectedPublicationStatus=86;
@@ -214,8 +215,8 @@ int main(int argc, char** argv) {
     // Exercise a real child process crash halfway through coordinated restore.
     write(diskA,"disk-a-process-original");
     write(diskB,"disk-b-process-original");
-    const std::string groupCommand="\\""+std::string(argv[0])+"\\" --group-crash-child \\""+
-        diskA.string()+"\\" \\""+diskB.string()+"\\"";
+    const std::string groupCommand="\""+std::string(argv[0])+"\" --group-crash-child \""+
+        diskA.string()+"\" \""+diskB.string()+"\"";
     const int groupStatus=std::system(groupCommand.c_str());
 #ifdef _WIN32
     const int expectedGroupStatus=85;
@@ -229,7 +230,8 @@ int main(int argc, char** argv) {
     if(read(diskA)!="disk-a-process-original"||read(diskB)!="disk-b-process-original") {
         std::cerr<<"multi-disk restart recovery was not atomic\\n";return 1;
     }
-\n    fs::remove_all(root);
+
+    fs::remove_all(root);
     std::cout << "Snapshot journal subprocess recovery tests passed\n";
     return 0;
 }
