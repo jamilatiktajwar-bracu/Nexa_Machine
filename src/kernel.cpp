@@ -20,7 +20,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::SharedWrite)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::SharedCreate)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -206,7 +206,7 @@ bool NexaKernel::mutexUnlock(std::uint32_t pid,std::uint8_t id) {
 }
 void NexaKernel::releaseSharedAttachments(std::uint32_t pid) {
     auto p=processes_.find(pid);if(p==processes_.end())return;
-    for(auto id:p->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
+    for(auto id:p->second.sharedAttachments){unmapSharedMemory(pid,id);auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
     p->second.sharedAttachments.clear();
 }
 void NexaKernel::releaseOwnedMutexes(std::uint32_t pid) {
@@ -521,6 +521,13 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::SemaphoreSignal: return semaphoreSignal(arg)?1:0;
     case Syscall::MutexLock: return mutexLock(pid,arg)?1:0;
     case Syscall::MutexUnlock: return mutexUnlock(pid,arg)?1:0;
+    case Syscall::SharedCreate: {
+        if(static_cast<std::size_t>(arg)+2>it->second.machine.ramSize()) throw std::runtime_error("Shared create descriptor outside process RAM");
+        const auto low=it->second.machine.readMemory(arg);
+        const auto high=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto size=static_cast<std::size_t>(low|(static_cast<std::uint16_t>(high)<<8));
+        return createSharedMemory(size);
+    }
     case Syscall::SharedAttach: { if(static_cast<std::size_t>(arg)+2>it->second.machine.ramSize()) throw std::runtime_error("Shared attach descriptor outside process RAM"); const auto id=it->second.machine.readMemory(arg); const auto base=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1)); if(!attachSharedMemory(pid,id))return 0; return mapSharedMemory(pid,id,base)?1:0; }
     case Syscall::SharedDetach: { if(static_cast<std::size_t>(arg)+1>it->second.machine.ramSize()) throw std::runtime_error("Shared detach descriptor outside process RAM"); return detachSharedMemory(pid,it->second.machine.readMemory(arg))?1:0; }
     case Syscall::SharedRead: {
