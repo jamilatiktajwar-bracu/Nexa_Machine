@@ -348,6 +348,9 @@ bool NexaKernel::sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std
     if(sender->second.info.state==ProcessState::Halted||sender->second.info.state==ProcessState::Faulted) return false;
     if(receiver->second.info.state==ProcessState::Halted||receiver->second.info.state==ProcessState::Faulted) return false;
     if(payload.size()>MaxIpcPayload||receiver->second.inbox.size()>=MaxInboxMessages) return false;
+    std::size_t queuedBytes=0;
+    for(const auto& message:receiver->second.inbox) queuedBytes+=message.payload.size();
+    if(payload.size()>MaxInboxBytes-queuedBytes) return false;
     receiver->second.inbox.push_back(IpcMessage{from,std::move(payload)});
     if(receiver->second.info.state==ProcessState::Blocked) receiver->second.info.state=ProcessState::Ready;
     return true;
