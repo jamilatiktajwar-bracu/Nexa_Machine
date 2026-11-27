@@ -25,6 +25,9 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <vector>
+#include <stdexcept>
+#include <filesystem>
 #include "nexa/assembler.hpp"
 #include "nexa/vm.hpp"
 #include "nexa/config.hpp"
@@ -40,7 +43,7 @@ private:
 };
 class NexaWindow:public QMainWindow {
 public:
- NexaWindow(){
+ NexaWindow(){timer.setInterval(15);connect(&timer,&QTimer::timeout,this,[this](){tick();});
   paths=nexa::WorkspacePaths::discover();paths.initialize();setWindowTitle("Nexa Machine — VM Manager");resize(1180,800);
   auto*w=new QWidget;auto*l=new QVBoxLayout(w);auto*bar=new QHBoxLayout;
   profiles=new QComboBox;profiles->setMinimumWidth(180);auto*refresh=new QPushButton("Refresh");auto*create=new QPushButton("New profile");auto*clone=new QPushButton("Clone");auto*del=new QPushButton("Delete");auto*exportProfile=new QPushButton("Export");auto*importProfile=new QPushButton("Import");auto*loadFile=new QPushButton("Open .nexa");
