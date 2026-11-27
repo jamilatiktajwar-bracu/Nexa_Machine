@@ -157,6 +157,10 @@ Create a profile with `nexa --profile-create NAME [RAM_BYTES DISK_BYTES]`; sizes
 
 `nexa --workspace` prints Nexa data paths; `nexa --init-workspace` creates the standard directory structure. Set `NEXA_HOME` to relocate the workspace (useful for portable drives or separate development profiles). The workspace separates config, profiles, disks, snapshots and logs.
 
+## VM snapshots
+
+Snapshots are named per profile and saved under the workspace snapshot directory. Commands: `nexa --snapshot-save PROFILE SNAPSHOT SOURCE.nexa` runs the assembly program and saves its VM state; `nexa --snapshot-restore PROFILE SNAPSHOT` loads that VM state; `nexa --snapshot-list PROFILE` lists snapshots; `nexa --snapshot-delete PROFILE SNAPSHOT` removes one. These are VM execution-state snapshots; virtual-disk persistence is separate and flushes on VM execution.
+
 ## Host diagnostics
 
 
