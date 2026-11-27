@@ -57,6 +57,14 @@ jobs:
             kill "$pid"
             wait "$pid" || true
           done
+      - name: Deploy Qt runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tool = Get-ChildItem "$env:VCPKG_INSTALLATION_ROOT/installed" -Filter windeployqt.exe -Recurse | Select-Object -First 1
+          if (-not $tool) { throw 'windeployqt was not found in vcpkg Qt installation' }
+          & $tool.FullName --release --no-translations build/Release/nexa_gui.exe
+          if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed' }
       - name: GUI launch and restart smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
