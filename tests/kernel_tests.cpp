@@ -221,7 +221,7 @@ int main() {
     const auto guestFinished=syncKernel.processes();
     const auto finishedGuest=std::find_if(guestFinished.begin(),guestFinished.end(),[&](const auto& process){return process.pid==shmGuestPid;});
     assert(finishedGuest!=guestFinished.end()&&finishedGuest->state==nexa::ProcessState::Halted);
-    assert(syncKernel.readProcessMemory(shmGuestPid,43)==1);
+    assert(syncKernel.readProcessMemory(shmGuestPid,48)==1);
     assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2)); // Halt auto-detaches guest mappings
     assert(syncKernel.sharedMemoryInfo().front().attachments==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
