@@ -94,5 +94,6 @@ private:
     std::uint16_t nextSemaphore_{1},nextMutex_{1};
     static constexpr std::size_t MaxSyncObjects=255;
     [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
+    void releaseOwnedMutexes(std::uint32_t pid);
 };
 }
