@@ -28,7 +28,25 @@ final class NexaSessionModel: ObservableObject {
             }
             guard rc == 0 else { status = errorText(); return }
             session = handle
-            status = "Ready · recovery checked"
+            let persistentDisk = root.deletingLastPathComponent().appendingPathComponent("guest.disk")
+            if FileManager.default.fileExists(atPath: persistentDisk.path) {
+                let attributes = try FileManager.default.attributesOfItem(atPath: persistentDisk.path)
+                let diskSize = (attributes[.size] as? NSNumber)?.intValue ?? 0
+                let attachStatus = persistentDisk.path.withCString {
+                    nexa_disk_attach(ctx, handle, $0, diskSize)
+                }
+                guard attachStatus == 0 else { status = "Disk recovery attach failed: " + errorText(); return }
+            }
+            if FileManager.default.fileExists(atPath: root.appendingPathComponent("manifest.txt").path) {
+                let restoreStatus = vm.withCString { vmPath in
+                    root.path.withCString { diskPath in
+                        nexa_snapshot_restore_bundle(ctx, handle, vmPath, diskPath)
+                    }
+                }
+                guard restoreStatus == 0 else { status = "Workspace restore failed: " + errorText(); return }
+                refreshConsole()
+                status = "Workspace restored"
+            } else { status = "Ready · recovery checked" }
         } catch { status = "Recovery startup error: \(error.localizedDescription)" }
     }
 
