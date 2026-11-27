@@ -24,3 +24,12 @@ Disk import validates file size against configured capacity before writing. Expo
 3. Create native iOS/iPadOS and Android shells around the shared core.
 4. Package signed desktop installers and mobile app builds, with platform-specific permissions and sandbox handling.
 5. Add CI coverage for desktop GUI and mobile toolchains.
+
+
+## Desktop multi-session workspace
+
+The Qt desktop application now includes a separate **Multi-session workspace** tab. Each VM tab owns an independent `SessionManager` instance, assembly editor, execution state, RAM preview, disk-device registry, and cooperative disk-operation queue. Disk attach, detach, flush, and snapshot file operations are scheduled one task per GUI timer tick so long host-side I/O does not run in the same UI callback that handles VM controls. VM-plus-disk snapshots flush attached images before copying them and restore disk images before reloading the VM state. These bundles are convenient local checkpoints, not crash-atomic transactions.
+
+## iOS build verification
+
+The macOS CI job additionally cross-compiles the portable `nexa_vm_core` static library for the iOS device SDK (arm64), with host tools and Qt disabled. This verifies the portable C++ core toolchain; it does **not** claim that a native iOS application, UI, signing, or App Store packaging exists.
