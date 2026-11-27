@@ -516,6 +516,15 @@ int main() {
     ipcStats=ipcKernel.processes();
     for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==1); assert(proc.pendingMessageBytes==4); }
     assert(ipcKernel.receiveMessage(ipcReceiver)->payload==std::vector<std::uint8_t>({6,7,8,9}));
+    std::vector<std::uint8_t> quotaPayload(nexa::NexaKernel::MaxIpcPayload,0x5A);
+    for(std::size_t n=0;n<32;++n) assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,quotaPayload));
+    ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==32); assert(proc.pendingMessageBytes==32*nexa::NexaKernel::MaxIpcPayload); }
+    assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,quotaPayload));
+    assert(ipcKernel.receiveMessage(ipcReceiver).has_value());
+    assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,quotaPayload));
+    ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==32); assert(proc.pendingMessageBytes==32*nexa::NexaKernel::MaxIpcPayload); }
     std::vector<std::uint8_t> oversized(252,0);
     assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,std::move(oversized)));
 
