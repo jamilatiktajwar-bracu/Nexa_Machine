@@ -90,6 +90,7 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     it->second.openFiles.clear();
     it->second.inbox.clear();
     it->second.signals.clear();
+    releaseOwnedMutexes(pid);
     if(currentPid_==pid) currentPid_=0;
     return true;
 }
@@ -108,6 +109,7 @@ bool NexaKernel::sendSignal(std::uint32_t pid,ProcessSignal signal) {
         process.openFiles.clear();
         process.inbox.clear();
         process.signals.clear();
+        releaseOwnedMutexes(pid);
         if(currentPid_==pid) currentPid_=0;
         return true;
     case ProcessSignal::Stop:
@@ -199,6 +201,21 @@ bool NexaKernel::mutexUnlock(std::uint32_t pid,std::uint8_t id) {
     }
     mutex.owner.reset();return true;
 }
+void NexaKernel::releaseOwnedMutexes(std::uint32_t pid) {
+    for(auto& [id,mutex]:mutexes_) {
+        if(!mutex.owner||*mutex.owner!=pid) continue;
+        mutex.owner.reset();
+        while(!mutex.waiters.empty()) {
+            const auto next=mutex.waiters.front();mutex.waiters.pop_front();
+            auto waiter=processes_.find(next);
+            if(waiter==processes_.end()||waiter->second.info.state!=ProcessState::Blocked) continue;
+            mutex.owner=next;
+            waiter->second.mutexGrants.push_back(id);
+            waiter->second.info.state=ProcessState::Ready;
+            break;
+        }
+    }
+}
 bool NexaKernel::reapProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) return false;
@@ -232,6 +249,7 @@ void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructio
         it->second.openFiles.clear();
         it->second.inbox.clear();
         it->second.signals.clear();
+        releaseOwnedMutexes(pid);
     }
 }
 void NexaKernel::setTimeQuantum(std::size_t instructions) {
@@ -347,6 +365,7 @@ bool NexaKernel::scheduleOne() {
         proc.openFiles.clear();
         proc.inbox.clear();
         proc.signals.clear();
+        releaseOwnedMutexes(pid);
     }
     proc.yieldRequested=false;
     return true;
@@ -382,7 +401,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); it->second.signals.clear(); return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); it->second.signals.clear(); releaseOwnedMutexes(pid); return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
