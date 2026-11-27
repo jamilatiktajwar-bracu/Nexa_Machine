@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <set>
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -30,6 +31,11 @@ public:
     void createAddressSpace(std::uint32_t pid);
     void destroyAddressSpace(std::uint32_t pid);
     void mapPage(std::uint32_t pid,std::uint8_t virtualPage,bool writable=true,bool userAccessible=true,bool executable=true);
+    [[nodiscard]] std::uint16_t createSharedFrame();
+    void releaseSharedFrame(std::uint16_t frame);
+    void mapSharedFrame(std::uint32_t pid,std::uint8_t virtualPage,std::uint16_t frame,bool writable=true,bool userAccessible=true);
+    [[nodiscard]] std::uint8_t readSharedFrame(std::uint16_t frame,std::size_t offset) const;
+    void writeSharedFrame(std::uint16_t frame,std::size_t offset,std::uint8_t value);
     void unmapPage(std::uint32_t pid,std::uint8_t virtualPage);
     void protectPage(std::uint32_t pid,std::uint8_t virtualPage,bool writable,bool userAccessible,bool executable=true);
     [[nodiscard]] std::uint8_t read(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User) const;
@@ -60,6 +66,8 @@ private:
     mutable std::uint64_t accessClock_{0};
     std::size_t swappedPages_{0},swapIns_{0},swapOuts_{0};
     std::string swapFilePath_;
+    std::map<std::uint16_t,std::size_t> sharedFrameMappings_;
+    std::set<std::uint16_t> ownedSharedFrames_;
     std::function<void(std::uint32_t,std::uint8_t)> pageFaultHandler_;
     static constexpr std::size_t TlbCapacity=16;
     [[nodiscard]] PageMapping& mapping(std::uint32_t pid,std::uint8_t page);
