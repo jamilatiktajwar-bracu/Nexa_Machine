@@ -26,7 +26,7 @@ NexaContext*nexa_context_create(void){try{return new NexaContext;}catch(...){ret
 void nexa_context_destroy(NexaContext*c){delete c;}
 const char*nexa_last_error(NexaContext*c){return c?c->error.c_str():"Invalid context";}
 int nexa_session_create(NexaContext*c,const char*name,size_t ram,uint64_t*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Output handle pointer is null");auto id=c->sessions.create(name?name:"Nexa session",ram);auto handle=c->next++;c->ids.emplace(handle,std::move(id));*out=handle;});}
-int nexa_session_remove(NexaContext*c,uint64_t id){return guard(c,[&]{auto key=session(c,id);if(!c->sessions.remove(key))throw std::runtime_error("Session removal failed");c->ids.erase(id);c->disks.erase(id);c->diskPaths.erase(id);});}
+int nexa_session_remove(NexaContext*c,uint64_t id){return guard(c,[&]{auto key=session(c,id);auto diskIt=c->disks.find(id);if(diskIt!=c->disks.end())for(auto&[device,disk]:diskIt->second)disk->flush();c->diskQueue.clearSession(id);for(auto&[requestId,request]:c->diskRequests){if(request.session==id&&request.status==0){request.status=-1;request.error="Session removed before queued disk request completed";}}if(!c->sessions.remove(key))throw std::runtime_error("Session removal failed");c->ids.erase(id);c->disks.erase(id);c->diskPaths.erase(id);});}
 int nexa_session_load_assembly(NexaContext*c,uint64_t id,const char*src){return guard(c,[&]{if(!src)throw std::invalid_argument("Assembly source is null");c->sessions.loadAssembly(session(c,id),src);});}
 int nexa_session_start(NexaContext*c,uint64_t id){return guard(c,[&]{c->sessions.start(session(c,id));});}
 int nexa_session_pause(NexaContext*c,uint64_t id){return guard(c,[&]{c->sessions.pause(session(c,id));});}
