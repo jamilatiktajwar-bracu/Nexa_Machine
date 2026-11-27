@@ -203,14 +203,14 @@ int main() {
     assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,8)==7);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
     const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
-        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,41},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
+        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,10},{nexa::Opcode::Store,41},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,4},{nexa::Opcode::Store,41},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedRead)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,5},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x77},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedWrite)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,44},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,3},{nexa::Opcode::Store,42},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAtomicAdd)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,46},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x13},{nexa::Opcode::Store,42},{nexa::Opcode::LoadImmediate,0x44},{nexa::Opcode::Store,43},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedCompareSwap)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,47},
-        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
+        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,2566},{nexa::Opcode::Load,2566},{nexa::Opcode::Store,45},
         {nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     for(int retry=0;retry<100;++retry) {
         const auto states=syncKernel.processes();
@@ -222,7 +222,7 @@ int main() {
     const auto finishedGuest=std::find_if(guestFinished.begin(),guestFinished.end(),[&](const auto& process){return process.pid==shmGuestPid;});
     assert(finishedGuest!=guestFinished.end()&&finishedGuest->state==nexa::ProcessState::Halted);
     assert(syncKernel.readProcessMemory(shmGuestPid,48)==1);
-    assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2)); // Halt auto-detaches guest mappings
+    assert(!syncKernel.memoryManager().isMapped(shmGuestPid,10)); // Halt auto-detaches guest mappings
     assert(syncKernel.sharedMemoryInfo().front().attachments==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
     assert(syncKernel.readProcessMemory(shmGuestPid,44)==1);
