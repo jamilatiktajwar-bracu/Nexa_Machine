@@ -27,7 +27,8 @@ int main(){
  auto snap=paths.snapshotPath("portable_dev","before-run"); assert(snap.filename()=="portable_dev-before-run.state"); {std::ofstream temp(snap);temp<<"test";} auto snames=paths.listSnapshots("portable_dev"); assert(snames.size()==1&&snames[0]=="before-run"); paths.deleteSnapshot("portable_dev","before-run"); assert(paths.listSnapshots("portable_dev").empty());
  auto names=paths.listProfiles(); assert(names.size()==2 && names[0]=="custom_vm" && names[1]=="portable_dev");
  bool rejected=false; try{paths.createProfile("../bad");}catch(const std::invalid_argument&){rejected=true;} assert(rejected);
- bool duplicate=false; try{paths.createProfile("portable_dev");}catch(const std::runtime_error&){duplicate=true;} assert(duplicate);\n paths.deleteProfile("custom_vm"); assert(paths.listProfiles().size()==1); bool missing=false;try{paths.deleteProfile("missing");}catch(const std::runtime_error&){missing=true;}assert(missing);
+ bool duplicate=false; try{paths.createProfile("portable_dev");}catch(const std::runtime_error&){duplicate=true;} assert(duplicate);
+ paths.deleteProfile("custom_vm"); assert(paths.listProfiles().size()==1); bool missing=false;try{paths.deleteProfile("missing");}catch(const std::runtime_error&){missing=true;}assert(missing);
  std::filesystem::remove_all(paths.root);
  std::cout<<"Workspace path tests passed\n";
 }
