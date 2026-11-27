@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
 namespace fs = std::filesystem;
 static fs::path rootPath() { return fs::temp_directory_path() / "nexa-c-api-crash-recovery"; }
