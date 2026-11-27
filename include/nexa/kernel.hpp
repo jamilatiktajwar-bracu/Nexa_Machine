@@ -28,7 +28,7 @@ struct ProcessInfo {
     std::uint64_t instructionBudget{0};
     std::size_t pendingSignals{0};
 };
-enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13, SemaphoreWait=14, SemaphoreSignal=15, MutexLock=16, MutexUnlock=17, SharedAttach=18, SharedDetach=19, SharedRead=20, SharedWrite=21 };
+enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13, SemaphoreWait=14, SemaphoreSignal=15, MutexLock=16, MutexUnlock=17, SharedAttach=18, SharedDetach=19, SharedRead=20, SharedWrite=21, SharedCreate=22 };
 enum class ProcessSignal : std::uint8_t { Terminate=1, Kill=2, Stop=3, Continue=4, User1=10, User2=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
 struct SharedMemoryInfo { std::uint8_t id{}; std::size_t size{}; std::size_t attachments{}; };
