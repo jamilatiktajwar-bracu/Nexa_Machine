@@ -44,15 +44,16 @@ void WorkspacePaths::initialize() const {
  std::filesystem::create_directories(snapshots);
  std::filesystem::create_directories(logs);
 }
-std::filesystem::path WorkspacePaths::createProfile(const std::string& name) const {
+std::filesystem::path WorkspacePaths::createProfile(const std::string& name, std::size_t ramBytes, std::size_t diskBytes) const {
  if(!validProfileName(name))
   throw std::invalid_argument("Profile name must be 1-48 characters: letters, digits, dash or underscore.");
+ if(ramBytes==0||ramBytes>65536||diskBytes==0) throw std::invalid_argument("RAM must be 1..65536 bytes and disk size must be positive.");
  initialize();
  const auto target=profiles/(name+".json");
  if(std::filesystem::exists(target)) throw std::runtime_error("Profile already exists: "+name);
  std::ofstream out(target,std::ios::binary|std::ios::out);
  if(!out) throw std::runtime_error("Cannot create profile: "+target.string());
- out << "{\n  \"name\": \""<<jsonEscape(name)<<"\",\n  \"ram_bytes\": 256,\n  \"disk_path\": \""<<jsonEscape((disks/(name+".disk")).generic_string())<<"\",\n  \"disk_bytes\": 1048576\n}\n";
+ out << "{\n  \"name\": \""<<jsonEscape(name)<<"\",\n  \"ram_bytes\": "<<ramBytes<<",\n  \"disk_path\": \""<<jsonEscape((disks/(name+".disk")).generic_string())<<"\",\n  \"disk_bytes\": "<<diskBytes\n}\n";
  out.close();
  if(!out) throw std::runtime_error("Failed writing profile file.");
  return target;
