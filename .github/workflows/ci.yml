@@ -36,6 +36,13 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Install staging smoke
+        run: cmake --install build --config Release --prefix install-root
+      - name: Verify staged installation
+        shell: bash
+        run: |
+          test -x install-root/bin/nexa || test -f install-root/bin/nexa.exe
+          test -f install-root/bin/nexa_gui || test -f install-root/bin/nexa_gui.exe
       - name: Package
         run: cpack --config build/CPackConfig.cmake -B release
       - name: Verify Unix package archive
@@ -60,12 +67,12 @@ jobs:
         with:
           name: nexa-desktop-${{ runner.os }}
           path: release/*
-      - name: Demo smoke test (Unix)
+      - name: CLI install smoke (Unix)
         if: runner.os != 'Windows'
-        run: ./build/nexa
-      - name: Demo smoke test (Windows)
+        run: ./install-root/bin/nexa
+      - name: CLI install smoke (Windows)
         if: runner.os == 'Windows'
-        run: .\\build\\Release\\nexa.exe
+        run: .\\install-root\\bin\\nexa.exe
   mobile:
     runs-on: ubuntu-latest
     steps:
