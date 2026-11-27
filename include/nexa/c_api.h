@@ -48,6 +48,14 @@ int nexa_disk_sector_count(NexaContext*,uint64_t id,size_t* out_count);
 int nexa_disk_read_sector(NexaContext*,uint64_t id,size_t sector,uint8_t* out_512_bytes);
 int nexa_disk_write_sector(NexaContext*,uint64_t id,size_t sector,const uint8_t* bytes_512);
 int nexa_disk_flush(NexaContext*,uint64_t id);
+/* 11-byte descriptor: op[0] (0 read/1 write), device[1..4],
+ * sector[5..8], guest RAM buffer address[9..10], all little-endian. */
+int nexa_disk_submit_guest(NexaContext*,uint64_t id,uint16_t descriptor_address,uint8_t completion_interrupt_vector,uint64_t* out_request_id);
+/* Cooperative scheduler: executes at most one queued request per call. */
+int nexa_disk_process_one(NexaContext*,uint64_t* out_completed_request_id);
+/* status: 0=pending, 1=completed, -1=failed. */
+int nexa_disk_request_status(NexaContext*,uint64_t request_id,int* out_status);
+int nexa_disk_request_error(NexaContext*,uint64_t request_id,char* out_error,size_t capacity);
 #ifdef __cplusplus
 }
 #endif
