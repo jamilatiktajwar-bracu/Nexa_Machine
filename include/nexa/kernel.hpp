@@ -34,6 +34,7 @@ struct ProcessInfo {
     std::size_t residentPages{0};
     std::size_t swappedPages{0};
     std::size_t residentBytes{0};
+    std::size_t memoryPageLimit{0};
 };
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13, SemaphoreWait=14, SemaphoreSignal=15, MutexLock=16, MutexUnlock=17, SharedAttach=18, SharedDetach=19, SharedRead=20, SharedWrite=21, SharedCreate=22, SharedAtomicAdd=23, SharedCompareSwap=24, SharedAttachReadOnly=25, SharedAtomicAdd16=26, SharedCompareSwap16=27 };
 enum class ProcessSignal : std::uint8_t { Terminate=1, Kill=2, Stop=3, Continue=4, User1=10, User2=12 };
@@ -54,6 +55,7 @@ public:
     [[nodiscard]] std::vector<std::uint32_t> mutexDeadlockCycle() const;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setInstructionBudget(std::uint32_t pid,std::uint64_t instructions);
+    void setMemoryPageLimit(std::uint32_t pid,std::size_t pages);
     void setTimeQuantum(std::size_t instructions);
     void setPriorityAgingThreshold(std::uint64_t ticks);
     [[nodiscard]] std::uint64_t priorityAgingThreshold() const noexcept{return priorityAgingThreshold_;}
