@@ -328,3 +328,10 @@ A portable C ABI (`include/nexa/c_api.h`) is now available for Swift/Objective-C
 ## Standalone portable core
 
 The reusable static target `nexa_vm_core` now contains the VM, assembler, cooperative session registry, and C ABI. It can be configured without host CLI/OpenSSL or Qt dependencies using `-DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF`. See [C API guide](docs/C_API.md) for Swift/Objective-C++ and JNI integration notes.
+
+
+## Multi-session desktop workspace
+
+When Qt 6 Widgets is available, the desktop app exposes a **Multi-session workspace** tab alongside the profile-based VM. Create independent VM tabs, edit and run guest assembly, step/pause/resume/reset each session, and manage each session's own disk devices. Disk attach/detach/flush and VM-plus-disk checkpoint file operations use a cooperative GUI task queue. The existing profile workflow remains available in its original tab.
+
+The macOS CI job cross-compiles the portable VM core for iOS arm64. This is a core-library toolchain check only; a native iOS application and its UI/signing/package workflow remain future work. macOS, Windows and Linux desktop verification is performed by the CI matrix; Qt desktop GUI compilation currently runs on Linux where Qt 6 Widgets is installed.
