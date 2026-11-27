@@ -95,3 +95,8 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_nexa_machine_NexaNative_resume(JNIEnv*, jclass, jlong handle, jlong session) {
     return nexa_session_resume(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session));
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_start(JNIEnv*, jclass, jlong handle, jlong session) {
+    return nexa_session_start(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session));
+}
