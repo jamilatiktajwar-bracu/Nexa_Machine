@@ -2,6 +2,8 @@
 #include "nexa/c_api.h"
 #include <cstdint>
 #include <string>
+#include <filesystem>
+#include <system_error>
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_nexa_machine_NexaNative_createContext(JNIEnv*, jclass) {
@@ -99,4 +101,45 @@ Java_com_nexa_machine_NexaNative_resume(JNIEnv*, jclass, jlong handle, jlong ses
 extern "C" JNIEXPORT jint JNICALL
 Java_com_nexa_machine_NexaNative_start(JNIEnv*, jclass, jlong handle, jlong session) {
     return nexa_session_start(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session));
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_attachDisk(JNIEnv* env, jclass, jlong handle, jlong session, jstring path) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context || !path) return -1;
+    const char* file = env->GetStringUTFChars(path, nullptr);
+    if (!file) return -1;
+    std::error_code ec;
+    const auto bytes = std::filesystem::file_size(file, ec);
+    const int rc = ec ? -1 : nexa_disk_attach_device(context, static_cast<uint64_t>(session), 0, file, static_cast<size_t>(bytes));
+    env->ReleaseStringUTFChars(path, file);
+    return rc;
+}
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_detachDisk(JNIEnv*, jclass, jlong handle, jlong session) {
+    return nexa_disk_detach(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session), 0, 1);
+}
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_saveSnapshot(JNIEnv* env, jclass, jlong handle, jlong session, jstring root) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context || !root) return -1;
+    const char* path = env->GetStringUTFChars(root, nullptr);
+    if (!path) return -1;
+    const std::string base(path);
+    env->ReleaseStringUTFChars(root, path);
+    const std::string vm = base + "/session.vm";
+    const std::string disks = base + "/disks";
+    return nexa_snapshot_save_bundle(context, static_cast<uint64_t>(session), vm.c_str(), disks.c_str());
+}
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_restoreSnapshot(JNIEnv* env, jclass, jlong handle, jlong session, jstring root) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context || !root) return -1;
+    const char* path = env->GetStringUTFChars(root, nullptr);
+    if (!path) return -1;
+    const std::string base(path);
+    env->ReleaseStringUTFChars(root, path);
+    const std::string vm = base + "/session.vm";
+    const std::string disks = base + "/disks";
+    return nexa_snapshot_restore_bundle(context, static_cast<uint64_t>(session), vm.c_str(), disks.c_str());
 }
