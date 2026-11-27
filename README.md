@@ -54,11 +54,11 @@
 
 # Nexa Machine
 
-## Cross-platform vision (Windows / macOS / Linux / iOS)
+## Cross-platform vision (Windows / macOS / Linux / iOS / Android)
 
 Nexa is being designed around a portable C++20 VM/kernel core, so users can choose their host platform and keep compatible guest images and workflows. Desktop targets are Windows, macOS and Linux; iOS/iPadOS requires a touch-first, sandbox-aware frontend and constrained runtime.
 
-**Status:** CLI and optional Qt6 desktop frontend exist today. Mobile frontend, platform packaging, and Windows/macOS CI are not yet complete. See [cross-platform architecture and milestones](docs/CROSS_PLATFORM.md).
+**Status:** CLI and optional Qt6 desktop frontend exist today. Mobile frontend, platform packaging, and Windows/macOS CI are not yet complete. See [cross-platform architecture and milestones](docs/CROSS_PLATFORM.md) and [platform frontend roadmap](docs/PLATFORM_ARCHITECTURE.md).
 
 
 ## Nexa OS 2.29 — Memory pressure diagnostics
@@ -312,3 +312,4 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 ## Desktop VM Manager (Qt 6)
 
 The desktop UI now supports selecting and creating VM profiles, loading assembly source files, Run/Step/Reset, breakpoints, interactive framebuffer drawing, RAM inspection, and saving/restoring VM snapshots. Snapshot state does not include virtual disk images. See [desktop VM manager guide](docs/GUI_VM_MANAGER.md).
+\n## Desktop manager updates\n\nThe Qt frontend now has cooperative timer-driven Start/Pause/Resume/Stop controls, instruction-level monitoring, breakpoint-aware execution, disk image inspection/flush/import/export, profile lifecycle controls, and snapshot actions. Mobile frontend remains architecture/documentation only. See [GUI manager guide](docs/GUI_VM_MANAGER.md).\n
