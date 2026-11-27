@@ -106,5 +106,21 @@ private:
  SessionManager manager_;QString name_;std::string id_;QTimer timer_;QPlainTextEdit*editor_{};QTextEdit*output_{};QTextEdit*memory_{};QLabel*status_{};QTableWidget*diskTable_{};std::map<uint32_t,DiskEntry>disks_;std::deque<std::function<void()>>ioQueue_;GuestDiskQueue guestDiskQueue_;bool loaded_{false},autoRun_{false};
 };
 }
-SessionWorkspace::SessionWorkspace(QWidget*parent):QWidget(parent){auto*layout=new QVBoxLayout(this);auto*bar=new QHBoxLayout;auto*tabs=new QTabWidget;auto*add=new QPushButton("New VM session");auto*remove=new QPushButton("Close session");bar->addWidget(add);bar->addWidget(remove);bar->addStretch();layout->addLayout(bar);layout->addWidget(tabs);auto create=[tabs]{auto n=tabs->count()+1;tabs->addTab(new SessionPage(QString("VM %1").arg(n)),QString("VM %1").arg(n));tabs->setCurrentIndex(tabs->count()-1);};connect(add,&QPushButton::clicked,this,create);connect(remove,&QPushButton::clicked,this,[tabs]{if(tabs->count()){auto*w=tabs->currentWidget();tabs->removeTab(tabs->currentIndex());w->deleteLater();}});create();}
+SessionWorkspace::SessionWorkspace(QWidget*parent):QWidget(parent){
+ auto*layout=new QVBoxLayout(this);auto*bar=new QHBoxLayout;auto*tabs=new QTabWidget;
+ auto*add=new QPushButton("New VM session");auto*remove=new QPushButton("Close session");
+ bar->addWidget(add);bar->addWidget(remove);bar->addStretch();layout->addLayout(bar);layout->addWidget(tabs);
+ auto createNamed=[tabs](const QString&name){tabs->addTab(new SessionPage(name),name);tabs->setCurrentIndex(tabs->count()-1);};
+ int nextId=1;auto sessionsRoot=WorkspacePaths::discover().root/"sessions";std::vector<std::string> savedNames;
+ if(std::filesystem::exists(sessionsRoot)){for(const auto&entry:std::filesystem::directory_iterator(sessionsRoot)){
+  if(!entry.is_directory())continue;auto name=entry.path().filename().string();
+  if(!name.empty()&&std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c)||c==' '||c=='-'||c=='_';}))savedNames.push_back(name);
+ }}
+ std::sort(savedNames.begin(),savedNames.end());
+ for(const auto&name:savedNames){createNamed(QString::fromStdString(name));
+  if(name.rfind("VM ",0)==0){try{nextId=std::max(nextId,std::stoi(name.substr(3))+1);}catch(...){}}
+ }
+ if(savedNames.empty())createNamed("VM 1");
+ connect(add,&QPushButton::clicked,this,[createNamed,&nextId]{createNamed(QString("VM %1").arg(nextId++));});
+ connect(remove,&QPushButton::clicked,this,[tabs]{if(tabs->count()){auto*w=tabs->currentWidget();tabs->removeTab(tabs->currentIndex());w->deleteLater();}});
 }
