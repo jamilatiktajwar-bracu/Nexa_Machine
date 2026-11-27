@@ -597,6 +597,11 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         info.pendingSignals=p.signals.size();
         info.openFileHandles=p.openFiles.size();
         info.sharedMemoryAttachments=p.sharedAttachments.size();
+        const auto codeSpace=id|0x80000000u;
+        info.virtualPages=memory_.mappedPages(id)+memory_.mappedPages(codeSpace);
+        info.residentPages=memory_.residentPages(id)+memory_.residentPages(codeSpace);
+        info.swappedPages=memory_.swappedPages(id)+memory_.swappedPages(codeSpace);
+        info.residentBytes=info.residentPages*VirtualMemoryManager::PageSize;
         info.readyWaitTicks=p.readyWaitTicks;
         info.effectivePriority=effectivePriority(id);
         result.push_back(std::move(info));
