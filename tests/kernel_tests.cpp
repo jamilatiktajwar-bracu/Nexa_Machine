@@ -168,6 +168,7 @@ int main() {
     assert(syncKernel.scheduleOne());
     assert(syncKernel.terminateProcess(deathOwner));
     assert(syncKernel.scheduleOne());
+    assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
     assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
     const auto mutex2=syncKernel.createMutex();
