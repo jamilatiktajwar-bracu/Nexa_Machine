@@ -241,6 +241,16 @@ int main() {
     try { (void)syncKernel.memoryManager().canExecute(lockWaiterPid,static_cast<std::uint16_t>(3*256),nexa::MemoryAccess::User); }
     catch(const std::runtime_error&) { sharedExecuteDenied=true; }
     assert(sharedExecuteDenied);
+    // A read-only mapping permits reads but rejects both guest-page and kernel shared writes.
+    assert(syncKernel.unmapSharedMemory(lockWaiterPid,guestSegment));
+    assert(syncKernel.mapSharedMemory(lockWaiterPid,guestSegment,3,false));
+    assert(syncKernel.memoryManager().read(lockWaiterPid,static_cast<std::uint16_t>(3*256+7),nexa::MemoryAccess::User)==0x99);
+    bool readOnlyStoreDenied=false;
+    try { syncKernel.memoryManager().write(lockWaiterPid,static_cast<std::uint16_t>(3*256+7),0x55,nexa::MemoryAccess::User); }
+    catch(const std::runtime_error&) { readOnlyStoreDenied=true; }
+    assert(readOnlyStoreDenied);
+    assert(!syncKernel.writeSharedMemory(lockWaiterPid,guestSegment,7,0x55));
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,7)==0x99);
     assert(syncKernel.detachSharedMemory(lockWaiterPid,guestSegment));
     assert(!syncKernel.memoryManager().isMapped(lockWaiterPid,3));
     assert(!syncKernel.detachSharedMemory(shmGuestPid,guestSegment)); // Guest already detached on exit
