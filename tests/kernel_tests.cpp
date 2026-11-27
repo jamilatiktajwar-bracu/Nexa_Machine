@@ -581,6 +581,23 @@ int main() {
     blockedKernel.run();
     assert(blockedKernel.takeConsoleOutput()=="A");
 
+    // Mutex wait-for graph distinguishes a circular wait from a single blocked waiter.
+    nexa::NexaKernel mutexDeadlockKernel(256);
+    const auto cycleA=mutexDeadlockKernel.spawn("cycle-a",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    const auto cycleB=mutexDeadlockKernel.spawn("cycle-b",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    const auto cycleMutexA=mutexDeadlockKernel.createMutex();
+    const auto cycleMutexB=mutexDeadlockKernel.createMutex();
+    assert(mutexDeadlockKernel.mutexLock(cycleA,cycleMutexA));
+    assert(mutexDeadlockKernel.mutexLock(cycleB,cycleMutexB));
+    assert(!mutexDeadlockKernel.mutexLock(cycleA,cycleMutexB));
+    assert(!mutexDeadlockKernel.hasMutexDeadlock());
+    assert(!mutexDeadlockKernel.mutexLock(cycleB,cycleMutexA));
+    assert(mutexDeadlockKernel.hasMutexDeadlock());
+    // Owner exit removes its wait edge and hands its mutex to the surviving waiter.
+    assert(mutexDeadlockKernel.terminateProcess(cycleB));
+    assert(!mutexDeadlockKernel.hasMutexDeadlock());
+    assert(mutexDeadlockKernel.mutexLock(cycleA,cycleMutexB));
+
     // Inbox capacity is bounded and FIFO; a full mailbox never overwrites messages.
     for(std::uint8_t value=0;value<64;++value)
         assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{value}));
