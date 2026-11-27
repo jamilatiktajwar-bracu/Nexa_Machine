@@ -189,19 +189,19 @@ int main() {
     // Guest syscalls attach, read, write and detach a kernel-created segment.
     const auto guestSegment=syncKernel.createSharedMemory(16);
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,4,0x33));
-    const auto sharedGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
+    const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
         {nexa::Opcode::LoadBImmediate,guestSegment},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,4},{nexa::Opcode::Store,41},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedRead)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,5},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x77},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedWrite)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,44},
-        {nexa::Opcode::LoadBImmediate,guestSegment},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedDetach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});    syncKernel.setPriority(sharedGuestPid,7);
+        {nexa::Opcode::LoadBImmediate,guestSegment},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedDetach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     assert(syncKernel.scheduleOne());
-    assert(syncKernel.readProcessMemory(sharedGuestPid,43)==1);
-    assert(syncKernel.readProcessMemory(sharedGuestPid,42)==0x33);
-    assert(syncKernel.readProcessMemory(sharedGuestPid,44)==1);
+    assert(syncKernel.readProcessMemory(shmGuestPid,43)==1);
+    assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
+    assert(syncKernel.readProcessMemory(shmGuestPid,44)==1);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
-    assert(!syncKernel.readSharedMemory(sharedGuestPid,guestSegment,4));
+    assert(!syncKernel.readSharedMemory(shmGuestPid,guestSegment,4));
     assert(syncKernel.destroySharedMemory(guestSegment));
     // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
     const auto sharedId=syncKernel.createSharedMemory(32);
