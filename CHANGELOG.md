@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.31.0] - 2026-11-27
+- Added guarded memory-allocation recovery callbacks; allocator retries after callback frees a frame when no free or evictable frames exist.
+- Connected kernel recovery to safe reaping of Halted/Faulted processes only; active processes are never force-killed.
+- Added pinned shared-frame exhaustion test for recovery retry and complete frame reclamation.
+
+
 ## [2.29.0] - 2026-11-27
 - Added `oomstat` system memory pressure diagnostics: free-frame ratio classification, resident/swapped pages, and swap counters.
 - Defined pressure labels as normal (>10% free), high (<=10% free), and critical (zero free frames); these are advisory diagnostics, not automatic OOM recovery.
