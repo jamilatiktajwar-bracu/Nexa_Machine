@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct NexaApp: App {
@@ -11,11 +12,13 @@ struct SessionView: View {
     @StateObject private var model = NexaSessionModel()
     @State private var source = "LOAD A, 19\nLOAD B, 23\nADD A, B\nOUT A, 1\nHALT"
     @State private var input = ""
+    @State private var showingDiskImporter = false
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
+                Text(model.diskStatus).font(.caption2).foregroundStyle(.secondary)
                 TextEditor(text: $source).font(.system(.body, design: .monospaced)).frame(minHeight: 180)
                 HStack {
                     Button("Load") { model.load(source) }
@@ -28,11 +31,23 @@ struct SessionView: View {
                     TextField("Guest keyboard input", text: $input)
                     Button("Send") { model.send(input); input = "" }
                 }
+                HStack {
+                    Button("Import disk") { showingDiskImporter = true }
+                    Button("Detach disk") { model.detachDisk() }
+                    Button("Save snapshot") { model.saveSnapshot() }
+                    Button("Restore snapshot") { model.restoreSnapshot() }
+                }.buttonStyle(.bordered).controlSize(.small)
                 TextEditor(text: $model.console).font(.system(.body, design: .monospaced))
             }
             .padding()
             .navigationTitle("Nexa Machine")
             .toolbar { Button("Stop") { model.stop() } }
+        }
+        .fileImporter(isPresented: $showingDiskImporter, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
+            switch result {
+            case .success(let urls): if let url = urls.first { model.attachDisk(from: url) }
+            case .failure(let error): model.status = "Import error: \\(error.localizedDescription)"
+            }
         }
         .task { model.create() }
         .onDisappear { model.close() }
