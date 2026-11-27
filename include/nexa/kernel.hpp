@@ -75,7 +75,7 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
+    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; std::deque<std::uint8_t> semaphoreGrants,mutexGrants; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
     struct Semaphore { std::uint16_t count{},maximum{}; std::deque<std::uint32_t> waiters; };
     struct Mutex { std::optional<std::uint32_t> owner{}; std::deque<std::uint32_t> waiters; };
     std::size_t ramBytes_;
