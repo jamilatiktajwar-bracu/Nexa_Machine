@@ -26,3 +26,10 @@ Link the same static core into a native C++ JNI layer. Kotlin/Compose calls a na
 - Guest RAM access is checked by the VM and errors are returned.
 - Snapshots store VM execution state, not disk images or workspace profiles.
 - The mobile frontends and platform packaging are not yet implemented.
+
+
+## Multi-device block storage (C API)
+
+A session may attach multiple disk images with unique 32-bit device IDs using `nexa_disk_attach_device`. The legacy `nexa_disk_attach` is device ID 0. Query attached device count with `nexa_disk_device_count`; use the `*_device` sector and flush functions to address a specific device. Detach with `nexa_disk_detach(context, session, device, flush_before_detach)`; pass nonzero to flush pending writes before releasing the image. Detaching device 0 also disables the legacy guest `SYS A=4/5` handler. Session removal releases all attached devices.
+
+For arbitrary guest RAM buffers, `nexa_disk_read_to_guest` and `nexa_disk_write_from_guest` transfer exactly one 512-byte sector at a checked 16-bit guest address. The complete buffer must fit in RAM. These host-mediated calls are synchronous; asynchronous queueing and interrupt completion are a later milestone. VM snapshots still do not include disk image contents, so coordinated VM+disk snapshots are not yet atomic.
