@@ -80,8 +80,13 @@ if(NEXA_BUILD_GUI)
   target_include_directories(nexa_gui PRIVATE include)
   target_link_libraries(nexa_gui PRIVATE Qt6::Widgets nexa_vm_core)
   install(TARGETS nexa_gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  qt_generate_deploy_app_script(TARGET nexa_gui OUTPUT_SCRIPT NEXA_QT_DEPLOY_SCRIPT NO_UNSUPPORTED_PLATFORM_ERROR)
-  install(SCRIPT ${NEXA_QT_DEPLOY_SCRIPT})
+  # Qt's generated deployment script is supported on Windows/macOS.
+  # Linux packages rely on distribution-provided Qt6 runtime dependencies:
+  # the generic script can fail rewriting RPATH on distro plugin ELF files.
+  if(WIN32 OR APPLE)
+   qt_generate_deploy_app_script(TARGET nexa_gui OUTPUT_SCRIPT NEXA_QT_DEPLOY_SCRIPT NO_UNSUPPORTED_PLATFORM_ERROR)
+   install(SCRIPT ${NEXA_QT_DEPLOY_SCRIPT})
+  endif()
  elseif(NEXA_REQUIRE_GUI)
   message(FATAL_ERROR "NEXA_REQUIRE_GUI is ON but Qt6 Widgets was not found")
  else()
