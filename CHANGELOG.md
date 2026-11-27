@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.16.0] - 2026-11-27
+- Added scheduler-atomic shared byte add and compare-swap operations (guest syscalls 23–24).
+- Expanded regression tests for atomic syscall dispatch, byte overflow and compare-swap success/failure.
+- Shared-memory API now includes previous-value-returning atomic operations; operations are atomic relative to the simulated single-core scheduler, not SMP hardware.
+
+
 ## [2.15.0] - 2026-11-27
 - Added reference-counted shared physical frames and guest virtual-page aliases.
 - Shared segments map into guest address spaces, with user read/write and non-executable permissions; detach/exit unmaps.
