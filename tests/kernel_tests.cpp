@@ -124,6 +124,44 @@ int main() {
     assert(processControlKernel.memoryManager().freeFrames()==framesBeforeManagedProcess);
     assert(processShell.execute("reap "+std::to_string(managedPid))=="unknown or active process");
 
+    nexa::NexaKernel syncKernel(512);
+    const auto semId=syncKernel.createSemaphore(0,2);
+    const auto waiterPid=syncKernel.spawn("semaphore-waiter",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::SemaphoreWait)},
+        {nexa::Opcode::LoadImmediate,semId},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,100},{nexa::Opcode::Halt,0}}});
+    assert(syncKernel.scheduleOne());
+    auto syncInfo=syncKernel.processes();
+    bool waiterBlocked=false;for(const auto& proc:syncInfo)if(proc.pid==waiterPid)waiterBlocked=proc.state==nexa::ProcessState::Blocked;
+    assert(waiterBlocked&&!syncKernel.scheduleOne());
+    assert(syncKernel.semaphoreSignal(semId));
+    assert(syncKernel.scheduleOne());
+    assert(syncKernel.readProcessMemory(waiterPid,100)==1);
+    assert(!syncKernel.semaphoreSignal(semId)==false);
+    assert(syncKernel.semaphoreSignal(semId));
+    assert(syncKernel.semaphoreSignal(semId));
+    assert(!syncKernel.semaphoreSignal(semId));
+    bool badSemaphore=false;try{(void)syncKernel.createSemaphore(2,1);}catch(const std::invalid_argument&){badSemaphore=true;}
+    assert(badSemaphore);
+    const auto mutexId=syncKernel.createMutex();
+    const auto ownerPid=syncKernel.spawn("mutex-owner",looping);
+    const auto lockWaiterPid=syncKernel.spawn("mutex-waiter",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},
+        {nexa::Opcode::LoadImmediate,mutexId},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,101},{nexa::Opcode::Halt,0}}});
+    assert(syncKernel.mutexLock(ownerPid,mutexId));
+    assert(syncKernel.scheduleOne());
+    syncInfo=syncKernel.processes();
+    waiterBlocked=false;for(const auto& proc:syncInfo)if(proc.pid==lockWaiterPid)waiterBlocked=proc.state==nexa::ProcessState::Blocked;
+    assert(waiterBlocked);
+    assert(syncKernel.mutexUnlock(ownerPid,mutexId));
+    assert(syncKernel.scheduleOne());
+    assert(syncKernel.readProcessMemory(lockWaiterPid,101)==1);
+    assert(!syncKernel.mutexUnlock(ownerPid,mutexId));
+    assert(syncKernel.mutexUnlock(lockWaiterPid,mutexId));
+    const auto mutex2=syncKernel.createMutex();
+    assert(syncKernel.mutexLock(ownerPid,mutex2));
+    assert(!syncKernel.mutexLock(ownerPid,mutex2));
+    assert(!syncKernel.mutexUnlock(lockWaiterPid,mutex2));
+    
     nexa::NexaKernel signalKernel(256);
     const auto signalPid=signalKernel.spawn("signal-target",looping);
     assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::Stop));
