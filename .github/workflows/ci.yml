@@ -36,12 +36,25 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package desktop release
+        run: cpack --config build/CPackConfig.cmake -B release
+      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
       - name: Build iOS VM core (macOS)
         if: runner.os == 'macOS'
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
       - name: Build SwiftUI iOS app (macOS)
         if: runner.os == 'macOS'
-        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
       - name: Setup Android SDK and NDK (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -63,6 +76,12 @@ jobs:
       - name: Build Android Compose app (Linux)
         if: runner.os == 'Linux'
         run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
       - name: Android JNI runtime tests (Linux)
         if: runner.os == 'Linux'
         uses: reactivecircus/android-emulator-runner@v2
