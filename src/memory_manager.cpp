@@ -22,11 +22,17 @@ void VirtualMemoryManager::createAddressSpace(std::uint32_t pid) {
     if(!spaces_.emplace(pid,std::map<std::uint8_t,PageMapping>{}).second)
         throw std::invalid_argument("Address space already exists");
 }
+void VirtualMemoryManager::setPageLimit(std::uint32_t pid,std::size_t pages) {
+    const auto it=spaces_.find(pid);
+    if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
+    if(pages!=0&&it->second.size()>pages) throw std::invalid_argument("Page limit is below current address-space usage");
+    if(pages==0) pageLimits_.erase(pid); else pageLimits_[pid]=pages;
+}
 void VirtualMemoryManager::destroyAddressSpace(std::uint32_t pid) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     invalidateTlb(pid);
     for(const auto& [page,m]:it->second){(void)page;if(m.resident) releaseFrame(m.frame); else if(swappedPages_) --swappedPages_;}
-    spaces_.erase(it);
+    spaces_.erase(it); pageLimits_.erase(pid);
 }
 std::uint16_t VirtualMemoryManager::allocateFrame() {
     for(std::size_t i=0;i<usedFrames_.size();++i) if(!usedFrames_[i]) {
@@ -139,6 +145,8 @@ void VirtualMemoryManager::mapSharedFrame(std::uint32_t pid,std::uint8_t page,st
     auto space=spaces_.find(pid);
     if(space==spaces_.end()) throw std::out_of_range("Unknown address space");
     if(space->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
+    const auto limit=pageLimits_.find(pid);
+    if(limit!=pageLimits_.end()&&space->second.size()>=limit->second) throw std::runtime_error("Process memory page limit exceeded");
     auto refs=sharedFrameMappings_.find(frame);
     if(refs==sharedFrameMappings_.end()||!usedFrames_[frame]) throw std::invalid_argument("Frame is not shared");
     ++refs->second;
