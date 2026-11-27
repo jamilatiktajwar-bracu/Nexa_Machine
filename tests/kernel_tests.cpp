@@ -500,9 +500,22 @@ int main() {
     const auto ipcSender=ipcKernel.spawn("ipc-host-sender",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto ipcReceiver=ipcKernel.spawn("ipc-host-receiver",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{1,2,3}));
+    auto ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==1); assert(proc.pendingMessageBytes==3); }
     auto ipcMessage=ipcKernel.receiveMessage(ipcReceiver);
     assert(ipcMessage&&ipcMessage->sender==ipcSender&&ipcMessage->payload==std::vector<std::uint8_t>({1,2,3}));
     assert(!ipcKernel.receiveMessage(ipcReceiver));
+    ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==0); assert(proc.pendingMessageBytes==0); }
+    assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{4,5}));
+    assert(ipcKernel.sendMessage(ipcSender,ipcReceiver,{6,7,8,9}));
+    ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==2); assert(proc.pendingMessageBytes==6); }
+    auto fifoFirst=ipcKernel.receiveMessage(ipcReceiver);
+    assert(fifoFirst&&fifoFirst->payload==std::vector<std::uint8_t>({4,5}));
+    ipcStats=ipcKernel.processes();
+    for(const auto& proc:ipcStats) if(proc.pid==ipcReceiver) { assert(proc.pendingMessages==1); assert(proc.pendingMessageBytes==4); }
+    assert(ipcKernel.receiveMessage(ipcReceiver)->payload==std::vector<std::uint8_t>({6,7,8,9}));
     std::vector<std::uint8_t> oversized(252,0);
     assert(!ipcKernel.sendMessage(ipcSender,ipcReceiver,std::move(oversized)));
 
