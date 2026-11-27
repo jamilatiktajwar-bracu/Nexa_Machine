@@ -312,4 +312,7 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 ## Desktop VM Manager (Qt 6)
 
 The desktop UI now supports selecting and creating VM profiles, loading assembly source files, Run/Step/Reset, breakpoints, interactive framebuffer drawing, RAM inspection, and saving/restoring VM snapshots. Snapshot state does not include virtual disk images. See [desktop VM manager guide](docs/GUI_VM_MANAGER.md).
-\n## Desktop manager updates\n\nThe Qt frontend now has cooperative timer-driven Start/Pause/Resume/Stop controls, instruction-level monitoring, breakpoint-aware execution, disk image inspection/flush/import/export, profile lifecycle controls, and snapshot actions. Mobile frontend remains architecture/documentation only. See [GUI manager guide](docs/GUI_VM_MANAGER.md).\n
+
+## Desktop manager updates
+
+The Qt frontend now has cooperative timer-driven Start/Pause/Resume/Stop controls, instruction-level monitoring, breakpoint-aware execution, disk image inspection/flush/import/export, profile lifecycle controls, and snapshot actions. Mobile frontend remains architecture/documentation only. See [GUI manager guide](docs/GUI_VM_MANAGER.md).
