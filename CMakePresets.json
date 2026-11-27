@@ -1,0 +1,29 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Nexa portable default",
+      "description": "Build CLI and optional Qt desktop frontend when Qt6 is available.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "BUILD_TESTING": "ON", "NEXA_BUILD_GUI": "ON" }
+    },
+    {
+      "name": "core",
+      "displayName": "Nexa portable core",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build-core",
+      "cacheVariables": { "NEXA_BUILD_GUI": "OFF" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "default", "configurePreset": "default" },
+    { "name": "core", "configurePreset": "core" }
+  ],
+  "testPresets": [
+    { "name": "default", "configurePreset": "default", "output": { "outputOnFailure": true } },
+    { "name": "core", "configurePreset": "core", "output": { "outputOnFailure": true } }
+  ]
+}
