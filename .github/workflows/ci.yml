@@ -62,6 +62,20 @@ jobs:
           $items = tar -tf $pkg.FullName
           if (-not ($items | Select-String 'bin/nexa_gui.exe')) { throw 'GUI executable missing' }
           if (-not ($items | Select-String 'bin/nexa.exe')) { throw 'CLI executable missing' }
+      - name: Generate release metadata (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          pkg=$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
+          sha256sum "$pkg" > release/SHA256SUMS
+          printf 'NexaMachine\\nVersion: %s\\nCommit: %s\\nPlatform: %s\\n' '${{ github.ref_name }}' '${{ github.sha }}' '${{ runner.os }}' > release/BUILDINFO.txt
+      - name: Generate release metadata (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          (Get-FileHash $pkg.FullName -Algorithm SHA256).Hash + '  ' + $pkg.Name | Out-File release/SHA256SUMS -Encoding ascii
+          "NexaMachine`nCommit: ${{ github.sha }}`nPlatform: Windows" | Out-File release/BUILDINFO.txt -Encoding utf8
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
