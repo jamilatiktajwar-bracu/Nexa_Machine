@@ -33,6 +33,9 @@ int nexa_framebuffer_get(NexaContext*,uint64_t id,size_t x,size_t y,int* out_pix
 int nexa_framebuffer_draw(NexaContext*,uint64_t id,size_t x,size_t y,int white);
 int nexa_snapshot_save(NexaContext*,uint64_t id,const char* path);
 int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);
+/* Coordinated bundle: VM state plus every attached disk image. Serialize context access. */
+int nexa_snapshot_save_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
+int nexa_snapshot_restore_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
 /* 512-byte sectors. Guest SYS ABI: A=4 reads B=sector into RAM[0..511];
  * A=5 writes RAM[0..511] to B=sector. Requires >=512 bytes RAM. */
 int nexa_disk_attach(NexaContext*,uint64_t id,const char* path,size_t capacity_bytes); /* device ID 0 compatibility */
