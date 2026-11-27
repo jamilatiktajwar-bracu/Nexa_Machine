@@ -99,7 +99,8 @@ std::string NexaShell::execute(const std::string& line) {
             }
             return command=="savefs"?"filesystem image saved":"filesystem image loaded";
         }
-        if(command=="ls") { std::string path; input>>path; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')||!security_.can(path,'x')) return "permission denied"; std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"\n"; return out; }
+        if(command=="ls") { std::string path; input>>path; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')||!security_.can(path,'x')) return "permission denied"; std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"
+"; return out; }
         if(command=="cat") { std::string path; input>>path; if(path.empty()) return "usage: cat PATH"; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')) return "permission denied"; auto bytes=kernel_.filesystem().readFile(path); return std::string(bytes.begin(),bytes.end()); }
         if(command=="touch") { std::string path; input>>path; if(path.empty()) return "usage: touch PATH"; path=resolvePath(path); if(!canCreateIn(path)) return "permission denied"; if(kernel_.filesystem().exists(path)) return "already exists"; kernel_.filesystem().createFile(path); security_.registerPath(path,0644); return "created "+path; }
         if(command=="mkdir") { std::string path; input>>path; if(path.empty()) return "usage: mkdir PATH"; path=resolvePath(path); if(!canCreateIn(path)) return "permission denied"; kernel_.filesystem().createDirectory(path); security_.registerPath(path,0755); return "created directory "+path; }
@@ -119,7 +120,8 @@ std::string NexaShell::execute(const std::string& line) {
             auto bytes=kernel_.filesystem().readFile(path); std::string source(bytes.begin(),bytes.end());
             Executable image{0,parseAssembly(source)}; auto pid=kernel_.spawn(path,image); kernel_.run(); auto out=kernel_.takeConsoleOutput();
             auto processes=kernel_.processes(); auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
-            if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="\nprocess fault: "+found->faultReason; return out;
+            if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="
+process fault: "+found->faultReason; return out;
         }
         if(command=="limit") {
             std::string pidText,budgetText; input>>pidText>>budgetText;
@@ -189,7 +191,21 @@ std::string NexaShell::execute(const std::string& line) {
             if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
             return kernel_.reapProcess(static_cast<std::uint32_t>(pidValue))?"process reaped":"unknown or active process";
         }
-        if(command=="oomstat") {\n            const auto& mm=kernel_.memoryManager();\n            const auto total=mm.totalFrames(),free=mm.freeFrames();\n            const auto pressure=free==0?"critical":(free*10<=total?"high":"normal");\n            return "pressure="+std::string(pressure)+\n                " free_percent="+std::to_string(total?free*100/total:0)+\n                " frames_free="+std::to_string(free)+\n                " frames_total="+std::to_string(total)+\n                " resident_pages="+std::to_string(mm.residentPages())+\n                " swapped_pages="+std::to_string(mm.swappedPages())+\n                " swap_ins="+std::to_string(mm.swapIns())+\n                " swap_outs="+std::to_string(mm.swapOuts())+\n                " swap_backend="+(mm.swapFilePath().empty()?"memory":"disk");\n        }\n        if(command=="memstat") {
+        if(command=="oomstat") {
+            const auto& mm=kernel_.memoryManager();
+            const auto total=mm.totalFrames(),free=mm.freeFrames();
+            const auto pressure=free==0?"critical":(free*10<=total?"high":"normal");
+            return "pressure="+std::string(pressure)+
+                " free_percent="+std::to_string(total?free*100/total:0)+
+                " frames_free="+std::to_string(free)+
+                " frames_total="+std::to_string(total)+
+                " resident_pages="+std::to_string(mm.residentPages())+
+                " swapped_pages="+std::to_string(mm.swappedPages())+
+                " swap_ins="+std::to_string(mm.swapIns())+
+                " swap_outs="+std::to_string(mm.swapOuts())+
+                " swap_backend="+(mm.swapFilePath().empty()?"memory":"disk");
+        }
+        if(command=="memstat") {
             const auto& mm=kernel_.memoryManager();
             return "frames_used="+std::to_string(mm.residentPages())+
                 " frames_total="+std::to_string(mm.totalFrames())+
@@ -237,7 +253,8 @@ std::string NexaShell::execute(const std::string& line) {
             return "priority aging updated";
         }
         if(command=="syncstat") return kernel_.syncDiagnostics();
-        if(command=="shmstat") { std::string out; for(const auto& seg:kernel_.sharedMemoryInfo()) out+="id="+std::to_string(seg.id)+" size="+std::to_string(seg.size)+" attachments="+std::to_string(seg.attachments)+"\n"; return out.empty()?"no shared-memory segments":out; }
+        if(command=="shmstat") { std::string out; for(const auto& seg:kernel_.sharedMemoryInfo()) out+="id="+std::to_string(seg.id)+" size="+std::to_string(seg.size)+" attachments="+std::to_string(seg.attachments)+"
+"; return out.empty()?"no shared-memory segments":out; }
         if(command=="sched") {
             return "policy=fixed-priority-round-robin quantum="+std::to_string(kernel_.timeQuantum())+
                 " ticks="+std::to_string(kernel_.systemTicks())+
@@ -257,7 +274,8 @@ std::string NexaShell::execute(const std::string& line) {
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
                     " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
                 if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
-                out+="\n";
+                out+="
+";
             }
             return out;
         }
