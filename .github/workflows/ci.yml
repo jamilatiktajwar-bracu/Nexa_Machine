@@ -160,6 +160,8 @@ jobs:
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
       - name: Android instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
@@ -181,10 +183,23 @@ jobs:
         run: brew install xcodegen
       - name: Build iOS VM core
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Install iOS Simulator runtime
+        run: xcodebuild -downloadPlatform iOS && xcrun simctl list runtimes
       - name: Build SwiftUI simulator app
         run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app -configuration Debug CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
       - name: iOS app termination and relaunch recovery tests
-        run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO test
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME_ID="$(xcrun simctl list -j runtimes | python3 -c 'import json,sys; items=[r for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable") and r.get("name", "").startswith("iOS ")]; items.sort(key=lambda r: tuple(int(p) for p in r["version"].split(".")), reverse=True); print(items[0]["identifier"] if items else "")')"
+          DEVICE_TYPE="$(xcrun simctl list -j devicetypes | python3 -c 'import json,sys; items=[d for d in json.load(sys.stdin)["devicetypes"] if d.get("name", "").startswith("iPhone")]; print(items[0]["identifier"] if items else "")')"
+          test -n "$RUNTIME_ID" || { echo 'No installed iOS simulator runtime after download' >&2; exit 1; }
+          test -n "$DEVICE_TYPE" || { echo 'No iPhone simulator device type is available' >&2; exit 1; }
+          DEVICE_ID="$(xcrun simctl create Nexa-CI-iPhone "$DEVICE_TYPE" "$RUNTIME_ID")"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          cd mobile/ios
+          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build-ios-tests CODE_SIGNING_ALLOWED=NO test
       - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:
