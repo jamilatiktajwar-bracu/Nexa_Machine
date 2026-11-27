@@ -52,15 +52,18 @@ std::uint16_t VirtualMemoryManager::allocateFrame() {
     }
     if(!victim) {
         if(allocationRecoveryHandler_&&!allocationRecoveryInProgress_) {
+            ++allocationRecoveryAttempts_;
             allocationRecoveryInProgress_=true;
-            try { allocationRecoveryHandler_(); } catch(...) { allocationRecoveryInProgress_=false; throw; }
+            try { allocationRecoveryHandler_(); } catch(...) { allocationRecoveryInProgress_=false; ++allocationRecoveryFailures_; throw; }
             allocationRecoveryInProgress_=false;
             for(std::size_t i=0;i<usedFrames_.size();++i) if(!usedFrames_[i]) {
                 usedFrames_[i]=true;
                 const auto start=i*PageSize;
                 std::fill(physical_.begin()+static_cast<std::ptrdiff_t>(start),physical_.begin()+static_cast<std::ptrdiff_t>(start+PageSize),0);
+                ++allocationRecoverySuccesses_;
                 return static_cast<std::uint16_t>(i);
             }
+            ++allocationRecoveryFailures_;
         }
         throw std::runtime_error("Out of physical memory: no evictable page");
     }
