@@ -36,6 +36,7 @@ struct SharedMemoryInfo { std::uint8_t id{}; std::size_t size{}; std::size_t att
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
 public:
+    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxInboxBytes=8192,MaxPendingSignals=32;
     explicit NexaKernel(std::size_t ramBytes=VM::DefaultRamSize);
     std::uint32_t spawn(const std::string& name, const Executable& image);
     bool reapProcess(std::uint32_t pid);
@@ -104,7 +105,6 @@ private:
     std::uint32_t cursor_{0};
     std::size_t timeQuantum_{1};
     std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0},priorityAgingThreshold_{0};
-    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxInboxBytes=8192,MaxPendingSignals=32;
     VirtualFileSystem fs_;
     VirtualMemoryManager memory_;
     std::string output_;
