@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | memlimit PID PAGES | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
