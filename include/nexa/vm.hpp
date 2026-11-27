@@ -18,6 +18,7 @@ public:
  explicit VM(std::size_t ramSize=DefaultRamSize);
  void loadProgram(std::vector<Instruction>);
  void setSyscallHandler(std::function<std::uint8_t(std::uint8_t,std::uint8_t)> handler){syscallHandler_=std::move(handler);}
+ void setBlockDeviceHandler(std::function<void(bool,std::uint8_t)> handler){blockDeviceHandler_=std::move(handler);}
  [[nodiscard]] PrivilegeMode privilegeMode()const noexcept{return privilegeMode_;}
  void setMemoryAccessors(std::function<std::uint8_t(std::uint16_t)> reader,std::function<void(std::uint16_t,std::uint8_t)> writer){memoryReader_=std::move(reader);memoryWriter_=std::move(writer);}
  void setInstructionFetchGuard(std::function<void(std::uint16_t)> guard){instructionFetchGuard_=std::move(guard);}
@@ -65,6 +66,7 @@ private:
  std::deque<std::uint8_t>keyboard_;
  std::string deviceOutput_;
  std::function<std::uint8_t(std::uint8_t,std::uint8_t)> syscallHandler_;
+ std::function<void(bool,std::uint8_t)> blockDeviceHandler_;
  std::function<std::uint8_t(std::uint16_t)> memoryReader_;
  std::function<void(std::uint16_t,std::uint8_t)> memoryWriter_; 
  std::function<void(std::uint16_t)> instructionFetchGuard_;
