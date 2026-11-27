@@ -20,7 +20,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::MutexUnlock)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::SharedWrite)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -491,6 +491,23 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::SemaphoreSignal: return semaphoreSignal(arg)?1:0;
     case Syscall::MutexLock: return mutexLock(pid,arg)?1:0;
     case Syscall::MutexUnlock: return mutexUnlock(pid,arg)?1:0;
+    case Syscall::SharedAttach: return attachSharedMemory(pid,arg)?1:0;
+    case Syscall::SharedDetach: return detachSharedMemory(pid,arg)?1:0;
+    case Syscall::SharedRead: {
+        if(static_cast<std::size_t>(arg)+2>it->second.machine.ramSize()) throw std::runtime_error("Shared-memory read descriptor outside process RAM");
+        const auto segment=it->second.machine.readMemory(arg);
+        const auto offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto value=readSharedMemory(pid,segment,offset);
+        if(!value) throw std::runtime_error("Shared-memory read denied or out of bounds");
+        return *value;
+    }
+    case Syscall::SharedWrite: {
+        if(static_cast<std::size_t>(arg)+3>it->second.machine.ramSize()) throw std::runtime_error("Shared-memory write descriptor outside process RAM");
+        const auto segment=it->second.machine.readMemory(arg);
+        const auto offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto value=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2));
+        return writeSharedMemory(pid,segment,offset,value)?1:0;
+    }
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     case Syscall::OpenRead:
     case Syscall::OpenWrite: {
