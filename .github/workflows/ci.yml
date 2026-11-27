@@ -23,6 +23,9 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
       - name: Run demo (Unix)
         if: runner.os != 'Windows'
         run: ./build/nexa
