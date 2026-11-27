@@ -1,0 +1,5 @@
+#include "nexa/c_api.h"
+#include <cassert>
+#include <cstring>
+#include <iostream>
+int main(){auto*c=nexa_context_create();assert(c);uint64_t id=0;assert(nexa_session_create(c,"ffi-test",256,&id)==0);assert(nexa_session_load_assembly(c,id,"LOAD A, 12\nHALT\n")==0);assert(nexa_session_start(c,id)==0);NexaSessionState state=NEXA_READY;assert(nexa_session_run(c,id,10,&state)==0&&state==NEXA_HALTED);NexaSessionInfo info{};assert(nexa_session_info(c,id,&info)==0);assert(info.ram_bytes==256&&info.halted&&info.instructions==2);uint8_t val=0;assert(nexa_memory_read(c,id,0,&val)==0);assert(nexa_memory_write(c,id,3,99)==0);assert(nexa_memory_read(c,id,3,&val)==0&&val==99);assert(nexa_session_remove(c,id)==0);assert(nexa_session_info(c,id,&info)<0);assert(std::strlen(nexa_last_error(c))>0);nexa_context_destroy(c);std::cout<<"C API tests passed\n";}
