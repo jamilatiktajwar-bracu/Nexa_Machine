@@ -357,10 +357,8 @@ int main() {
     const auto rollbackId=rollbackKernel.createSharedMemory(300);
     assert(rollbackKernel.attachSharedMemory(rollbackPid,rollbackId));
     rollbackKernel.memoryManager().mapPage(rollbackPid,101,true,true,false);
-    bool mappingCollision=false;
-    try { (void)rollbackKernel.mapSharedMemory(rollbackPid,rollbackId,100); }
-    catch(const std::invalid_argument&) { mappingCollision=true; }
-    assert(mappingCollision);
+    const bool mappingCollision=rollbackKernel.mapSharedMemory(rollbackPid,rollbackId,100);
+    assert(!mappingCollision);
     assert(!rollbackKernel.memoryManager().isMapped(rollbackPid,100));
     assert(rollbackKernel.memoryManager().isMapped(rollbackPid,101));
     assert(rollbackKernel.memoryManager().mappedPages(rollbackPid)>=1);
