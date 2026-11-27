@@ -158,7 +158,7 @@ inline void writeJournalLink(const std::filesystem::path& sidecar,
     {
         std::ofstream out(temp, std::ios::trunc);
         if (!out) throw std::runtime_error("Cannot create snapshot journal link");
-        out << "NEXA_SNAPSHOT_LINK 1\\n" << std::quoted(coordinator.string()) << '\\n';
+        out << "NEXA_SNAPSHOT_LINK 1\n" << std::quoted(coordinator.string()) << '\n';
         out.flush();
         if (!out) throw std::runtime_error("Failed writing snapshot journal link");
     }
@@ -212,7 +212,7 @@ inline std::vector<JournalEntry> prepareGroup(
     {
         std::ofstream links(linksFile, std::ios::trunc);
         if (!links) throw std::runtime_error("Cannot create coordinated journal link list");
-        for (const auto& sidecar : sidecars) links << sidecar.string() << '\\n';
+        for (const auto& sidecar : sidecars) links << sidecar.string() << '\n';
         links.flush();
         if (!links) throw std::runtime_error("Failed writing coordinated journal link list");
     }
