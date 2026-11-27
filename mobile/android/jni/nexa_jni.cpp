@@ -24,6 +24,28 @@ Java_com_nexa_machine_NexaNative_createSession(JNIEnv* env, jclass, jlong handle
     env->ReleaseStringUTFChars(name, text);
     return rc == 0 ? static_cast<jlong>(id) : 0;
 }
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_nexa_machine_NexaNative_createRecoveringSession(JNIEnv* env, jclass, jlong handle,
+        jstring name, jint ramBytes, jstring vmPath, jstring diskDirectory) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context || !name || !vmPath || !diskDirectory || ramBytes <= 0) return 0;
+    const char* nameText = env->GetStringUTFChars(name, nullptr);
+    const char* vmText = env->GetStringUTFChars(vmPath, nullptr);
+    const char* diskText = env->GetStringUTFChars(diskDirectory, nullptr);
+    if (!nameText || !vmText || !diskText) {
+        if (nameText) env->ReleaseStringUTFChars(name, nameText);
+        if (vmText) env->ReleaseStringUTFChars(vmPath, vmText);
+        if (diskText) env->ReleaseStringUTFChars(diskDirectory, diskText);
+        return 0;
+    }
+    uint64_t id = 0;
+    const int rc = nexa_session_create_recovering(context, nameText,
+        static_cast<size_t>(ramBytes), vmText, diskText, &id);
+    env->ReleaseStringUTFChars(name, nameText);
+    env->ReleaseStringUTFChars(vmPath, vmText);
+    env->ReleaseStringUTFChars(diskDirectory, diskText);
+    return rc == 0 ? static_cast<jlong>(id) : 0;
+}
 extern "C" JNIEXPORT jint JNICALL
 Java_com_nexa_machine_NexaNative_loadAssembly(JNIEnv* env, jclass, jlong handle, jlong session, jstring source) {
     auto* context = reinterpret_cast<NexaContext*>(handle);
