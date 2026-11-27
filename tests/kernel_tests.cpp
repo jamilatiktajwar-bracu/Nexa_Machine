@@ -201,7 +201,7 @@ int main() {
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,5},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x77},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedWrite)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,44},
         {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
-        {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedDetach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
+        {nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     for(int retry=0;retry<100;++retry) {
         const states=syncKernel.processes();
         const guestState=std::find_if(states.begin(),states.end(),[&](const auto& process){return process.pid==shmGuestPid;});
@@ -212,6 +212,8 @@ int main() {
     const auto finishedGuest=std::find_if(guestFinished.begin(),guestFinished.end(),[&](const auto& process){return process.pid==shmGuestPid;});
     assert(finishedGuest!=guestFinished.end()&&finishedGuest->state==nexa::ProcessState::Halted);
     assert(syncKernel.readProcessMemory(shmGuestPid,43)==1);
+    assert(syncKernel.memoryManager().isMapped(shmGuestPid,2));
+    assert(syncKernel.sharedMemoryInfo().front().attachments==2);
     assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
     assert(syncKernel.readProcessMemory(shmGuestPid,44)==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,45)==0x66);
@@ -228,6 +230,7 @@ int main() {
     assert(sharedExecuteDenied);
     assert(syncKernel.detachSharedMemory(lockWaiterPid,guestSegment));
     assert(!syncKernel.memoryManager().isMapped(lockWaiterPid,3));
+    assert(syncKernel.detachSharedMemory(shmGuestPid,guestSegment));
     assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2));
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(!syncKernel.readSharedMemory(shmGuestPid,guestSegment,4));
