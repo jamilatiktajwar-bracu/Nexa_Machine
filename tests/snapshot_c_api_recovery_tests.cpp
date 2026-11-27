@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 
@@ -86,9 +87,14 @@ int main(int argc, char** argv) {
             " " + quote(vmState.string()) + " " + quote(snapshotDir.string()) +
             " " + quote(disk.string());
         const int childStatus = std::system(command.c_str());
-        if (childStatus == 0 || !fs::exists(journal)) {
-            std::cerr << "restore child did not leave an interrupted transaction at failpoint "
-                      << failpoint << '\\n';
+#ifdef _WIN32
+        const int expectedStatus = failpoint == 3 ? 83 : 84;
+#else
+        const int expectedStatus = (failpoint == 3 ? 83 : 84) << 8;
+#endif
+        if (childStatus != expectedStatus || !fs::exists(journal)) {
+            std::cerr << "restore child did not hit the intended abrupt-exit failpoint "
+                      << failpoint << " (status " << childStatus << ")\\n";
             return 4;
         }
 
