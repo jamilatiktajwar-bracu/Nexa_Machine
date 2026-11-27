@@ -39,7 +39,20 @@ int main(){
  swapped.destroyAddressSpace(7);
  assert(swapped.freeFrames()==swapped.totalFrames());
 
- nexa::VirtualMemoryManager recovery(512);\n recovery.createAddressSpace(42);\n const auto pinnedA=recovery.createSharedFrame();\n const auto pinnedB=recovery.createSharedFrame();\n int recoveries=0;\n recovery.setAllocationRecoveryHandler([&]{++recoveries; recovery.releaseSharedFrame(pinnedB);});\n recovery.mapPage(42,0);\n assert(recoveries==1&&recovery.freeFrames()==0);\n assert(recovery.read(42,0)==0);\n recovery.destroyAddressSpace(42);\n recovery.releaseSharedFrame(pinnedA);\n assert(recovery.freeFrames()==recovery.totalFrames());\n\n nexa::VirtualMemoryManager diskSwap(512);
+ nexa::VirtualMemoryManager recovery(512);
+ recovery.createAddressSpace(42);
+ const auto pinnedA=recovery.createSharedFrame();
+ const auto pinnedB=recovery.createSharedFrame();
+ int recoveries=0;
+ recovery.setAllocationRecoveryHandler([&]{++recoveries; recovery.releaseSharedFrame(pinnedB);});
+ recovery.mapPage(42,0);
+ assert(recoveries==1&&recovery.freeFrames()==0);
+ assert(recovery.read(42,0)==0);
+ recovery.destroyAddressSpace(42);
+ recovery.releaseSharedFrame(pinnedA);
+ assert(recovery.freeFrames()==recovery.totalFrames());
+
+ nexa::VirtualMemoryManager diskSwap(512);
  diskSwap.setSwapFile("nexa_swap_test.bin");
  diskSwap.createAddressSpace(9);
  diskSwap.mapPage(9,0); diskSwap.mapPage(9,1);
