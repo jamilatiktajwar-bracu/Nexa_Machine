@@ -37,6 +37,7 @@ private fun NexaScreen() {
     var input by remember { mutableStateOf("") }
     var running by remember { mutableStateOf(false) }
     var diskStatus by remember { mutableStateOf("No disk attached") }
+    var recoveryReport by remember { mutableStateOf("") }
     val appContext = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val diskPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -107,6 +108,7 @@ private fun NexaScreen() {
         Text("Nexa Machine", style = MaterialTheme.typography.headlineMedium)
         Text(status, style = MaterialTheme.typography.labelMedium)
         Text(diskStatus, style = MaterialTheme.typography.labelSmall)
+        if (recoveryReport.isNotBlank()) Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { Text("Recovery diagnostics", style = MaterialTheme.typography.titleSmall); Text(recoveryReport, style = MaterialTheme.typography.bodySmall) } }
         OutlinedTextField(source, { source = it }, label = { Text("Guest assembly") }, modifier = Modifier.fillMaxWidth().height(190.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Button(onClick = { val rc = NexaNative.loadAssembly(context, session, source); status = if (rc == 0) "Program loaded" else NexaNative.lastError(context) }) { Text("Load") }
