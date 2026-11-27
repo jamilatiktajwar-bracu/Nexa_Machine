@@ -22,4 +22,5 @@ object NexaNative {
     external fun detachDisk(context: Long, session: Long): Int
     external fun saveSnapshot(context: Long, session: Long, root: String): Int
     external fun restoreSnapshot(context: Long, session: Long, root: String): Int
+    external fun recoveryReport(context: Long): String
 }
