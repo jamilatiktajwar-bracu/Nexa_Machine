@@ -1,5 +1,12 @@
 
 
+## Nexa OS 2.26 — Per-process resource accounting
+
+- `ProcessInfo` reports live open-file handle and shared-memory attachment counts for each process.
+- `ps` now shows inbox message count/payload bytes, open file handles, shared-memory attachments, and pending signals in one process row.
+- Resource values are derived from current kernel containers, so close/detach/exit cleanup is reflected immediately.
+- Regression tests cover file open and exit cleanup plus shared-memory attach/detach accounting.
+
 ## Nexa OS 2.25 — IPC mailbox memory quota
 
 - Each process inbox is capped at 8,192 queued payload bytes in addition to the existing 64-message and 251-byte-per-message limits.
@@ -23,7 +30,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.25.0**
+**Current development milestone: Nexa OS 2.26.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
