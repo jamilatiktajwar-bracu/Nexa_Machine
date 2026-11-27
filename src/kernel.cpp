@@ -20,7 +20,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::SharedAttachReadOnly)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::SharedCompareSwap16)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -448,6 +448,25 @@ std::optional<std::uint8_t> NexaKernel::sharedCompareSwap(std::uint32_t pid,std:
     if(*previous==expected&&!writeSharedMemory(pid,id,offset,replacement))return std::nullopt;
     return previous;
 }
+std::optional<std::uint16_t> NexaKernel::sharedAtomicAdd16(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint16_t delta) {
+    const auto low=readSharedMemory(pid,id,offset),high=readSharedMemory(pid,id,offset+1);
+    if(!low||!high)return std::nullopt;
+    const auto previous=static_cast<std::uint16_t>(*low|(static_cast<std::uint16_t>(*high)<<8));
+    const auto next=static_cast<std::uint16_t>(previous+delta);
+    if(!writeSharedMemory(pid,id,offset,static_cast<std::uint8_t>(next&0xff))||
+       !writeSharedMemory(pid,id,offset+1,static_cast<std::uint8_t>(next>>8)))return std::nullopt;
+    return previous;
+}
+std::optional<std::uint16_t> NexaKernel::sharedCompareSwap16(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint16_t expected,std::uint16_t replacement) {
+    const auto low=readSharedMemory(pid,id,offset),high=readSharedMemory(pid,id,offset+1);
+    if(!low||!high)return std::nullopt;
+    const auto previous=static_cast<std::uint16_t>(*low|(static_cast<std::uint16_t>(*high)<<8));
+    if(previous==expected) {
+        if(!writeSharedMemory(pid,id,offset,static_cast<std::uint8_t>(replacement&0xff))||
+           !writeSharedMemory(pid,id,offset+1,static_cast<std::uint8_t>(replacement>>8)))return std::nullopt;
+    }
+    return previous;
+}
 bool NexaKernel::mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage,bool writable) {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
     if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id))return false;
@@ -569,6 +588,23 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
         const auto previous=sharedAtomicAdd(pid,segment,offset,delta);
         if(!previous)throw std::runtime_error("Shared atomic-add denied or out of bounds");
         return *previous;
+    }
+    case Syscall::SharedAtomicAdd16: {
+        if(static_cast<std::size_t>(arg)+4>it->second.machine.ramSize()) throw std::runtime_error("Shared 16-bit atomic-add descriptor outside process RAM");
+        const auto id=it->second.machine.readMemory(arg),offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto delta=static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2))|(static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+3)))<<8));
+        const auto previous=sharedAtomicAdd16(pid,id,offset,delta);
+        if(!previous)throw std::runtime_error("Shared 16-bit atomic-add denied or out of bounds");
+        return static_cast<std::uint8_t>(*previous&0xff);
+    }
+    case Syscall::SharedCompareSwap16: {
+        if(static_cast<std::size_t>(arg)+6>it->second.machine.ramSize()) throw std::runtime_error("Shared 16-bit compare-swap descriptor outside process RAM");
+        const auto id=it->second.machine.readMemory(arg),offset=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1));
+        const auto expected=static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+2))|(static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+3)))<<8));
+        const auto replacement=static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+4))|(static_cast<std::uint16_t>(it->second.machine.readMemory(static_cast<std::uint16_t>(arg+5)))<<8));
+        const auto previous=sharedCompareSwap16(pid,id,offset,expected,replacement);
+        if(!previous)throw std::runtime_error("Shared 16-bit compare-swap denied or out of bounds");
+        return static_cast<std::uint8_t>(*previous&0xff);
     }
     case Syscall::SharedCompareSwap: {
         if(static_cast<std::size_t>(arg)+4>it->second.machine.ramSize()) throw std::runtime_error("Shared compare-swap descriptor outside process RAM");
