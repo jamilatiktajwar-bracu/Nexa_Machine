@@ -99,8 +99,7 @@ std::string NexaShell::execute(const std::string& line) {
             }
             return command=="savefs"?"filesystem image saved":"filesystem image loaded";
         }
-        if(command=="ls") { std::string path; input>>path; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')||!security_.can(path,'x')) return "permission denied"; std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"
-"; return out; }
+        if(command=="ls") { std::string path; input>>path; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')||!security_.can(path,'x')) return "permission denied"; std::string out; for(const auto& item:kernel_.filesystem().list(path)) out+=item+"\n"; return out; }
         if(command=="cat") { std::string path; input>>path; if(path.empty()) return "usage: cat PATH"; path=resolvePath(path); if(!canTraverse(path)||!security_.can(path,'r')) return "permission denied"; auto bytes=kernel_.filesystem().readFile(path); return std::string(bytes.begin(),bytes.end()); }
         if(command=="touch") { std::string path; input>>path; if(path.empty()) return "usage: touch PATH"; path=resolvePath(path); if(!canCreateIn(path)) return "permission denied"; if(kernel_.filesystem().exists(path)) return "already exists"; kernel_.filesystem().createFile(path); security_.registerPath(path,0644); return "created "+path; }
         if(command=="mkdir") { std::string path; input>>path; if(path.empty()) return "usage: mkdir PATH"; path=resolvePath(path); if(!canCreateIn(path)) return "permission denied"; kernel_.filesystem().createDirectory(path); security_.registerPath(path,0755); return "created directory "+path; }
@@ -120,8 +119,7 @@ std::string NexaShell::execute(const std::string& line) {
             auto bytes=kernel_.filesystem().readFile(path); std::string source(bytes.begin(),bytes.end());
             Executable image{0,parseAssembly(source)}; auto pid=kernel_.spawn(path,image); kernel_.run(); auto out=kernel_.takeConsoleOutput();
             auto processes=kernel_.processes(); auto found=std::find_if(processes.begin(),processes.end(),[pid](const auto& p){return p.pid==pid;});
-            if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="
-process fault: "+found->faultReason; return out;
+            if(found!=processes.end()&&found->state==ProcessState::Faulted) out+="\nprocess fault: "+found->faultReason; return out;
         }
         if(command=="limit") {
             std::string pidText,budgetText; input>>pidText>>budgetText;
