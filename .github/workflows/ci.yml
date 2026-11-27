@@ -160,7 +160,6 @@ jobs:
           disable-animations: true
           script: gradle -p mobile/android connectedDebugAndroidTest
       - name: Build signed Android APK and AAB
-        if: ${{ vars.NEXA_ANDROID_SIGNING_ENABLED == 'true' }}
         env:
           NEXA_ANDROID_KEYSTORE_BASE64: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 }}
           NEXA_ANDROID_STORE_PASSWORD: ${{ secrets.NEXA_ANDROID_STORE_PASSWORD }}
@@ -178,6 +177,7 @@ jobs:
           path: |
             mobile/android/app/build/outputs/apk/release/*.apk
             mobile/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
 
   ios-simulator:
     timeout-minutes: 60
@@ -207,7 +207,6 @@ jobs:
           name: nexa-ios-simulator
           path: mobile/ios/nexa-ios-simulator.zip
       - name: Archive signed iOS application
-        if: ${{ vars.NEXA_IOS_SIGNING_ENABLED == 'true' }}
         env:
           NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
           NEXA_IOS_CERTIFICATE_PASSWORD: ${{ secrets.NEXA_IOS_CERTIFICATE_PASSWORD }}
@@ -216,6 +215,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ -z "$NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64" || -z "$NEXA_IOS_CERTIFICATE_PASSWORD" || -z "$NEXA_IOS_PROVISIONING_PROFILE_BASE64" || -z "$NEXA_IOS_TEAM_ID" ]]; then
+            echo "iOS signing secrets not configured; skipping signed archive."
+            exit 0
+          fi
           KEYCHAIN="$RUNNER_TEMP/nexa-build.keychain"
           security create-keychain -p "$RUNNER_TEMP" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
@@ -247,3 +250,4 @@ jobs:
         with:
           name: nexa-ios-signed-archive
           path: ${{ runner.temp }}/nexa-ios-export
+          if-no-files-found: ignore
