@@ -86,6 +86,8 @@ jobs:
         run: gradle -p mobile/android assembleDebug
       - name: Android release APK install and force-stop smoke
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
@@ -189,7 +191,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-ios-release
-          path: nexa-ios-appstore.zip*
+          path: |
+            nexa-ios-appstore.zip*
+            nexa-ios-simulator.zip*
           if-no-files-found: warn
 
   publish:
