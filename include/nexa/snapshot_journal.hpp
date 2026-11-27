@@ -240,8 +240,8 @@ inline void commitGroup(const std::filesystem::path& coordinator) {
             syncDirectory(std::filesystem::path(sidecar).parent_path());
         }
     }
-    std::filesystem::remove(coordinator);
-    std::filesystem::remove(linksFile);
+    // Keep the durable COMMITTED coordinator until the caller has also
+    // published its VM commit marker and removed the rollback directory.
     syncDirectory(coordinator.parent_path());
 }
 inline std::vector<JournalEntry> prepare(const std::filesystem::path& journal,
