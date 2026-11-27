@@ -1,6 +1,7 @@
 #include "nexa/session_gui.hpp"
 #include "nexa/session_manager.hpp"
 #include "nexa/virtual_disk.hpp"
+#include "nexa/workspace.hpp"
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -26,6 +27,7 @@
 #include <functional>
 #include <sstream>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -68,9 +70,13 @@ public:
   connect(clearBreakpoints,&QPushButton::clicked,this,[this]{manager_.machine(id_).clearBreakpoints();status_->setText("Breakpoints cleared");});
   auto submitInput=[this,guestInput]{manager_.machine(id_).queueKeyboardInput(guestInput->text().toStdString()+"\n");guestInput->clear();status_->setText("Guest input queued");};connect(sendInput,&QPushButton::clicked,this,submitInput);connect(guestInput,&QLineEdit::returnPressed,this,submitInput);
   connect(submitDisk,&QPushButton::clicked,this,[this]{submitGuestDiskRequest();});
+  restoreSession();
  }
- ~SessionPage() override {timer_.stop();try{for(auto&[id,d]:disks_)d.disk->flush();}catch(...){}}
+ ~SessionPage() override {timer_.stop();try{persistSession();for(auto&[id,d]:disks_)d.disk->flush();}catch(...){}}
 private:
+ std::filesystem::path sessionDirectory()const{auto safe=name_;safe.replace('/','_');safe.replace('\\\\','_');return WorkspacePaths::discover().root/"sessions"/safe.toStdString();}
+ void restoreSession(){try{auto dir=sessionDirectory();auto state=dir/"session.vm";if(std::filesystem::exists(state)){manager_.loadSnapshot(id_,state.string());loaded_=true;}auto source=dir/"session.asm";if(std::filesystem::exists(source)){std::ifstream in(source);std::ostringstream text;text<<in.rdbuf();editor_->setPlainText(QString::fromStdString(text.str()));}auto devices=dir/"devices.txt";if(std::filesystem::exists(devices)){std::ifstream in(devices);uint32_t id;std::size_t capacity;std::string path;while(in>>id>>capacity>>std::quoted(path)){if(!std::filesystem::exists(path))continue;auto disk=std::make_unique<VirtualDisk>(path,capacity);disk->load();disks_.emplace(id,DiskEntry{std::move(disk),QString::fromStdString(path)});}}refreshDisks();refresh();status_->setText("Session recovered from workspace");}catch(const std::exception&e){status_->setText(QString("Session recovery warning: %1").arg(e.what()));}}
+ void persistSession(){auto dir=sessionDirectory();std::filesystem::create_directories(dir);manager_.saveSnapshot(id_,(dir/"session.vm").string());{std::ofstream out(dir/"session.asm",std::ios::trunc);out<<editor_->toPlainText().toStdString();if(!out)throw std::runtime_error("Cannot persist session source");}{std::ofstream out(dir/"devices.txt",std::ios::trunc);for(const auto&[id,d]:disks_)out<<id<<" "<<d.disk->size()<<" "<<std::quoted(d.path.toStdString())<<"\\n";if(!out)throw std::runtime_error("Cannot persist session device registry");}}
  void error(const std::string&s){status_->setText("Error");QMessageBox::warning(this,"Nexa session",QString::fromStdString(s));}
  void enqueue(std::function<void()> task){ioQueue_.push_back(std::move(task));if(!timer_.isActive())timer_.start();}
  void submitGuestDiskRequest(){bool ok=false;int descriptor=QInputDialog::getInt(this,"Guest disk request","11-byte descriptor address:",0,0,65525,1,&ok);if(!ok)return;int vector=QInputDialog::getInt(this,"Guest disk request","Completion interrupt vector:",9,0,255,1,&ok);if(!ok)return;int handler=QInputDialog::getInt(this,"Guest disk request","Guest interrupt handler PC:",0,0,65535,1,&ok);if(!ok)return;try{auto&vm=manager_.machine(id_);vm.setInterruptVector(static_cast<uint8_t>(vector),static_cast<uint16_t>(handler));auto byte=[&](int offset){return vm.readMemory(static_cast<uint16_t>(descriptor+offset));};const bool write=byte(0)!=0;const uint32_t device=static_cast<uint32_t>(byte(1))|(static_cast<uint32_t>(byte(2))<<8)|(static_cast<uint32_t>(byte(3))<<16)|(static_cast<uint32_t>(byte(4))<<24);const uint32_t sector=static_cast<uint32_t>(byte(5))|(static_cast<uint32_t>(byte(6))<<8)|(static_cast<uint32_t>(byte(7))<<16)|(static_cast<uint32_t>(byte(8))<<24);const uint16_t buffer=static_cast<uint16_t>(byte(9)|(static_cast<uint16_t>(byte(10))<<8));if(static_cast<std::size_t>(buffer)+512>vm.ramSize())throw std::out_of_range("Guest disk buffer exceeds RAM");const auto request=nextDiskRequest_++;enqueue([this,write,device,sector,buffer,vector,request]{auto&guest=manager_.machine(id_);auto it=disks_.find(device);if(it==disks_.end())throw std::runtime_error("Guest request references an unattached disk");auto&disk=*it->second.disk;if(sector>=disk.size()/512)throw std::out_of_range("Guest disk sector outside image");if(write){std::vector<uint8_t>data(512);for(std::size_t i=0;i<512;++i)data[i]=guest.readMemory(static_cast<uint16_t>(buffer+i));disk.write(static_cast<std::size_t>(sector)*512,data);}else{auto data=disk.read(static_cast<std::size_t>(sector)*512,512);for(std::size_t i=0;i<512;++i)guest.writeMemory(static_cast<uint16_t>(buffer+i),data[i]);}guest.triggerInterrupt(static_cast<uint8_t>(vector));status_->setText(QString("Guest disk request %1 completed").arg(request));});status_->setText(QString("Guest disk request %1 queued").arg(request));}catch(const std::exception&e){error(e.what());}}
