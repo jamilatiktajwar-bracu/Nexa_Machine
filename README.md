@@ -1,3 +1,8 @@
+# Nexa OS 2.32 — Recovery telemetry
+
+- Exposed counters for recovery attempts, successes, and failures.
+- Callback exceptions and unsuccessful recovery are counted as failures; counters are asserted in regression tests.
+
 # Nexa OS 2.31 — Automatic allocation recovery
 
 - The virtual-memory allocator can invoke a guarded recovery callback when all frames are pinned and no page can be evicted.
