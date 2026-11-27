@@ -67,7 +67,9 @@ public:
   connect(resume,&QPushButton::clicked,this,[this](){resumeExecution();});
   connect(stop,&QPushButton::clicked,this,[this](){timer.stop();if(vm)vm->requestHalt();status->setText("Stopped");refreshMemory();});
   connect(diskInfo,&QPushButton::clicked,this,[this](){showDiskInfo();});
-  connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});\n  connect(importDisk,&QPushButton::clicked,this,[this](){importDiskImage();});\n  connect(exportDisk,&QPushButton::clicked,this,[this](){exportDiskImage();});
+  connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});
+  connect(importDisk,&QPushButton::clicked,this,[this](){importDiskImage();});
+  connect(exportDisk,&QPushButton::clicked,this,[this](){exportDiskImage();});
   connect(step,&QPushButton::clicked,this,[this](){execute(true);});
   connect(reset,&QPushButton::clicked,this,[this](){timer.stop();vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
   connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm->setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint");});
