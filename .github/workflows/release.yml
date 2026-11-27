@@ -44,8 +44,8 @@ jobs:
       - name: Generate and verify desktop checksums
         shell: bash
         run: |
-          find release -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > release/SHA256SUMS.tmp
-          mv release/SHA256SUMS.tmp release/SHA256SUMS
+          find release -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > .nexa-SHA256SUMS.tmp
+          mv .nexa-SHA256SUMS.tmp release/SHA256SUMS
           sha256sum -c release/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
