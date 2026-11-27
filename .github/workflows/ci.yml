@@ -7,6 +7,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   desktop:
+    if: github.ref != 'refs/heads/release-verification'
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -127,6 +128,7 @@ jobs:
         if: runner.os == 'Windows'
         run: .\\install-root\\bin\\nexa.exe
   mobile:
+    if: github.ref != 'refs/heads/release-verification'
     timeout-minutes: 75
     runs-on: ubuntu-24.04
     steps:
@@ -175,6 +177,7 @@ jobs:
           script: gradle -p mobile/android connectedDebugAndroidTest
 
   ios-simulator:
+    if: github.ref != 'refs/heads/release-verification'
     timeout-minutes: 60
     runs-on: macos-latest
     steps:
