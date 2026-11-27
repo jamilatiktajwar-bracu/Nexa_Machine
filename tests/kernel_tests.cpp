@@ -816,7 +816,7 @@ int main() {
     assert(shell.execute("memlimit "+std::to_string(first)+" 2")=="memory page limit updated");
     assert(shell.execute("ps").find("memlimit=2")!=std::string::npos);
     assert(shell.execute("memlimit "+std::to_string(first)+" 1").find("error: Memory page limit") == 0);
-    assert(shell.execute("pwd")=="/");
+    const auto oomSnapshot=shell.execute("oomstat");\n    assert(oomSnapshot.find("pressure=normal")!=std::string::npos);\n    assert(oomSnapshot.find("frames_free=")!=std::string::npos);\n    assert(oomSnapshot.find("swap_outs=")!=std::string::npos);\n    assert(shell.execute("pwd")=="/");
     assert(shell.execute("whoami")=="root");
     assert(shell.execute("ps").find("fault=")!=std::string::npos);
     assert(shell.execute("passwd root-secret")=="password updated");
