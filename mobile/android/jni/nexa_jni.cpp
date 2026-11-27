@@ -174,9 +174,9 @@ Java_com_nexa_machine_NexaNative_recoveryReport(JNIEnv* env, jclass, jlong handl
     if (nexa_snapshot_recovery_report_get(context, &report) != 0 || !report.attempted)
         return env->NewStringUTF("");
     const std::string text = std::string("Recovery: ") + (report.success ? "SUCCESS" : "NEEDS ATTENTION") +
-        "\\nPhase: " + report.phase +
-        "\\nAffected path: " + report.affected_path +
-        "\\nReason: " + report.reason +
-        "\\nRecommended action: " + report.recommended_action;
+        "\nPhase: " + report.phase +
+        "\nAffected path: " + report.affected_path +
+        "\nReason: " + report.reason +
+        "\nRecommended action: " + report.recommended_action;
     return env->NewStringUTF(text.c_str());
 }
