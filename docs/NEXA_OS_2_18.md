@@ -13,10 +13,10 @@ Both return the previous 16-bit value as `std::optional<uint16_t>`. Values use l
 
 | Number | Name | Descriptor at B | Return |
 |---|---|---|---|
-| 26 | SharedAtomicAdd16 | `[segment, offset, deltaLo, deltaHi]` | Previous value low byte in A |
-| 27 | SharedCompareSwap16 | `[segment, offset, expectedLo, expectedHi, replacementLo, replacementHi]` | Previous value low byte in A |
+| 26 | SharedAtomicAdd16 | `[segment, offset, deltaLo, deltaHi, resultHi]` | Previous value low byte in A; high byte written to `resultHi` |
+| 27 | SharedCompareSwap16 | `[segment, offset, expectedLo, expectedHi, replacementLo, replacementHi, resultHi]` | Previous value low byte in A; high byte written to `resultHi` |
 
-The guest syscall ABI currently returns one byte in register A; use the host API when the complete previous 16-bit value is required. Both operations execute synchronously within the single-core simulator and are serialized relative to scheduled guest execution. This is not a hardware SMP atomic guarantee.
+The guest ABI returns the previous value's low byte in register A and writes its high byte to the final descriptor byte (`B+4` for syscall 26, `B+6` for syscall 27). Descriptors must therefore fit all five or seven bytes, respectively. Both operations execute synchronously within the single-core simulator and are serialized relative to scheduled guest execution. This is not a hardware SMP atomic guarantee.
 
 ## Shared semaphore model
 
