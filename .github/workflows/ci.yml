@@ -126,7 +126,11 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot -wipe-data
+          emulator-boot-timeout: 900
+          cores: 2
+          ram-size: 2048
+          heap-size: 512
           disable-animations: true
           script: gradle -p mobile/android connectedDebugAndroidTest
 
