@@ -65,3 +65,20 @@ Java_com_nexa_machine_NexaNative_lastError(JNIEnv* env, jclass, jlong handle) {
     const char* error = nexa_last_error(reinterpret_cast<NexaContext*>(handle));
     return env->NewStringUTF(error ? error : "Unknown Nexa error");
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_stop(JNIEnv*, jclass, jlong handle, jlong session) {
+    return nexa_session_stop(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session));
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_nexa_machine_NexaNative_console(JNIEnv* env, jclass, jlong handle, jlong session) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context) return env->NewStringUTF("");
+    size_t required = 0;
+    if (nexa_console_read(context, static_cast<uint64_t>(session), nullptr, 0, &required) != 0 || required == 0)
+        return env->NewStringUTF("");
+    std::string output(required, '\0');
+    if (nexa_console_read(context, static_cast<uint64_t>(session), output.data(), output.size(), &required) != 0)
+        return env->NewStringUTF("");
+    return env->NewStringUTF(output.c_str());
+}
