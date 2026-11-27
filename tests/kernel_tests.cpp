@@ -265,7 +265,7 @@ int main() {
     assert(syncKernel.attachSharedMemory(lockWaiterPid,sharedId));
     assert(syncKernel.writeSharedMemory(ownerPid,sharedId,7,0xA5));
     assert(syncKernel.readSharedMemory(lockWaiterPid,sharedId,7)==0xA5);
-    assert(!syncKernel.readSharedMemory(deathWaiter,sharedId,7));
+    assert(!syncKernel.readSharedMemory(shmGuestPid,sharedId,7));
     assert(!syncKernel.writeSharedMemory(ownerPid,sharedId,32,1));
     assert(syncKernel.detachSharedMemory(ownerPid,sharedId));
     assert(!syncKernel.readSharedMemory(ownerPid,sharedId,7));
