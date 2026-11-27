@@ -65,6 +65,12 @@ std::vector<std::string> WorkspacePaths::listProfiles() const {
  std::sort(result.begin(),result.end());
  return result;
 }
+void WorkspacePaths::deleteProfile(const std::string& name) const {
+ if(!validProfileName(name)) throw std::invalid_argument("Invalid profile name");
+ const auto target=profiles/(name+".json");
+ if(!std::filesystem::exists(target)) throw std::runtime_error("Profile not found: "+name);
+ if(!std::filesystem::remove(target)) throw std::runtime_error("Failed to delete profile: "+name);
+}
 std::filesystem::path WorkspacePaths::snapshotPath(const std::string& profile, const std::string& snapshot) const {
  if(!validProfileName(profile)||!validProfileName(snapshot)) throw std::invalid_argument("Invalid profile or snapshot name");
  return snapshots/(profile+"-"+snapshot+".state");
