@@ -7,7 +7,7 @@ struct WorkspacePaths {
  std::filesystem::path root, config, profiles, disks, snapshots, logs;
  static WorkspacePaths discover();
  void initialize() const;
- std::filesystem::path createProfile(const std::string& name) const;
+ std::filesystem::path createProfile(const std::string& name, std::size_t ramBytes=256, std::size_t diskBytes=1048576) const;
  std::vector<std::string> listProfiles() const;
  std::string summary() const;
 };
