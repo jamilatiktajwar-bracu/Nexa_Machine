@@ -1,6 +1,6 @@
 #include "nexa/memory_manager.hpp"
 #include <iostream>
-#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\n'; return 1; } } while (false
+#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\n'; return 1; } } while (false)
 #include <stdexcept>
 #include <cstdio>
 int main(){
