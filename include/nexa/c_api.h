@@ -20,7 +20,9 @@ int nexa_session_stop(NexaContext*,uint64_t id);
 int nexa_session_reset(NexaContext*,uint64_t id);
 int nexa_session_step(NexaContext*,uint64_t id,int* guest_alive);
 int nexa_session_run(NexaContext*,uint64_t id,size_t budget,NexaSessionState* out_state);
-int nexa_session_info(NexaContext*,uint64_t id,NexaSessionInfo* out_info);\n/* Query with out_items=null, capacity=0; out_count receives required item count. */\nint nexa_session_list(NexaContext*,NexaSessionInfo* out_items,size_t capacity,size_t* out_count);
+int nexa_session_info(NexaContext*,uint64_t id,NexaSessionInfo* out_info);
+/* Query with out_items=null, capacity=0; out_count receives required item count. */
+int nexa_session_list(NexaContext*,NexaSessionInfo* out_items,size_t capacity,size_t* out_count);
 int nexa_memory_read(NexaContext*,uint64_t id,uint16_t address,uint8_t* out_value);
 int nexa_memory_write(NexaContext*,uint64_t id,uint16_t address,uint8_t value);
 int nexa_keyboard_input(NexaContext*,uint64_t id,const char* text);
