@@ -196,14 +196,21 @@ int main() {
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,4,0x33));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,8,0x10));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,9,0xff));
-    assert(syncKernel.sharedAtomicAdd(ownerPid,guestSegment,9,2)==0xff);\n    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==1);\n    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,7)==1);\n    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);\n    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,8)==7);\n    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
+    assert(syncKernel.sharedAtomicAdd(ownerPid,guestSegment,9,2)==0xff);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==1);
+    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,7)==1);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
+    assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,8)==7);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
     const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,41},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,4},{nexa::Opcode::Store,41},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedRead)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,5},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x77},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedWrite)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,44},
-        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,3},{nexa::Opcode::Store,42},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAtomicAdd)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,46},\n        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x13},{nexa::Opcode::Store,42},{nexa::Opcode::LoadImmediate,0x44},{nexa::Opcode::Store,43},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedCompareSwap)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,47},\n        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
+        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,3},{nexa::Opcode::Store,42},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAtomicAdd)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,46},
+        {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,8},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x13},{nexa::Opcode::Store,42},{nexa::Opcode::LoadImmediate,0x44},{nexa::Opcode::Store,43},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedCompareSwap)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,47},
+        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
         {nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     for(int retry=0;retry<100;++retry) {
         const auto states=syncKernel.processes();
@@ -219,7 +226,10 @@ int main() {
     assert(syncKernel.sharedMemoryInfo().front().attachments==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
     assert(syncKernel.readProcessMemory(shmGuestPid,44)==1);
-    assert(syncKernel.readProcessMemory(shmGuestPid,45)==0x66);\n    assert(syncKernel.readProcessMemory(shmGuestPid,46)==0x10);\n    assert(syncKernel.readProcessMemory(shmGuestPid,47)==0x13);\n    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,8)==0x44);
+    assert(syncKernel.readProcessMemory(shmGuestPid,45)==0x66);
+    assert(syncKernel.readProcessMemory(shmGuestPid,46)==0x10);
+    assert(syncKernel.readProcessMemory(shmGuestPid,47)==0x13);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,8)==0x44);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,4)==0x33);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,6)==0x66);
