@@ -1,5 +1,11 @@
 
 
+## Nexa OS 2.24 — IPC mailbox accounting
+
+- `ProcessInfo::pendingMessages` reports queued inbox message count and the new `pendingMessageBytes` reports the total queued payload bytes.
+- Byte accounting is derived from the live FIFO mailbox, so it updates immediately after enqueue, dequeue, and process cleanup without a second mutable counter.
+- Regression tests cover enqueue/dequeue accounting and byte totals across multiple FIFO messages.
+
 ## Nexa OS 2.23 — Deadlock cycle diagnostics
 
 - `mutexDeadlockCycle()` returns the process IDs in the first detected circular mutex wait, allowing diagnostics to identify the affected processes.
@@ -11,7 +17,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.23.0**
+**Current development milestone: Nexa OS 2.24.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
