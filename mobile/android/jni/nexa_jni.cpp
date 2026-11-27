@@ -1,6 +1,7 @@
 #include <jni.h>
 #include "nexa/c_api.h"
 #include <cstdint>
+#include <string>
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_nexa_machine_NexaNative_createContext(JNIEnv*, jclass) {
