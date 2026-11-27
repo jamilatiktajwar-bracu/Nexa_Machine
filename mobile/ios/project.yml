@@ -1,0 +1,39 @@
+name: NexaMachine
+options:
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  NexaMachine:
+    type: application
+    platform: iOS
+    sources:
+      - path: NexaApp.swift
+      - path: NexaSessionModel.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.nexa.machine
+        PRODUCT_NAME: NexaMachine
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_OBJC_BRIDGING_HEADER: Nexa-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - $(SRCROOT)/../../include
+        LIBRARY_SEARCH_PATHS:
+          - $(DERIVED_FILE_DIR)/nexa-core
+        OTHER_LDFLAGS:
+          - -lc++
+          - -lnexa_vm_core
+    preBuildScripts:
+      - name: Build portable Nexa VM core
+        script: |
+          set -euo pipefail
+          ROOT="$SRCROOT/../.."
+          BUILD="$DERIVED_FILE_DIR/nexa-core"
+          if [[ "$PLATFORM_NAME" == *simulator* ]]; then
+            SYSROOT="iphonesimulator"
+          else
+            SYSROOT="iphoneos"
+          fi
+          cmake -S "$ROOT" -B "$BUILD" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$SYSROOT" -DCMAKE_OSX_ARCHITECTURES="$CURRENT_ARCH" -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF
+          cmake --build "$BUILD" --target nexa_vm_core --config Release --parallel
+        basedOnDependencyAnalysis: false
