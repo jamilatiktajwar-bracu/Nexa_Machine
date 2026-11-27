@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.28.0] - 2026-11-27
+- Added configurable per-process memory page quotas covering executable and data mappings, including shared-memory mappings.
+- Added the root-only `memlimit PID PAGES` command (`0` disables the limit) and exposed configured limits in `ps`.
+- Processes that exceed their quota fault cleanly instead of allocating beyond the configured page budget; lowering a limit below current usage is rejected.
+- Added regression coverage for quota enforcement, process fault reporting, and disabling limits.
+
+
 ## [2.27.0] - 2026-11-27
 - Added per-address-space resident and swapped page counters and exposed combined data/code virtual pages, resident pages, swapped pages, and resident bytes in `ProcessInfo`.
 - Extended `ps` with per-process memory usage and page residency diagnostics.
