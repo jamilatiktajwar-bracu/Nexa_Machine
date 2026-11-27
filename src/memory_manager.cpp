@@ -118,6 +118,8 @@ void VirtualMemoryManager::releaseFrame(std::uint16_t frame) {
 void VirtualMemoryManager::mapPage(std::uint32_t pid,std::uint8_t page,bool writable,bool user,bool executable) {
     auto it=spaces_.find(pid); if(it==spaces_.end()) throw std::out_of_range("Unknown address space");
     if(it->second.contains(page)) throw std::invalid_argument("Virtual page already mapped");
+    const auto limit=pageLimits_.find(pid);
+    if(limit!=pageLimits_.end()&&it->second.size()>=limit->second) throw std::runtime_error("Process memory page limit exceeded");
     const auto frame=allocateFrame();
     it->second.emplace(page,PageMapping{frame,writable,user,executable,true,++accessClock_,{}});
     invalidateTlb(pid);
