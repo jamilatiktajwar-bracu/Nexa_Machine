@@ -7,6 +7,7 @@ object NexaNative {
     external fun createSession(context: Long, name: String, ramBytes: Int): Long
     external fun loadAssembly(context: Long, session: Long, source: String): Int
     external fun run(context: Long, session: Long, budget: Int): Int
+    external fun start(context: Long, session: Long): Int
     external fun step(context: Long, session: Long): Int
     external fun pause(context: Long, session: Long): Int
     external fun resume(context: Long, session: Long): Int
