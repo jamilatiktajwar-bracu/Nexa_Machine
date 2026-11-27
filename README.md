@@ -335,3 +335,8 @@ The reusable static target `nexa_vm_core` now contains the VM, assembler, cooper
 When Qt 6 Widgets is available, the desktop app exposes a **Multi-session workspace** tab alongside the profile-based VM. Create independent VM tabs, edit and run guest assembly, step/pause/resume/reset each session, and manage each session's own disk devices. Disk attach/detach/flush and VM-plus-disk checkpoint file operations use a cooperative GUI task queue. The existing profile workflow remains available in its original tab.
 
 The macOS CI job cross-compiles the portable VM core for iOS arm64. This is a core-library toolchain check only; a native iOS application and its UI/signing/package workflow remain future work. macOS, Windows and Linux desktop verification is performed by the CI matrix; Qt desktop GUI compilation currently runs on Linux where Qt 6 Widgets is installed.
+
+
+## Cross-platform frontend and recovery milestone
+
+See [cross-platform frontend and recovery status](docs/CROSS_PLATFORM_FRONTENDS.md) for the Qt guest disk scheduler, snapshot integrity and rollback, session persistence, SwiftUI iOS starter, Android JNI starter, and CI coverage.
