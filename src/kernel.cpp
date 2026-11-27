@@ -80,6 +80,30 @@ bool NexaKernel::hasDeadlock() const noexcept {
     }
     return blocked;
 }
+bool NexaKernel::hasMutexDeadlock() const {
+    // Build wait-for edges lazily: a blocked waiter depends on the current
+    // owner of every mutex whose queue contains that PID.
+    std::map<std::uint32_t,std::uint8_t> visitState;
+    const auto visit=[&](const auto& self,std::uint32_t pid)->bool {
+        auto& state=visitState[pid];
+        if(state==1) return true;  // Back-edge: a circular wait exists.
+        if(state==2) return false;
+        state=1;
+        for(const auto& [id,mutex]:mutexes_) {
+            (void)id;
+            if(!mutex.owner||std::find(mutex.waiters.begin(),mutex.waiters.end(),pid)==mutex.waiters.end()) continue;
+            const auto owner=processes_.find(*mutex.owner);
+            if(owner!=processes_.end()&&owner->second.info.state!=ProcessState::Halted&&
+               owner->second.info.state!=ProcessState::Faulted&&self(self,*mutex.owner)) return true;
+        }
+        state=2;
+        return false;
+    };
+    for(const auto& [pid,process]:processes_) {
+        if(process.info.state==ProcessState::Blocked&&visit(visit,pid)) return true;
+    }
+    return false;
+}
 bool NexaKernel::terminateProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) return false;
