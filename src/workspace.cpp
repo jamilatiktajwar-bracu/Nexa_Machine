@@ -65,6 +65,27 @@ std::vector<std::string> WorkspacePaths::listProfiles() const {
  std::sort(result.begin(),result.end());
  return result;
 }
+std::filesystem::path WorkspacePaths::snapshotPath(const std::string& profile, const std::string& snapshot) const {
+ if(!validProfileName(profile)||!validProfileName(snapshot)) throw std::invalid_argument("Invalid profile or snapshot name");
+ return snapshots/(profile+"-"+snapshot+".state");
+}
+std::vector<std::string> WorkspacePaths::listSnapshots(const std::string& profile) const {
+ if(!validProfileName(profile)) throw std::invalid_argument("Invalid profile name");
+ std::vector<std::string> result;
+ if(!std::filesystem::exists(snapshots)) return result;
+ const auto prefix=profile+"-";
+ for(const auto& entry:std::filesystem::directory_iterator(snapshots)) {
+  if(!entry.is_regular_file()||entry.path().extension()!=".state") continue;
+  const auto stem=entry.path().stem().string();
+  if(stem.rfind(prefix,0)==0) result.push_back(stem.substr(prefix.size()));
+ }
+ std::sort(result.begin(),result.end()); return result;
+}
+void WorkspacePaths::deleteSnapshot(const std::string& profile, const std::string& snapshot) const {
+ const auto path=snapshotPath(profile,snapshot);
+ if(!std::filesystem::exists(path)) throw std::runtime_error("Snapshot not found");
+ if(!std::filesystem::remove(path)) throw std::runtime_error("Failed to delete snapshot");
+}
 std::string WorkspacePaths::summary() const {
  std::ostringstream out;
  out<<"Workspace: "<<root.string()<<"\nConfig: "<<config.string()<<"\nProfiles: "<<profiles.string()
