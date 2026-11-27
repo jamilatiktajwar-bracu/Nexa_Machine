@@ -820,6 +820,7 @@ int main() {
     assert(oomSnapshot.find("pressure=normal")!=std::string::npos);
     assert(oomSnapshot.find("frames_free=")!=std::string::npos);
     assert(oomSnapshot.find("swap_outs=")!=std::string::npos);
+    assert(oomSnapshot.find("recovery_attempts=")!=std::string::npos);
     assert(shell.execute("pwd")=="/");
     assert(shell.execute("whoami")=="root");
     assert(shell.execute("ps").find("fault=")!=std::string::npos);
