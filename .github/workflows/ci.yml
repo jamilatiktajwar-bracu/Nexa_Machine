@@ -90,7 +90,7 @@ jobs:
         run: .\\install-root\\bin\\nexa.exe
   mobile:
     timeout-minutes: 75
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Android SDK/NDK setup
@@ -126,6 +126,8 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
           script: gradle -p mobile/android connectedDebugAndroidTest
 
   ios-simulator:
