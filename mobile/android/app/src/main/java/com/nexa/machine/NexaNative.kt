@@ -17,4 +17,8 @@ object NexaNative {
     external fun state(context: Long, session: Long): Int
     external fun sendInput(context: Long, session: Long, input: String): Int
     external fun lastError(context: Long): String
+    external fun attachDisk(context: Long, session: Long, path: String): Int
+    external fun detachDisk(context: Long, session: Long): Int
+    external fun saveSnapshot(context: Long, session: Long, root: String): Int
+    external fun restoreSnapshot(context: Long, session: Long, root: String): Int
 }
