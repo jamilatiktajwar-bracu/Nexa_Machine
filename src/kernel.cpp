@@ -148,6 +148,8 @@ bool NexaKernel::semaphoreWait(std::uint32_t pid,std::uint8_t id) {
     if(s==semaphores_.end()) throw std::out_of_range("Unknown semaphore id");
     if(p->second.info.state==ProcessState::Halted||p->second.info.state==ProcessState::Faulted) return false;
     auto& sem=s->second;
+    auto grant=std::find(p->second.semaphoreGrants.begin(),p->second.semaphoreGrants.end(),id);
+    if(grant!=p->second.semaphoreGrants.end()){p->second.semaphoreGrants.erase(grant);return true;}
     if(sem.count>0){--sem.count;return true;}
     if(std::find(sem.waiters.begin(),sem.waiters.end(),pid)==sem.waiters.end()) sem.waiters.push_back(pid);
     p->second.info.state=ProcessState::Blocked;
@@ -160,7 +162,7 @@ bool NexaKernel::semaphoreSignal(std::uint8_t id) {
     while(!sem.waiters.empty()){
         const auto pid=sem.waiters.front();sem.waiters.pop_front();
         auto p=processes_.find(pid);
-        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){p->second.info.state=ProcessState::Ready;return true;}
+        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){p->second.semaphoreGrants.push_back(id);p->second.info.state=ProcessState::Ready;return true;}
     }
     if(sem.count==sem.maximum)return false;
     ++sem.count;return true;
@@ -177,6 +179,8 @@ bool NexaKernel::mutexLock(std::uint32_t pid,std::uint8_t id) {
     if(m==mutexes_.end())throw std::out_of_range("Unknown mutex id");
     if(p->second.info.state==ProcessState::Halted||p->second.info.state==ProcessState::Faulted)return false;
     auto& mutex=m->second;
+    auto grant=std::find(p->second.mutexGrants.begin(),p->second.mutexGrants.end(),id);
+    if(grant!=p->second.mutexGrants.end()){p->second.mutexGrants.erase(grant);return true;}
     if(!mutex.owner){mutex.owner=pid;return true;}
     if(*mutex.owner==pid)return false;
     if(std::find(mutex.waiters.begin(),mutex.waiters.end(),pid)==mutex.waiters.end())mutex.waiters.push_back(pid);
@@ -191,7 +195,7 @@ bool NexaKernel::mutexUnlock(std::uint32_t pid,std::uint8_t id) {
     while(!mutex.waiters.empty()){
         const auto next=mutex.waiters.front();mutex.waiters.pop_front();
         auto p=processes_.find(next);
-        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){mutex.owner=next;p->second.info.state=ProcessState::Ready;return true;}
+        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){mutex.owner=next;p->second.mutexGrants.push_back(id);p->second.info.state=ProcessState::Ready;return true;}
     }
     mutex.owner.reset();return true;
 }
