@@ -88,6 +88,9 @@ int main(int argc, char** argv) {
     nexa::snapshot::syncFile(diskA);
     nexa::snapshot::syncFile(diskB);
     nexa::snapshot::commitGroup(coordinator);
+    // A crash during rollback-directory cleanup leaves the COMMITTED decision
+    // for the next process to consume without rolling either disk back.
+    nexa::snapshot::recoverCoordinator(coordinator);
     if (read(diskA) != "disk-a-committed" || read(diskB) != "disk-b-committed" ||
         fs::exists(sidecarA) || fs::exists(sidecarB) || fs::exists(coordinator) ||
         fs::exists(backupA) || fs::exists(backupB)) {
