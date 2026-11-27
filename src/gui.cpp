@@ -61,7 +61,8 @@ public:
   connect(profiles,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int){selectProfile();});
   connect(loadFile,&QPushButton::clicked,this,[this](){auto file=QFileDialog::getOpenFileName(this,"Open assembly",QString(),"Nexa Assembly (*.nexa *.asm *.txt);;All files (*)");if(!file.isEmpty()){QFile f(file);if(f.open(QIODevice::ReadOnly|QIODevice::Text))editor->setPlainText(QString::fromUtf8(f.readAll()));loaded=false;status->setText("Source loaded");}});
   connect(saveSnap,&QPushButton::clicked,this,[this](){saveSnapshot();});
-  connect(restoreSnap,&QPushButton::clicked,this,[this](){restoreSnapshot();});\n  connect(deleteSnap,&QPushButton::clicked,this,[this](){deleteSnapshot();});
+  connect(restoreSnap,&QPushButton::clicked,this,[this](){restoreSnapshot();});
+  connect(deleteSnap,&QPushButton::clicked,this,[this](){deleteSnapshot();});
   connect(run,&QPushButton::clicked,this,[this](){startExecution();});
   connect(pause,&QPushButton::clicked,this,[this](){timer.stop();status->setText("Paused");});
   connect(resume,&QPushButton::clicked,this,[this](){resumeExecution();});
