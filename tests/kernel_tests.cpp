@@ -124,6 +124,53 @@ int main() {
     assert(processControlKernel.memoryManager().freeFrames()==framesBeforeManagedProcess);
     assert(processShell.execute("reap "+std::to_string(managedPid))=="unknown or active process");
 
+    nexa::NexaKernel signalKernel(256);
+    const auto signalPid=signalKernel.spawn("signal-target",looping);
+    assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::Stop));
+    auto signalProcesses=signalKernel.processes();
+    assert(signalProcesses.size()==1&&signalProcesses.front().state==nexa::ProcessState::Stopped);
+    assert(!signalKernel.scheduleOne());
+    assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::User1));
+    assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::User2));
+    signalProcesses=signalKernel.processes();
+    assert(signalProcesses.front().pendingSignals==2);
+    assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::Continue));
+    assert(signalKernel.scheduleOne());
+    auto deliveredSignal=signalKernel.receiveSignal(signalPid);
+    assert(deliveredSignal&&*deliveredSignal==nexa::ProcessSignal::User1);
+    deliveredSignal=signalKernel.receiveSignal(signalPid);
+    assert(deliveredSignal&&*deliveredSignal==nexa::ProcessSignal::User2);
+    assert(!signalKernel.receiveSignal(signalPid));
+    assert(!signalKernel.sendSignal(signalPid,nexa::ProcessSignal::Continue));
+    for(std::size_t n=0;n<32;++n) assert(signalKernel.sendSignal(signalPid,nexa::ProcessSignal::User1));
+    assert(!signalKernel.sendSignal(signalPid,nexa::ProcessSignal::User2));
+    signalProcesses=signalKernel.processes();
+    assert(signalProcesses.front().pendingSignals==32);
+    const auto signalGuestPid=signalKernel.spawn("signal-guest",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::GetSignal)},
+        {nexa::Opcode::Syscall,0},{nexa::Opcode::Store,90},{nexa::Opcode::Halt,0}}});
+    assert(signalKernel.sendSignal(signalGuestPid,nexa::ProcessSignal::User2));
+    signalKernel.run(20);
+    assert(signalKernel.readProcessMemory(signalGuestPid,90)==static_cast<std::uint8_t>(nexa::ProcessSignal::User2));
+    const auto termPid=signalKernel.spawn("term-target",looping);
+    assert(signalKernel.sendSignal(termPid,nexa::ProcessSignal::Terminate));
+    signalProcesses=signalKernel.processes();
+    bool termRecorded=false;
+    for(const auto& proc:signalProcesses) if(proc.pid==termPid)
+        termRecorded=proc.state==nexa::ProcessState::Halted&&proc.exitCode==143&&proc.terminationReason=="signal:TERM";
+    assert(termRecorded&&!signalKernel.sendSignal(termPid,nexa::ProcessSignal::Continue));
+
+    nexa::NexaKernel signalShellKernel(256);
+    const auto shellSignalPid=signalShellKernel.spawn("shell-signal-target",looping);
+    nexa::NexaShell signalShell(signalShellKernel);
+    assert(signalShell.execute("signal "+std::to_string(shellSignalPid)+" STOP")=="signal delivered");
+    assert(signalShell.execute("ps").find("stopped")!=std::string::npos);
+    assert(signalShell.execute("signal "+std::to_string(shellSignalPid)+" CONT")=="signal delivered");
+    assert(signalShell.execute("signal "+std::to_string(shellSignalPid)+" USR1")=="signal delivered");
+    assert(signalShell.execute("ps").find("signals=1")!=std::string::npos);
+    assert(signalShell.execute("signal "+std::to_string(shellSignalPid)+" TERM")=="signal delivered");
+    assert(signalShell.execute("signal "+std::to_string(shellSignalPid)+" BAD")=="invalid signal (TERM, KILL, STOP, CONT, USR1, USR2)");
+
     nexa::NexaKernel exitCleanupKernel(256);
     const auto exitCleanupPid=exitCleanupKernel.spawn("exit-cleanup",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     exitCleanupKernel.filesystem().createFile("/exit-data",{44});
