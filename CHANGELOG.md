@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.20.0] - 2026-11-27
+- Added late-page mapping-collision rollback tests proving partial aliases are removed without disturbing pre-existing guest mappings.
+- Added live-segment destruction tests proving guest aliases are revoked immediately and backing shared frames are reclaimed.
+
+
 ## [2.16.0] - 2026-11-27
 - Added scheduler-atomic shared byte add and compare-swap operations (guest syscalls 23–24).
 - Expanded regression tests for atomic syscall dispatch, byte overflow and compare-swap success/failure.
