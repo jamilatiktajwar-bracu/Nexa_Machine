@@ -6,4 +6,4 @@ The virtual memory manager exposes cumulative counters for recovery attempts, su
 - Success increments only when the callback frees a frame that is successfully returned for allocation.
 - Failure increments when a callback throws or returns without freeing a usable frame.
 
-The counters are read-only and do not affect recovery behavior. Regression coverage verifies the successful recovery path.
+The counters are read-only and do not affect recovery behavior. Regression coverage verifies both successful recovery and failure when a callback does not free a frame; the latter preserves the OOM exception and increments failure telemetry.
