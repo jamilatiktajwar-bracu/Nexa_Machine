@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.32.0] - 2026-11-27
+- Added allocation recovery attempt/success/failure telemetry and regression assertions.
+
+
 ## [2.31.0] - 2026-11-27
 - Added guarded memory-allocation recovery callbacks; allocator retries after callback frees a frame when no free or evictable frames exist.
 - Connected kernel recovery to safe reaping of Halted/Faulted processes only; active processes are never force-killed.
