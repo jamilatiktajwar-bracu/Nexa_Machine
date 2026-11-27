@@ -301,7 +301,7 @@ bool NexaKernel::reapProcess(std::uint32_t pid) {
     if(currentPid_==pid) currentPid_=0;
     return true;
 }
-void NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
+std::size_t NexaKernel::reapTerminatedProcesses() {\n    std::vector<std::uint32_t> dead;\n    for(const auto& [pid,proc]:processes_)\n        if(proc.info.state==ProcessState::Halted||proc.info.state==ProcessState::Faulted) dead.push_back(pid);\n    std::size_t reaped=0;\n    for(const auto pid:dead) if(reapProcess(pid)) ++reaped;\n    return reaped;\n}\nvoid NexaKernel::setPriority(std::uint32_t pid,std::uint8_t priority) {
     if(priority>7) throw std::invalid_argument("Process priority must be between 0 and 7");
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
