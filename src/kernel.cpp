@@ -315,7 +315,7 @@ void NexaKernel::setMemoryPageLimit(std::uint32_t pid,std::size_t pages) {
     const auto codePages=memory_.mappedPages(codeSpace);
     const auto currentPages=memory_.mappedPages(pid)+codePages;
     if(pages!=0&&pages<currentPages) throw std::invalid_argument("Memory page limit is below current process usage");
-    memory_.setPageLimit(pid,pages==0?0:pages-codePages);
+    memory_.setPageLimit(pid,pages==0?std::numeric_limits<std::size_t>::max():pages-codePages);
     process->second.info.memoryPageLimit=pages;
 }
 void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructions) {
