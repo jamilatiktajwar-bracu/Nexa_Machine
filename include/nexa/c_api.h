@@ -22,7 +22,7 @@ int nexa_session_step(NexaContext*,uint64_t id,int* guest_alive);
 int nexa_session_run(NexaContext*,uint64_t id,size_t budget,NexaSessionState* out_state);
 int nexa_session_info(NexaContext*,uint64_t id,NexaSessionInfo* out_info);
 int nexa_memory_read(NexaContext*,uint64_t id,uint16_t address,uint8_t* out_value);
-int nexa_memory_write(NexaContext*,uint64_t id,uint16_t address,uint8_t value);
+int nexa_memory_write(NexaContext*,uint64_t id,uint16_t address,uint8_t value);\nint nexa_keyboard_input(NexaContext*,uint64_t id,const char* text);\nint nexa_breakpoint_set(NexaContext*,uint64_t id,size_t address);\nint nexa_breakpoint_clear(NexaContext*,uint64_t id,size_t address);\nint nexa_framebuffer_get(NexaContext*,uint64_t id,size_t x,size_t y,int* out_pixel);\nint nexa_framebuffer_draw(NexaContext*,uint64_t id,size_t x,size_t y,int white);
 int nexa_snapshot_save(NexaContext*,uint64_t id,const char* path);
 int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);
 #ifdef __cplusplus
