@@ -115,7 +115,7 @@ inline std::vector<JournalEntry> readJournal(const std::filesystem::path& journa
     if (in >> extra) throw std::runtime_error("Unexpected trailing snapshot journal data");
     return entries;
 }
-inline void recover(const std::filesystem::path& journal) {
+inline void recoverCoordinator(const std::filesystem::path& journal) {
     if (!std::filesystem::exists(journal)) return;
     JournalPhase phase{};
     const auto entries = readJournal(journal, phase);
@@ -133,12 +133,116 @@ inline void recover(const std::filesystem::path& journal) {
             syncDirectory(e.target.parent_path());
         }
     }
+    const auto linksFile = std::filesystem::path(journal.string() + ".links");
+    if (std::filesystem::exists(linksFile)) {
+        std::ifstream links(linksFile);
+        std::string sidecar;
+        while (std::getline(links, sidecar)) {
+            if (!sidecar.empty()) {
+                std::filesystem::remove(sidecar);
+                syncDirectory(std::filesystem::path(sidecar).parent_path());
+            }
+        }
+    }
     for (const auto& e : entries) {
         std::filesystem::remove(e.backup);
         syncDirectory(e.backup.parent_path());
     }
     std::filesystem::remove(journal);
+    std::filesystem::remove(linksFile);
     syncDirectory(journal.parent_path());
+}
+inline void writeJournalLink(const std::filesystem::path& sidecar,
+                             const std::filesystem::path& coordinator) {
+    const auto temp = std::filesystem::path(sidecar.string() + ".tmp");
+    {
+        std::ofstream out(temp, std::ios::trunc);
+        if (!out) throw std::runtime_error("Cannot create snapshot journal link");
+        out << "NEXA_SNAPSHOT_LINK 1\\n" << std::quoted(coordinator.string()) << '\\n';
+        out.flush();
+        if (!out) throw std::runtime_error("Failed writing snapshot journal link");
+    }
+    syncFile(temp);
+#ifdef _WIN32
+    if (!MoveFileExW(temp.c_str(), sidecar.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        throw std::runtime_error("Cannot publish snapshot journal link");
+#else
+    std::error_code ec;
+    std::filesystem::rename(temp, sidecar, ec);
+    if (ec) throw std::runtime_error("Cannot publish snapshot journal link: " + ec.message());
+    syncDirectory(sidecar.parent_path());
+#endif
+}
+inline void recover(const std::filesystem::path& journal) {
+    if (!std::filesystem::exists(journal)) return;
+    std::ifstream in(journal);
+    std::string magic;
+    in >> magic;
+    if (magic == "NEXA_SNAPSHOT_LINK") {
+        unsigned version = 0;
+        std::string coordinator;
+        in >> version >> std::quoted(coordinator);
+        if (!in || version != 1 || coordinator.empty())
+            throw std::runtime_error("Invalid snapshot journal link");
+        recoverCoordinator(coordinator);
+        return;
+    }
+    recoverCoordinator(journal);
+}
+inline std::vector<JournalEntry> prepareGroup(
+    const std::filesystem::path& coordinator,
+    const std::vector<std::pair<std::filesystem::path,
+                                std::pair<std::filesystem::path, std::filesystem::path>>>& files) {
+    std::vector<JournalEntry> entries;
+    std::vector<std::filesystem::path> sidecars;
+    entries.reserve(files.size());
+    for (const auto& item : files) {
+        const auto& sidecar = item.first;
+        const auto& target = item.second.first;
+        const auto& backup = item.second.second;
+        if (!std::filesystem::exists(target))
+            throw std::runtime_error("Snapshot transaction target is missing: " + target.string());
+        std::filesystem::copy_file(target, backup, std::filesystem::copy_options::overwrite_existing);
+        syncFile(backup);
+        syncDirectory(backup.parent_path());
+        entries.push_back({target, backup, std::filesystem::file_size(backup), checksum(backup)});
+        sidecars.push_back(sidecar);
+    }
+    const auto linksFile = std::filesystem::path(coordinator.string() + ".links");
+    {
+        std::ofstream links(linksFile, std::ios::trunc);
+        if (!links) throw std::runtime_error("Cannot create coordinated journal link list");
+        for (const auto& sidecar : sidecars) links << sidecar.string() << '\\n';
+        links.flush();
+        if (!links) throw std::runtime_error("Failed writing coordinated journal link list");
+    }
+    syncFile(linksFile);
+    syncDirectory(linksFile.parent_path());
+    writeJournal(coordinator, JournalPhase::Prepared, entries);
+    for (const auto& sidecar : sidecars) writeJournalLink(sidecar, coordinator);
+    return entries;
+}
+inline void commitGroup(const std::filesystem::path& coordinator) {
+    if (!std::filesystem::exists(coordinator)) return;
+    JournalPhase phase{};
+    const auto entries = readJournal(coordinator, phase);
+    writeJournal(coordinator, JournalPhase::Committed, entries);
+    for (const auto& e : entries) {
+        std::filesystem::remove(e.backup);
+        syncDirectory(e.backup.parent_path());
+    }
+    const auto linksFile = std::filesystem::path(coordinator.string() + ".links");
+    if (std::filesystem::exists(linksFile)) {
+        std::ifstream links(linksFile);
+        std::string sidecar;
+        while (std::getline(links, sidecar)) if (!sidecar.empty()) {
+            std::filesystem::remove(sidecar);
+            syncDirectory(std::filesystem::path(sidecar).parent_path());
+        }
+    }
+    std::filesystem::remove(coordinator);
+    std::filesystem::remove(linksFile);
+    syncDirectory(coordinator.parent_path());
 }
 inline std::vector<JournalEntry> prepare(const std::filesystem::path& journal,
     const std::vector<std::pair<std::filesystem::path, std::filesystem::path>>& files) {
