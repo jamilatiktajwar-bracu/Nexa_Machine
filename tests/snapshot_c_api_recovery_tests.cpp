@@ -70,7 +70,14 @@ int main(int argc, char** argv) {
     NexaContext* setup = nexa_context_create();
     if (!setup) return 1;
     uint64_t setupSession = 0;
+    NexaSessionInfo expectedCpuState{};
+    int guestAlive = 0;
     if (!createSession(setup, setupSession) || !attachDisk(setup, setupSession, disk) ||
+        nexa_session_load_assembly(setup, setupSession, "LOAD A, 12\\nHALT\\n") != 0 ||
+        nexa_session_start(setup, setupSession) != 0 ||
+        nexa_session_step(setup, setupSession, &guestAlive) != 0 ||
+        nexa_session_info(setup, setupSession, &expectedCpuState) != 0 ||
+        expectedCpuState.instructions == 0 ||
         nexa_memory_write(setup, setupSession, 17, 0x11) != 0 ||
         nexa_snapshot_save_bundle(setup, setupSession, vmState.string().c_str(),
                                   snapshotDir.string().c_str()) != 0) {
@@ -123,12 +130,17 @@ int main(int argc, char** argv) {
         }
         std::array<uint8_t, 512> observed{};
         uint8_t restoredRam = 0;
+        NexaSessionInfo restoredCpuState{};
         const int readStatus =
             nexa_disk_read_sector(restarted, restartedSession, 0, observed.data());
         const int memoryStatus = nexa_memory_read(restarted, restartedSession, 17, &restoredRam);
+        const int cpuStatus = nexa_session_info(restarted, restartedSession, &restoredCpuState);
         nexa_context_destroy(restarted);
         if (readStatus != 0 || observed[0] != 0x42 || memoryStatus != 0 ||
-            restoredRam != 0x22 || fs::exists(journal)) {
+            restoredRam != 0x22 || cpuStatus != 0 ||
+            restoredCpuState.pc != expectedCpuState.pc ||
+            restoredCpuState.instructions != expectedCpuState.instructions ||
+            fs::exists(journal)) {
             std::cerr << "new session did not restore pre-transaction RAM and disk at failpoint "
                       << failpoint << '\n';
             return 7;
