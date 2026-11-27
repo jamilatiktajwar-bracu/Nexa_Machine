@@ -28,6 +28,7 @@ int nexa_memory_write(NexaContext*,uint64_t id,uint16_t address,uint8_t value);
 int nexa_keyboard_input(NexaContext*,uint64_t id,const char* text);
 int nexa_breakpoint_set(NexaContext*,uint64_t id,size_t address);
 int nexa_breakpoint_clear(NexaContext*,uint64_t id,size_t address);
+int nexa_interrupt_vector_set(NexaContext*,uint64_t id,uint8_t vector,uint16_t handler_address);
 int nexa_framebuffer_get(NexaContext*,uint64_t id,size_t x,size_t y,int* out_pixel);
 int nexa_framebuffer_draw(NexaContext*,uint64_t id,size_t x,size_t y,int white);
 int nexa_snapshot_save(NexaContext*,uint64_t id,const char* path);
