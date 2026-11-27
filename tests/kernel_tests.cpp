@@ -212,6 +212,24 @@ int main() {
     assert(waiterCleanupKernel.syncDiagnostics().find("waiters=[]")!=std::string::npos);
     assert(waiterCleanupKernel.mutexUnlock(cleanupOwner,cleanupMutex));
 
+    // TERM/KILL signal paths must perform the same synchronization cleanup.
+    const auto signalSemaphore=waiterCleanupKernel.createSemaphore(0,1);
+    const auto signalDeadWaiter=waiterCleanupKernel.spawn("signal-dead-sem-waiter",looping);
+    const auto signalLiveWaiter=waiterCleanupKernel.spawn("signal-live-sem-waiter",looping);
+    assert(!waiterCleanupKernel.semaphoreWait(signalDeadWaiter,signalSemaphore));
+    assert(!waiterCleanupKernel.semaphoreWait(signalLiveWaiter,signalSemaphore));
+    assert(waiterCleanupKernel.sendSignal(signalDeadWaiter,nexa::ProcessSignal::Kill));
+    assert(waiterCleanupKernel.semaphoreSignal(signalSemaphore));
+    assert(waiterCleanupKernel.semaphoreWait(signalLiveWaiter,signalSemaphore));
+    const auto termMutex=waiterCleanupKernel.createMutex();
+    const auto termOwner=waiterCleanupKernel.spawn("term-mutex-owner",looping);
+    const auto termWaiter=waiterCleanupKernel.spawn("term-mutex-waiter",looping);
+    assert(waiterCleanupKernel.mutexLock(termOwner,termMutex));
+    assert(!waiterCleanupKernel.mutexLock(termWaiter,termMutex));
+    assert(waiterCleanupKernel.sendSignal(termWaiter,nexa::ProcessSignal::Terminate));
+    assert(waiterCleanupKernel.syncDiagnostics().find("waiters=[]")!=std::string::npos);
+    assert(waiterCleanupKernel.mutexUnlock(termOwner,termMutex));
+
     // Guest syscalls attach, read, write and detach a kernel-created segment.
     const auto guestSegment=syncKernel.createSharedMemory(16);
     assert(syncKernel.attachSharedMemory(ownerPid,guestSegment));
