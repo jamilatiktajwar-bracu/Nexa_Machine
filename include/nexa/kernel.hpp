@@ -30,6 +30,7 @@ struct ProcessInfo {
 enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13, SemaphoreWait=14, SemaphoreSignal=15, MutexLock=16, MutexUnlock=17 };
 enum class ProcessSignal : std::uint8_t { Terminate=1, Kill=2, Stop=3, Continue=4, User1=10, User2=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
+struct SharedMemoryInfo { std::uint8_t id{}; std::size_t size{}; std::size_t attachments{}; };
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
 class NexaKernel {
 public:
@@ -65,6 +66,13 @@ public:
     [[nodiscard]] std::vector<ProcessInfo> processes() const;
     [[nodiscard]] std::uint8_t effectivePriority(std::uint32_t pid) const;
     [[nodiscard]] std::string syncDiagnostics() const;
+    std::uint8_t createSharedMemory(std::size_t bytes);
+    bool destroySharedMemory(std::uint8_t id);
+    bool attachSharedMemory(std::uint32_t pid,std::uint8_t id);
+    bool detachSharedMemory(std::uint32_t pid,std::uint8_t id);
+    [[nodiscard]] std::optional<std::uint8_t> readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const;
+    bool writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value);
+    [[nodiscard]] std::vector<SharedMemoryInfo> sharedMemoryInfo() const;
     [[nodiscard]] std::uint32_t currentPid() const noexcept { return currentPid_; }
     [[nodiscard]] VirtualFileSystem& filesystem() noexcept { return fs_; }
     [[nodiscard]] VirtualMemoryManager& memoryManager() noexcept { return memory_; }
@@ -77,7 +85,7 @@ public:
     [[nodiscard]] bool hasFileAccess(std::uint32_t pid, const std::string& path, FilePermission permission) const;
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
-    struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; std::deque<std::uint8_t> semaphoreGrants,mutexGrants; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
+    struct Process { ProcessInfo info; VM machine; std::set<std::uint8_t> sharedAttachments; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; std::deque<std::uint8_t> semaphoreGrants,mutexGrants; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
     struct Semaphore { std::uint16_t count{},maximum{}; std::deque<std::uint32_t> waiters; };
     struct Mutex { std::optional<std::uint32_t> owner{}; std::deque<std::uint32_t> waiters; };
     std::size_t ramBytes_;
@@ -93,7 +101,9 @@ private:
     std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
     std::map<std::uint8_t,Semaphore> semaphores_;
     std::map<std::uint8_t,Mutex> mutexes_;
-    std::uint16_t nextSemaphore_{1},nextMutex_{1};
+    struct SharedSegment { std::vector<std::uint8_t> bytes; std::set<std::uint32_t> attached; };
+    std::map<std::uint8_t,SharedSegment> sharedSegments_;
+    std::uint16_t nextSemaphore_{1},nextMutex_{1},nextSharedSegment_{1};
     static constexpr std::size_t MaxSyncObjects=255;
     [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
     void releaseOwnedMutexes(std::uint32_t pid);
