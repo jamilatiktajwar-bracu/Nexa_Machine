@@ -39,6 +39,11 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
       - name: Build and package
         run: cmake --build build --config Release --parallel && cpack --config build/CPackConfig.cmake -B release
+      - name: Generate and verify desktop checksums
+        shell: bash
+        run: |
+          find release -type f -print0 | sort -z | xargs -0 sha256sum > release/SHA256SUMS
+          sha256sum -c release/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-desktop-${{ runner.os }}
@@ -79,10 +84,32 @@ jobs:
       - name: Build unsigned Android preview
         if: env.NEXA_ANDROID_SIGNING_READY != 'true'
         run: gradle -p mobile/android assembleDebug
+      - name: Verify signed Android outputs and checksums
+        if: env.NEXA_ANDROID_SIGNING_READY == 'true'
+        shell: bash
+        run: |
+          APK=$(find mobile/android/app/build/outputs/apk/release -name '*.apk' -print -quit)
+          AAB=$(find mobile/android/app/build/outputs/bundle/release -name '*.aab' -print -quit)
+          test -n "$APK" && test -n "$AAB"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          jarsigner -verify -verbose -certs "$AAB"
+          mkdir -p release-checksums
+          sha256sum "$APK" "$AAB" > release-checksums/SHA256SUMS
+          sha256sum -c release-checksums/SHA256SUMS
+      - name: Verify preview APK and checksum
+        if: env.NEXA_ANDROID_SIGNING_READY != 'true'
+        shell: bash
+        run: |
+          APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+          sha256sum -c "$APK.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-android-release
           path: |
+            release-checksums/*
             mobile/android/app/build/outputs/bundle/release/*.aab
             mobile/android/app/build/outputs/apk/release/*.apk
             mobile/android/app/build/outputs/apk/debug/*.apk
@@ -92,7 +119,7 @@ jobs:
     name: iOS release
     runs-on: macos-latest
     env:
-      NEXA_IOS_SIGNING_READY: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_PROVISIONING_PROFILE_BASE64 != '' && secrets.APPLE_TEAM_ID != '' }}
+      NEXA_IOS_SIGNING_READY: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 != '' && secrets.NEXA_IOS_CERTIFICATE_PASSWORD != '' && secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.NEXA_IOS_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -103,33 +130,36 @@ jobs:
       - name: Build signed iOS archive
         if: env.NEXA_IOS_SIGNING_READY == 'true'
         env:
-          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          NEXA_IOS_CERTIFICATE_PASSWORD: ${{ secrets.NEXA_IOS_CERTIFICATE_PASSWORD }}
+          NEXA_IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 }}
+          NEXA_IOS_TEAM_ID: ${{ secrets.NEXA_IOS_TEAM_ID }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/nexa-signing.keychain-db"
           security create-keychain -p "$RUNNER_TEMP/keychain-pass" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$RUNNER_TEMP/keychain-pass" "$KEYCHAIN"
-          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
-          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          echo "$NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" -P "$NEXA_IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$RUNNER_TEMP/keychain-pass" "$KEYCHAIN"
           security list-keychains -d user -s "$KEYCHAIN"
-          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/profile.mobileprovision"
+          echo "$NEXA_IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/profile.mobileprovision"
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           security cms -D -i "$RUNNER_TEMP/profile.mobileprovision" > "$RUNNER_TEMP/profile.plist"
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist")
           cp "$RUNNER_TEMP/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_NAME.mobileprovision"
           cd mobile/ios
-          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
+          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" DEVELOPMENT_TEAM="$NEXA_IOS_TEAM_ID" CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict><key>method</key><string>app-store-connect</string><key>teamID</key><string>$APPLE_TEAM_ID</string><key>signingStyle</key><string>manual</string><key>provisioningProfiles</key><dict><key>org.nexa.machine</key><string>$PROFILE_NAME</string></dict></dict></plist>
+          <plist version="1.0"><dict><key>method</key><string>app-store-connect</string><key>teamID</key><string>$NEXA_IOS_TEAM_ID</string><key>signingStyle</key><string>manual</string><key>provisioningProfiles</key><dict><key>org.nexa.machine</key><string>$PROFILE_NAME</string></dict></dict></plist>
           EOF
+          codesign --verify --deep --strict "$RUNNER_TEMP/NexaMachine.xcarchive/Products/Applications/NexaMachine.app"
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" -exportPath "$RUNNER_TEMP/ios-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
           ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ios-export" nexa-ios-appstore.zip
+          shasum -a 256 nexa-ios-appstore.zip > nexa-ios-appstore.zip.sha256
+          shasum -a 256 -c nexa-ios-appstore.zip.sha256
       - name: Build iOS Simulator preview
         if: env.NEXA_IOS_SIGNING_READY != 'true'
         run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
