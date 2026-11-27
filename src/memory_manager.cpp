@@ -232,5 +232,13 @@ bool VirtualMemoryManager::isMapped(std::uint32_t pid,std::uint8_t page) const {
     auto it=spaces_.find(pid); return it!=spaces_.end()&&it->second.contains(page);
 }
 std::size_t VirtualMemoryManager::mappedPages(std::uint32_t pid) const {return spaces_.at(pid).size();}
+std::size_t VirtualMemoryManager::residentPages(std::uint32_t pid) const {
+    const auto& table=spaces_.at(pid);
+    return static_cast<std::size_t>(std::count_if(table.begin(),table.end(),[](const auto& entry){return entry.second.resident;}));
+}
+std::size_t VirtualMemoryManager::swappedPages(std::uint32_t pid) const {
+    const auto& table=spaces_.at(pid);
+    return static_cast<std::size_t>(std::count_if(table.begin(),table.end(),[](const auto& entry){return !entry.second.resident;}));
+}
 std::size_t VirtualMemoryManager::freeFrames() const noexcept {return static_cast<std::size_t>(std::count(usedFrames_.begin(),usedFrames_.end(),false));}
 }
