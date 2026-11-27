@@ -37,7 +37,7 @@ xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine \
 
 ## Android Jetpack Compose frontend
 
-The Gradle project is in `mobile/android`. Its Android NDK CMake target builds the JNI bridge against the portable VM core. The Compose app provides assembly editing, load/run/pause/step/reset/stop, keyboard input, and guest console output. Disk-image selection and bundle snapshot UI are not yet exposed.
+The Gradle project is in `mobile/android`. Its Android NDK CMake target builds the JNI bridge against the portable VM core. The Compose app provides assembly editing, load/run/pause/step/reset/stop, keyboard input, guest console output, disk-image attachment through Android's document picker, disk detach/flush, and local VM-plus-disk bundle snapshot save/restore. The selected disk image is copied into app-private storage before attachment. Snapshot bundles are stored in app-private storage and are not automatically exported or backed up; restore requires the same attached disk-device set as the saved bundle.
 
 Build with Android SDK/NDK, Java 17 and Gradle 8.9:
 
