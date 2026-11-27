@@ -59,7 +59,12 @@ public:
   connect(loadFile,&QPushButton::clicked,this,[this](){auto file=QFileDialog::getOpenFileName(this,"Open assembly",QString(),"Nexa Assembly (*.nexa *.asm *.txt);;All files (*)");if(!file.isEmpty()){QFile f(file);if(f.open(QIODevice::ReadOnly|QIODevice::Text))editor->setPlainText(QString::fromUtf8(f.readAll()));loaded=false;status->setText("Source loaded");}});
   connect(saveSnap,&QPushButton::clicked,this,[this](){saveSnapshot();});
   connect(restoreSnap,&QPushButton::clicked,this,[this](){restoreSnapshot();});
-  connect(run,&QPushButton::clicked,this,[this](){startExecution();});\n  connect(pause,&QPushButton::clicked,this,[this](){timer.stop();status->setText("Paused");});\n  connect(resume,&QPushButton::clicked,this,[this](){resumeExecution();});\n  connect(stop,&QPushButton::clicked,this,[this](){timer.stop();if(vm)vm->requestHalt();status->setText("Stopped");refreshMemory();});\n  connect(diskInfo,&QPushButton::clicked,this,[this](){showDiskInfo();});\n  connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});
+  connect(run,&QPushButton::clicked,this,[this](){startExecution();});
+  connect(pause,&QPushButton::clicked,this,[this](){timer.stop();status->setText("Paused");});
+  connect(resume,&QPushButton::clicked,this,[this](){resumeExecution();});
+  connect(stop,&QPushButton::clicked,this,[this](){timer.stop();if(vm)vm->requestHalt();status->setText("Stopped");refreshMemory();});
+  connect(diskInfo,&QPushButton::clicked,this,[this](){showDiskInfo();});
+  connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});
   connect(step,&QPushButton::clicked,this,[this](){execute(true);});
   connect(reset,&QPushButton::clicked,this,[this](){timer.stop();vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
   connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm->setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint");});
