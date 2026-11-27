@@ -90,3 +90,8 @@ Java_com_nexa_machine_NexaNative_state(JNIEnv*, jclass, jlong handle, jlong sess
     const int rc = nexa_session_info(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session), &info);
     return rc == 0 ? static_cast<jint>(info.state) : -1;
 }
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nexa_machine_NexaNative_resume(JNIEnv*, jclass, jlong handle, jlong session) {
+    return nexa_session_resume(reinterpret_cast<NexaContext*>(handle), static_cast<uint64_t>(session));
+}
