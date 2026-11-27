@@ -153,7 +153,16 @@ int main() {
     syncInfo=syncKernel.processes();
     waiterBlocked=false;for(const auto& proc:syncInfo)if(proc.pid==lockWaiterPid)waiterBlocked=proc.state==nexa::ProcessState::Blocked;
     assert(waiterBlocked);
+    syncKernel.setPriority(ownerPid,1);
+    syncKernel.setPriority(lockWaiterPid,7);
+    syncInfo=syncKernel.processes();
+    bool ownerBoosted=false;for(const auto& proc:syncInfo)if(proc.pid==ownerPid)ownerBoosted=proc.effectivePriority==7;
+    assert(ownerBoosted);
+    assert(syncKernel.syncDiagnostics().find("waiters=[")!=std::string::npos);
     assert(syncKernel.mutexUnlock(ownerPid,mutexId));
+    syncInfo=syncKernel.processes();
+    bool boostRemoved=false;for(const auto& proc:syncInfo)if(proc.pid==ownerPid)boostRemoved=proc.effectivePriority==1;
+    assert(boostRemoved);
     assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(lockWaiterPid,101)==1);
     assert(!syncKernel.mutexUnlock(ownerPid,mutexId));
