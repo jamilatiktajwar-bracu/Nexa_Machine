@@ -274,8 +274,7 @@ process fault: "+found->faultReason; return out;
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
                     " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
                 if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
-                out+="
-";
+                out+="\n";
             }
             return out;
         }
