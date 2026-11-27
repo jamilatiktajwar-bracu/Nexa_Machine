@@ -320,3 +320,7 @@ The Qt frontend now has cooperative timer-driven Start/Pause/Resume/Stop control
 ## VM session manager core
 
 The portable `SessionManager` API creates independent VM instances with stable session IDs, per-session RAM, lifecycle state, cooperative execution budgets, breakpoints, stepping, reset, stop, and VM-state snapshots. A regression suite checks session isolation and state transitions. The Qt frontend is not yet wired to this registry; multi-session GUI tabs remain planned.
+
+## Native frontend bridge
+
+A portable C ABI (`include/nexa/c_api.h`) is now available for Swift/Objective-C++, Kotlin/JNI, and other FFI clients. It exposes opaque contexts, session lifecycle, bounded execution, status, RAM access, and snapshots with error strings. C API tests are part of CMake/CTest. Native mobile apps are still not implemented.
