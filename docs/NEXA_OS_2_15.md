@@ -1,4 +1,4 @@
-# Nexa OS 2.15 — Shared Virtual Pages
+# Nexa OS 2.16 — Shared-memory Atomic Operations — Shared Virtual Pages
 
 ## Syscall interface
 | Number | Name | B descriptor | Return |
@@ -18,3 +18,4 @@ SharedDetach and process termination remove mappings and release frame reference
 For segment ID 3 mapped at virtual page 2, write descriptor bytes `[3,2]` at guest RAM address 40. Set B=40, A=18, execute syscall. Segment byte offset 5 is then available at virtual address `2*256+5 = 517`. Guest Store/Load there modifies the shared page.
 
 SharedCreate uses descriptor `[sizeLo,sizeHi]`; SharedRead/Write remain available for checked descriptor-based byte access. Use `shmstat` to inspect segment size and attachment count.
+\n## Atomic syscall extensions (2.16)\n| Number | Name | Descriptor at B | Return in A |\n|---|---|---|---|\n| 23 | SharedAtomicAdd | [segment, offset, delta] | old byte value; stores old+delta modulo 256 |\n| 24 | SharedCompareSwap | [segment, offset, expected, replacement] | old byte; writes replacement only if old==expected |\n\nThese operations run as one syscall on Nexa's single-core scheduler, so no guest process is interleaved during the operation. This is scheduler-atomic (not a hardware SMP atomic primitive). Use semaphores/mutexes for compound synchronization.\n
