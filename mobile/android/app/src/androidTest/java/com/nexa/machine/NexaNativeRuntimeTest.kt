@@ -28,6 +28,43 @@ class NexaNativeRuntimeTest {
     }
 
     @Test
+    fun workspaceSnapshotRestoresIntoFreshNativeContext() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val root = File(app.cacheDir, "nexa-restart-test").apply { deleteRecursively(); mkdirs() }
+        val disk = File(root, "guest.disk").apply { writeBytes(ByteArray(4096)) }
+        val snapshot = File(root, "snapshot").apply { mkdirs() }
+        val firstContext = NexaNative.createContext()
+        assertTrue(firstContext != 0L)
+        val firstSession = NexaNative.createSession(firstContext, "before restart", 4096)
+        assertTrue(firstSession != 0L)
+        assertEquals(0, NexaNative.attachDisk(firstContext, firstSession, disk.absolutePath))
+        assertEquals(0, NexaNative.loadAssembly(firstContext, firstSession, "LOAD A, 71\nOUT A, 1\nHALT\n"))
+        assertEquals(0, NexaNative.start(firstContext, firstSession))
+        assertEquals(0, NexaNative.run(firstContext, firstSession, 64))
+        val expectedConsole = NexaNative.console(firstContext, firstSession)
+        assertTrue(expectedConsole.isNotEmpty())
+        assertEquals(0, NexaNative.saveSnapshot(firstContext, firstSession, snapshot.absolutePath))
+        NexaNative.destroyContext(firstContext)
+
+        val restartedContext = NexaNative.createContext()
+        assertTrue(restartedContext != 0L)
+        try {
+            val restartedSession = NexaNative.createRecoveringSession(
+                restartedContext, "after restart", 4096,
+                File(snapshot, "session.vm").absolutePath,
+                File(snapshot, "disks").absolutePath
+            )
+            assertTrue("Recovery-aware session creation failed: " + NexaNative.lastError(restartedContext), restartedSession != 0L)
+            assertEquals(0, NexaNative.attachDisk(restartedContext, restartedSession, disk.absolutePath))
+            assertEquals(0, NexaNative.restoreSnapshot(restartedContext, restartedSession, snapshot.absolutePath))
+            assertEquals(expectedConsole, NexaNative.console(restartedContext, restartedSession))
+            assertEquals(4, NexaNative.state(restartedContext, restartedSession))
+        } finally {
+            NexaNative.destroyContext(restartedContext)
+            root.deleteRecursively()
+        }
+    }
+    @Test
     fun nativeDiskAndSnapshotLifecycleWorks() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
         val context = NexaNative.createContext()
