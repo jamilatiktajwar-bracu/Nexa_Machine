@@ -10,7 +10,7 @@ permissions:
   contents: write
 concurrency:
   group: nexa-release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   desktop:
     name: Desktop release (${{ matrix.os }})
