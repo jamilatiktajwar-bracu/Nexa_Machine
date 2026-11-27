@@ -37,6 +37,7 @@ int nexa_memory_write(NexaContext*c,uint64_t id,uint16_t a,uint8_t v){return gua
 int nexa_keyboard_input(NexaContext*c,uint64_t id,const char*text){return guard(c,[&]{if(!text)throw std::invalid_argument("Keyboard text is null");c->sessions.machine(session(c,id)).queueKeyboardInput(text);});}
 int nexa_breakpoint_set(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).setBreakpoint(a);});}
 int nexa_breakpoint_clear(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]{c->sessions.machine(session(c,id)).clearBreakpoint(a);});}
+int nexa_interrupt_vector_set(NexaContext*c,uint64_t id,uint8_t vector,uint16_t address){return guard(c,[&]{c->sessions.machine(session(c,id)).setInterruptVector(vector,address);});}
 int nexa_framebuffer_get(NexaContext*c,uint64_t id,size_t x,size_t y,int*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Pixel output pointer is null");if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");*out=c->sessions.machine(session(c,id)).pixel(x,y)?1:0;});}
 int nexa_framebuffer_draw(NexaContext*c,uint64_t id,size_t x,size_t y,int white){return guard(c,[&]{if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");c->sessions.machine(session(c,id)).drawPixel(x,y,white!=0);});}
 int nexa_snapshot_save(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.saveSnapshot(session(c,id),path);});}
