@@ -84,6 +84,29 @@ jobs:
       - name: Build unsigned Android preview
         if: env.NEXA_ANDROID_SIGNING_READY != 'true'
         run: gradle -p mobile/android assembleDebug
+      - name: Android release APK install and force-stop smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot -wipe-data
+          emulator-boot-timeout: 900
+          cores: 2
+          ram-size: 2048
+          heap-size: 512
+          disable-animations: true
+          script: |
+            APK=$(find mobile/android/app/build/outputs/apk/release -name '*.apk' -print -quit)
+            if [ -z "$APK" ]; then APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk; fi
+            adb install "$APK"
+            adb shell am start -n com.nexa.machine/.MainActivity
+            sleep 8
+            adb shell pidof com.nexa.machine
+            adb shell am force-stop com.nexa.machine
+            adb shell am start -n com.nexa.machine/.MainActivity
+            sleep 8
+            adb shell pidof com.nexa.machine
       - name: Verify signed Android outputs and checksums
         if: env.NEXA_ANDROID_SIGNING_READY == 'true'
         shell: bash
@@ -162,11 +185,11 @@ jobs:
           shasum -a 256 -c nexa-ios-appstore.zip.sha256
       - name: Build iOS Simulator preview
         if: env.NEXA_IOS_SIGNING_READY != 'true'
-        run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+        run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-preview CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-preview/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip && shasum -a 256 nexa-ios-simulator.zip > nexa-ios-simulator.zip.sha256 && shasum -a 256 -c nexa-ios-simulator.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-ios-release
-          path: nexa-ios-appstore.zip
+          path: nexa-ios-appstore.zip*
           if-no-files-found: warn
 
   publish:
