@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.23.0] - 2026-11-27
+- Added `mutexDeadlockCycle()` to return the process IDs participating in a detected circular mutex wait, alongside the boolean `hasMutexDeadlock()` query.
+- Added tests verifying cycle membership and that termination cleanup clears the reported cycle.
+
+
 ## [2.22.0] - 2026-11-27
 - Added wait-for graph cycle detection through `hasMutexDeadlock()`, identifying circular mutex dependencies separately from scheduler-wide blocked-state detection.
 - Added regression coverage for an acyclic waiter, a two-process mutex cycle, and cycle recovery after owner termination.
