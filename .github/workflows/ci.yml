@@ -43,7 +43,380 @@ jobs:
         run: |
           PACKAGE="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
           test -n "$PACKAGE"
-          tar -tzf "$PACKAGE" | grep -E '(^|/)bin/nexa_gui
+          tar -tzf "$PACKAGE" | grep -E '(^|/)bin/nexa_gui      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
+          tar -tzf "$PACKAGE" | grep -E '(^|/)bin/nexa
+      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
+      - name: Verify desktop package contents (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw "No ZIP package produced" }
+          $listing = tar -tf $package.FullName
+          if (-not ($listing | Select-String 'bin/nexa_gui.exe')) { throw "GUI executable missing from package" }
+          if (-not ($listing | Select-String 'bin/nexa.exe')) { throw "CLI executable missing from package" }
+      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
+          tar -tzf "$PACKAGE" | grep -E '(^|/)bin/nexa      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
+          tar -tzf "$PACKAGE" | grep -E '(^|/)bin/nexa
+      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
+      - name: Verify desktop package contents (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw "No ZIP package produced" }
+          $listing = tar -tf $package.FullName
+          if (-not ($listing | Select-String 'bin/nexa_gui.exe')) { throw "GUI executable missing from package" }
+          if (-not ($listing | Select-String 'bin/nexa.exe')) { throw "CLI executable missing from package" }
+      - name: Upload desktop release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-desktop-${{ runner.os }}
+          path: release/*
+      - name: Build iOS VM core (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
+      - name: Build SwiftUI iOS app (macOS)
+        if: runner.os == 'macOS'
+        run: brew install xcodegen && cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Upload iOS simulator app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-simulator
+          path: mobile/ios/nexa-ios-simulator.zip
+      - name: Setup Android SDK and NDK (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+      - name: Build Android JNI core (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
+      - name: Setup Java (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Gradle (Linux)
+        if: runner.os == 'Linux'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Build Android Compose app (Linux)
+        if: runner.os == 'Linux'
+        run: gradle -p mobile/android assembleDebug
+      - name: Upload Android APK
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Android JNI runtime tests (Linux)
+        if: runner.os == 'Linux'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
+        run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\\build\\Release\\nexa.exe
+
       - name: Upload desktop release package
         uses: actions/upload-artifact@v4
         with:
