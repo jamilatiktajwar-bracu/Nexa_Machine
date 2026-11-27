@@ -9,7 +9,7 @@ struct NexaApp: App {
 
 struct SessionView: View {
     @StateObject private var model = NexaSessionModel()
-    @State private var source = "LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT"
+    @State private var source = "LOAD A, 19\nLOAD B, 23\nADD A, B\nOUT A, 1\nHALT"
     @State private var input = ""
 
     var body: some View {
