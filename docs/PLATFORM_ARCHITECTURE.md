@@ -13,7 +13,7 @@ The optional Qt 6 Widgets application provides profiles, source editing, single-
 - Both mobile frontends consume the same serialized profile and snapshot formats where practical, with versioning and explicit compatibility checks.
 
 ## Multi-session design (planned)
-A session registry owns independent VM instances and metadata: stable session ID, profile, lifecycle state, start time, source identity, snapshot references, and event/log stream. The GUI should switch sessions without sharing registers or guest RAM. A future public API should expose create/load/start/pause/resume/stop/reset, step, status, memory inspection, event subscription, disk attach/detach, snapshot operations, and typed errors.
+The portable `SessionManager` registry now owns independent VM instances and stable IDs, names, lifecycle state, program-loaded status, RAM metadata, execution count, and snapshot operations. It supports start, cooperative bounded run, pause/resume, stop/reset, step, breakpoint-aware run, and independent state inspection. It is not yet connected to Qt session tabs or profile/disk ownership. The GUI should switch sessions without sharing registers or guest RAM. A future public API should expose create/load/start/pause/resume/stop/reset, step, status, memory inspection, event subscription, disk attach/detach, snapshot operations, and typed errors.
 
 ## Storage safety
 Disk import validates file size against configured capacity before writing. Export should be explicit and destination-selected. Profile clone/import allocates a fresh disk path. VM execution snapshots and disk images are separate until a future coordinated bundle format exists.
