@@ -13,7 +13,8 @@ Current kernel capabilities include:
 - Per-process instruction quotas with deterministic termination and exit-code reporting.
 - Process signals: TERM/KILL termination, STOP/CONT lifecycle control, bounded FIFO USR1/USR2 delivery, and guest `SYS GetSignal` polling.
 - Signal queue diagnostics in `ps` and root-only `signal PID SIGNAL` administration.
-- Kernel synchronization, priority inheritance, and syncstat diagnostics primitives: bounded counting semaphores and FIFO mutex handoff, blocking guest waits and syscalls 14–17; mutexes are released and handed off if an owner exits or faults.
+- Kernel synchronization, priority inheritance, and syncstat diagnostics: bounded counting semaphores and FIFO mutex handoff, blocking guest waits and syscalls 14–17.
+- Kernel-managed shared-memory segments with process attach/detach, bounded byte access, attachment diagnostics and termination cleanup (host API; not guest-mapped yet).
 - Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
 Start with the [Nexa OS 2.13 guide](docs/NEXA_OS_2_13.md) or the [Nexa OS 2.12 guide](docs/NEXA_OS_2_12.md) or the [Nexa OS 2.11 guide](docs/NEXA_OS_2_11.md) or the [Nexa OS 2.10 guide](docs/NEXA_OS_2_10.md) or the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
