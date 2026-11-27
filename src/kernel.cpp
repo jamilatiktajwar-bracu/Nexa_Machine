@@ -43,7 +43,8 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
             memory_.protectPage(codeSpace,static_cast<std::uint8_t>(page),false,true,true);
     } catch(...) {
         if(codeSpaceCreated) memory_.destroyAddressSpace(codeSpace);
-        memory_.destroyAddressSpace(pid);
+        for(auto id:it->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
+    memory_.destroyAddressSpace(pid);
         throw;
     }
     p.machine.setMemoryAccessors(
@@ -89,6 +90,8 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     it->second.info.exitCode=137;
     it->second.info.terminationReason="killed";
     it->second.openFiles.clear();
+    for(auto id:it->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
+    it->second.sharedAttachments.clear();
     it->second.inbox.clear();
     it->second.signals.clear();
     releaseOwnedMutexes(pid);
@@ -390,6 +393,45 @@ std::uint8_t NexaKernel::effectivePriority(std::uint32_t pid) const {
         if(!changed) break;
     }
     return priorities.at(pid);
+}
+std::uint8_t NexaKernel::createSharedMemory(std::size_t bytes) {
+    if(bytes==0||bytes>65536) throw std::invalid_argument("Shared memory size must be between 1 and 65536 bytes");
+    if(nextSharedSegment_>MaxSyncObjects) throw std::runtime_error("Shared memory table exhausted");
+    const auto id=static_cast<std::uint8_t>(nextSharedSegment_++);
+    sharedSegments_.emplace(id,SharedSegment{std::vector<std::uint8_t>(bytes,0),{}});
+    return id;
+}
+bool NexaKernel::destroySharedMemory(std::uint8_t id) {
+    auto it=sharedSegments_.find(id);if(it==sharedSegments_.end())return false;
+    for(auto pid:it->second.attached) {auto p=processes_.find(pid);if(p!=processes_.end())p->second.sharedAttachments.erase(id);}
+    sharedSegments_.erase(it);return true;
+}
+bool NexaKernel::attachSharedMemory(std::uint32_t pid,std::uint8_t id) {
+    auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
+    if(p==processes_.end()||s==sharedSegments_.end())return false;
+    if(p->second.info.state==ProcessState::Halted||p->second.info.state==ProcessState::Faulted)return false;
+    p->second.sharedAttachments.insert(id);s->second.attached.insert(pid);return true;
+}
+bool NexaKernel::detachSharedMemory(std::uint32_t pid,std::uint8_t id) {
+    auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
+    if(p==processes_.end()||s==sharedSegments_.end())return false;
+    if(!p->second.sharedAttachments.erase(id))return false;
+    s->second.attached.erase(pid);return true;
+}
+std::optional<std::uint8_t> NexaKernel::readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const {
+    auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
+    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return std::nullopt;
+    return s->second.bytes[offset];
+}
+bool NexaKernel::writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value) {
+    auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
+    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return false;
+    s->second.bytes[offset]=value;return true;
+}
+std::vector<SharedMemoryInfo> NexaKernel::sharedMemoryInfo() const {
+    std::vector<SharedMemoryInfo> result;result.reserve(sharedSegments_.size());
+    for(const auto& [id,segment]:sharedSegments_)result.push_back({id,segment.bytes.size(),segment.attached.size()});
+    return result;
 }
 std::string NexaKernel::syncDiagnostics() const {
     std::ostringstream out;
