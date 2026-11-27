@@ -3,6 +3,7 @@
 #include <exception>
 #include <stdexcept>
 #include <limits>
+#include <sstream>
 namespace nexa {
 NexaKernel::NexaKernel(std::size_t n):ramBytes_(n),memory_(std::max<std::size_t>(VirtualMemoryManager::PageSize,((n+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize)*VirtualMemoryManager::PageSize*16)){
     VM check(n); (void)check;
