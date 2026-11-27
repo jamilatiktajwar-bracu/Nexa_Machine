@@ -149,7 +149,7 @@ Run `nexa console`, then type `os`. Commands: help, echo, clear, mem, run FILE, 
 - `examples/keyboard_echo.nexa`
 - `examples/boot_message.nexa`
 
-## Portable workspace\n\n`nexa --workspace` prints Nexa data paths; `nexa --init-workspace` creates the standard directory structure. Set `NEXA_HOME` to relocate the workspace (useful for portable drives or separate development profiles). The workspace separates config, profiles, disks, snapshots and logs.\n\n## Host diagnostics
+## VM profiles\n\nCreate a named profile with `nexa --profile-create NAME`, then list available profiles using `nexa --profile-list`. Names are restricted to safe filename characters; duplicates are rejected. Profiles are stored under the portable workspace profile directory as JSON, with per-profile disk paths.\n\n## Portable workspace\n\n`nexa --workspace` prints Nexa data paths; `nexa --init-workspace` creates the standard directory structure. Set `NEXA_HOME` to relocate the workspace (useful for portable drives or separate development profiles). The workspace separates config, profiles, disks, snapshots and logs.\n\n## Host diagnostics
 
 Run `nexa --platform` to inspect host OS, CPU architecture, compiler, build mode, and byte order without starting a VM or reading guest files.
 
