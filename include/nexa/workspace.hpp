@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <cstddef>
 #include <string>
 #include <vector>
 namespace nexa {
