@@ -49,10 +49,12 @@ int main(int argc,char**argv){
   if(argc==2&&std::string(argv[1])=="--os"){osConsole();return 0;}
   if(argc==4&&std::string(argv[1])=="--compile"){auto source=readFile(argv[2]);nexa::Executable e{0,nexa::parseAssembly(source)};nexa::saveExecutable(e,argv[3]);std::cout<<"Compiled "<<e.code.size()<<" instructions to "<<argv[3]<<"\n";return 0;}
   if(argc==3&&std::string(argv[1])=="--exe"){auto e=nexa::loadExecutable(argv[2]);nexa::VM vm;vm.loadProgram(e.code);vm.setProgramCounter(e.entryPoint);vm.run();std::cout<<"Executable halted. Instructions="<<vm.instructionsExecuted()<<"\n";return 0;}
+  if(argc==3&&std::string(argv[1])=="--profile-create"){auto path=nexa::WorkspacePaths::discover().createProfile(argv[2]);std::cout<<"Profile created: "<<path.string()<<"\\n";return 0;}
+  if(argc==2&&std::string(argv[1])=="--profile-list"){auto names=nexa::WorkspacePaths::discover().listProfiles();if(names.empty())std::cout<<"No profiles yet. Create one with --profile-create NAME.\\n";else for(const auto& name:names)std::cout<<name<<"\\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--workspace"){std::cout<<nexa::WorkspacePaths::discover().summary()<<"\\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--init-workspace"){auto paths=nexa::WorkspacePaths::discover();paths.initialize();std::cout<<"Workspace initialized.\\n"<<paths.summary()<<"\\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--platform"){std::cout<<nexa::platformSummary()<<"\n";return 0;}
-  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"Usage: nexa --workspace | nexa --init-workspace | nexa --platform | nexa [program.nexa] | nexa --compile source.nexa output.nexe | nexa --exe program.nexe | nexa console | nexa --os | nexa --config config.json program.nexa\n";return 0;}
+  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"Usage: nexa --profile-create NAME | nexa --profile-list | nexa --workspace | nexa --init-workspace | nexa --platform | nexa [program.nexa] | nexa --compile source.nexa output.nexe | nexa --exe program.nexe | nexa console | nexa --os | nexa --config config.json program.nexa\n";return 0;}
   std::string program=demo;nexa::MachineConfig config;
   if(argc==2)program=readFile(argv[1]);
   else if(argc==4&&std::string(argv[1])=="--config"){config=nexa::MachineConfig::load(argv[2]);program=readFile(argv[3]);}
