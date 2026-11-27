@@ -31,7 +31,7 @@ int nexa_breakpoint_clear(NexaContext*,uint64_t id,size_t address);
 int nexa_framebuffer_get(NexaContext*,uint64_t id,size_t x,size_t y,int* out_pixel);
 int nexa_framebuffer_draw(NexaContext*,uint64_t id,size_t x,size_t y,int white);
 int nexa_snapshot_save(NexaContext*,uint64_t id,const char* path);
-int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);
+int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);\n/* Host-side 512-byte sector image API; not yet guest-issued block I/O. */\nint nexa_disk_attach(NexaContext*,uint64_t id,const char* path,size_t capacity_bytes);\nint nexa_disk_sector_count(NexaContext*,uint64_t id,size_t* out_count);\nint nexa_disk_read_sector(NexaContext*,uint64_t id,size_t sector,uint8_t* out_512_bytes);\nint nexa_disk_write_sector(NexaContext*,uint64_t id,size_t sector,const uint8_t* bytes_512);\nint nexa_disk_flush(NexaContext*,uint64_t id);
 #ifdef __cplusplus
 }
 #endif
