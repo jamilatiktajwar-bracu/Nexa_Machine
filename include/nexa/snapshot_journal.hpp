@@ -10,6 +10,7 @@
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
+#include <windows.h>
 #else
 #include <fcntl.h>
 #include <unistd.h>
@@ -67,14 +68,14 @@ inline void writeJournal(const std::filesystem::path& journal, JournalPhase phas
         if (!out) throw std::runtime_error("Failed writing snapshot transaction journal");
     }
     syncFile(temp);
+#ifdef _WIN32
+    if (!MoveFileExW(temp.c_str(), journal.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        throw std::runtime_error("Cannot atomically publish snapshot transaction journal");
+#else
     std::error_code ec;
     std::filesystem::rename(temp, journal, ec);
-    if (ec) {
-        std::filesystem::remove(journal, ec);
-        ec.clear();
-        std::filesystem::rename(temp, journal, ec);
-    }
     if (ec) throw std::runtime_error("Cannot publish snapshot transaction journal: " + ec.message());
+#endif
 }
 inline std::vector<JournalEntry> readJournal(const std::filesystem::path& journal,
                                              JournalPhase& phase) {
