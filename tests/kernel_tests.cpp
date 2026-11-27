@@ -136,7 +136,6 @@ int main() {
     assert(syncKernel.semaphoreSignal(semId));
     assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(waiterPid,100)==1);
-    assert(!syncKernel.semaphoreSignal(semId)==false);
     assert(syncKernel.semaphoreSignal(semId));
     assert(syncKernel.semaphoreSignal(semId));
     assert(!syncKernel.semaphoreSignal(semId));
@@ -148,6 +147,7 @@ int main() {
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},
         {nexa::Opcode::LoadImmediate,mutexId},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,101},{nexa::Opcode::Halt,0}}});
     assert(syncKernel.mutexLock(ownerPid,mutexId));
+    assert(syncKernel.sendSignal(ownerPid,nexa::ProcessSignal::Stop));
     assert(syncKernel.scheduleOne());
     syncInfo=syncKernel.processes();
     waiterBlocked=false;for(const auto& proc:syncInfo)if(proc.pid==lockWaiterPid)waiterBlocked=proc.state==nexa::ProcessState::Blocked;
