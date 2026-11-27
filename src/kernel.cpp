@@ -291,13 +291,7 @@ bool NexaKernel::scheduleOne() {
     std::vector<std::uint32_t> ids;
     std::uint8_t highestPriority=0;
     bool haveReady=false;
-    const auto effectivePriority=[this](const Process& candidate) {
-        if(priorityAgingThreshold_==0) return candidate.info.priority;
-        const auto boost=candidate.readyWaitTicks/priorityAgingThreshold_;
-        const auto base=candidate.info.priority;
-        if(boost>=static_cast<std::uint64_t>(7-base)) return std::uint8_t{7};
-        return static_cast<std::uint8_t>(base+boost);
-    };
+    const auto effectivePriority=[this](const Process& candidate) { return this->effectivePriority(candidate.info.pid); };
     for(const auto& [id,proc]:processes_) {
         if(proc.info.state!=ProcessState::Ready) continue;
         const auto effective=effectivePriority(proc);
@@ -371,6 +365,45 @@ bool NexaKernel::scheduleOne() {
     return true;
 }
 void NexaKernel::run(std::size_t maxSlices) { for(std::size_t n=0;n<maxSlices&&scheduleOne();++n) {} }
+std::uint8_t NexaKernel::effectivePriority(std::uint32_t pid) const {
+    auto target=processes_.find(pid);
+    if(target==processes_.end()) throw std::out_of_range("Unknown process id");
+    std::map<std::uint32_t,std::uint8_t> priorities;
+    for(const auto& [id,proc]:processes_) {
+        const auto aging=priorityAgingThreshold_==0?0:proc.readyWaitTicks/priorityAgingThreshold_;
+        priorities[id]=static_cast<std::uint8_t>(std::min<std::uint64_t>(7,proc.info.priority+aging));
+    }
+    for(std::size_t pass=0;pass<processes_.size();++pass) {
+        bool changed=false;
+        for(const auto& [mid,mutex]:mutexes_) {
+            (void)mid;
+            if(!mutex.owner||!priorities.contains(*mutex.owner)) continue;
+            auto& ownerPriority=priorities[*mutex.owner];
+            for(const auto waiterId:mutex.waiters) {
+                auto waiter=priorities.find(waiterId);
+                if(waiter!=priorities.end()&&waiter->second>ownerPriority) {
+                    ownerPriority=waiter->second;changed=true;
+                }
+            }
+        }
+        if(!changed) break;
+    }
+    return priorities.at(pid);
+}
+std::string NexaKernel::syncDiagnostics() const {
+    std::ostringstream out;
+    out<<"Semaphores: "<<semaphores_.size()<<"\\n";
+    for(const auto& [id,sem]:semaphores_) out<<"  sem "<<static_cast<unsigned>(id)<<" count="<<sem.count<<"/"<<sem.maximum<<" waiters="<<sem.waiters.size()<<"\\n";
+    out<<"Mutexes: "<<mutexes_.size()<<"\\n";
+    for(const auto& [id,mutex]:mutexes_) {
+        out<<"  mutex "<<static_cast<unsigned>(id)<<" owner=";
+        if(mutex.owner) out<<*mutex.owner<<" (effective priority "<<static_cast<unsigned>(effectivePriority(*mutex.owner))<<")"; else out<<"none";
+        out<<" waiters=[";
+        bool first=true;for(auto waiter:mutex.waiters){if(!first)out<<",";first=false;out<<waiter<<"(p"<<static_cast<unsigned>(effectivePriority(waiter))<<")";}
+        out<<"]\\n";
+    }
+    return out.str();
+}
 std::vector<ProcessInfo> NexaKernel::processes() const {
     std::vector<ProcessInfo> result;
     for(const auto& [id,p]:processes_) {
@@ -379,9 +412,7 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         info.pendingMessages=p.inbox.size();
         info.pendingSignals=p.signals.size();
         info.readyWaitTicks=p.readyWaitTicks;
-        const auto boost=priorityAgingThreshold_==0?0:p.readyWaitTicks/priorityAgingThreshold_;
-        if(boost>=static_cast<std::uint64_t>(7-p.info.priority)) info.effectivePriority=7;
-        else info.effectivePriority=static_cast<std::uint8_t>(p.info.priority+boost);
+        info.effectivePriority=effectivePriority(id);
         result.push_back(std::move(info));
     }
     return result;
