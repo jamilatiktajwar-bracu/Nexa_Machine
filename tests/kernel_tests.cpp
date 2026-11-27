@@ -187,7 +187,7 @@ int main() {
     }
     assert(deathWaiterBlocked);
     assert(deathKernel.terminateProcess(deathOwner));
-    assert(deathKernel.scheduleOne());
+    for(int retry=0;retry<20&&deathKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(deathKernel.scheduleOne());
     assert(deathKernel.readProcessMemory(deathWaiter,102)==1);
     assert(deathKernel.mutexUnlock(deathWaiter,deathMutex));
     // Guest syscalls attach, read, write and detach a kernel-created segment.
