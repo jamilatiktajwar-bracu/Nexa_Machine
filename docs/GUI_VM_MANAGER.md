@@ -16,7 +16,7 @@ Qt 6 Widgets is required. If Qt is not detected, the CLI build continues and CMa
 - **Import / Export**: transfer profile JSON settings; import creates a fresh disk image.
 - **New profile**: prompts for profile name, RAM size (1–65,536 bytes), and disk size (1–128 MiB).
 - **Open .nexa**: loads source text into the editor.
-- **Run / Step / Reset**: execute, single-step, or reset the current VM.
+- **Step / Reset**: execute one instruction or create a fresh VM.
 - **Set / Clear breakpoints**: configure or clear instruction-address breakpoints.
 - **Send input**: queue keyboard bytes for guest INPUT instructions; Enter appends a newline.
 - **Export log**: save the current console transcript to a text file.
@@ -25,7 +25,7 @@ Qt 6 Widgets is required. If Qt is not detected, the CLI build continues and CMa
 - **Import disk / Export disk**: import an image only if it fits configured capacity; export to a chosen file.
 - **Save / Restore / Delete snapshot**: save, restore, or remove VM execution state under the selected profile.
 
-Snapshots capture VM state, not the virtual disk image. Disk images and profile definitions remain separate workspace assets. The GUI currently uses profile RAM settings; disk I/O is managed by the CLI and workspace, not yet exposed as a GUI panel.
+Snapshots capture VM state, not the virtual disk image. Disk images and profile definitions remain separate workspace assets. The GUI disk actions manage image files only; virtual disks are not yet connected to guest block-device instructions. Profiles use configured RAM settings.
 
 Workspace is discovered through `NEXA_HOME` or the default `~/.nexa` (Windows uses the user profile home).
 
