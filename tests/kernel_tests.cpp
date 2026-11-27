@@ -234,6 +234,9 @@ int main() {
     // Guest syscalls attach, read, write and detach a kernel-created segment.
     const auto guestSegment=syncKernel.createSharedMemory(16);
     assert(syncKernel.attachSharedMemory(ownerPid,guestSegment));
+    auto attachmentStats=syncKernel.processes();
+    const auto ownerStats=std::find_if(attachmentStats.begin(),attachmentStats.end(),[&](const auto& process){return process.pid==ownerPid;});
+    assert(ownerStats!=attachmentStats.end()&&ownerStats->sharedMemoryAttachments==1);
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,4,0x33));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,8,0x10));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,9,0xff));
@@ -324,6 +327,9 @@ int main() {
     assert(!syncKernel.writeSharedMemory(lockWaiterPid,guestSegment,7,0x55));
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,7)==0x99);
     assert(syncKernel.detachSharedMemory(lockWaiterPid,guestSegment));
+    attachmentStats=syncKernel.processes();
+    const auto detachedStats=std::find_if(attachmentStats.begin(),attachmentStats.end(),[&](const auto& process){return process.pid==lockWaiterPid;});
+    assert(detachedStats!=attachmentStats.end()&&detachedStats->sharedMemoryAttachments==0);
     assert(!syncKernel.memoryManager().isMapped(lockWaiterPid,3));
     assert(!syncKernel.detachSharedMemory(shmGuestPid,guestSegment)); // Guest already detached on exit
     assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2));
@@ -488,7 +494,11 @@ int main() {
     exitCleanupKernel.writeProcessMemory(exitCleanupPid,static_cast<std::uint16_t>(40+exitPath.size()),0);
     const auto exitHandle=exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::OpenRead,40);
     assert(exitHandle!=0);
+    auto resourceStats=exitCleanupKernel.processes();
+    assert(resourceStats.size()==1&&resourceStats.front().openFileHandles==1);
     assert(exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::Exit,23)==0);
+    resourceStats=exitCleanupKernel.processes();
+    assert(resourceStats.size()==1&&resourceStats.front().openFileHandles==0&&resourceStats.front().sharedMemoryAttachments==0);
     bool exitHandleClosed=false;
     try{(void)exitCleanupKernel.syscall(exitCleanupPid,nexa::Syscall::ReadByte,exitHandle);}
     catch(const std::runtime_error&){exitHandleClosed=true;}
