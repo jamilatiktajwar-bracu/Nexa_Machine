@@ -206,6 +206,16 @@ int main() {
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,4)==0x33);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,6)==0x66);
+    assert(syncKernel.attachSharedMemory(lockWaiterPid,guestSegment));
+    assert(syncKernel.mapSharedMemory(lockWaiterPid,guestSegment,3));
+    syncKernel.memoryManager().write(lockWaiterPid,static_cast<std::uint16_t>(3*256+7),0x99,nexa::MemoryAccess::User);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,7)==0x99);
+    bool sharedExecuteDenied=false;
+    try { (void)syncKernel.memoryManager().canExecute(lockWaiterPid,static_cast<std::uint16_t>(3*256),nexa::MemoryAccess::User); }
+    catch(const std::runtime_error&) { sharedExecuteDenied=true; }
+    assert(sharedExecuteDenied);
+    assert(syncKernel.detachSharedMemory(lockWaiterPid,guestSegment));
+    assert(!syncKernel.memoryManager().isMapped(lockWaiterPid,3));
     assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2));
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(!syncKernel.readSharedMemory(shmGuestPid,guestSegment,4));
