@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.22.0] - 2026-11-27
+- Added wait-for graph cycle detection through `hasMutexDeadlock()`, identifying circular mutex dependencies separately from scheduler-wide blocked-state detection.
+- Added regression coverage for an acyclic waiter, a two-process mutex cycle, and cycle recovery after owner termination.
+
+
 ## [2.21.1] - 2026-11-27
 - Fixed synchronization cleanup for TERM/KILL signal exits so dead waiters are removed and abandoned semaphore grants are recovered consistently.
 - Added regression tests for signal-driven semaphore and mutex waiter termination.
