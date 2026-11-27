@@ -1,12 +1,12 @@
 #include "nexa/c_api.h"
-#include "nexa/session_manager.hpp"
+#include "nexa/session_manager.hpp"\n#include "nexa/virtual_disk.hpp"
 #include <algorithm>
 #include <cstring>
 #include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
-struct NexaContext {nexa::SessionManager sessions;std::map<uint64_t,std::string> ids;uint64_t next{1};std::string error;};
+struct NexaContext {nexa::SessionManager sessions;std::map<uint64_t,std::string> ids;std::map<uint64_t,std::unique_ptr<nexa::VirtualDisk>> disks;uint64_t next{1};std::string error;};
 namespace {
 template<class F>int guard(NexaContext*c,F&&fn){if(!c)return -1;try{fn();c->error.clear();return 0;}catch(const std::exception&e){c->error=e.what();return -1;}catch(...){c->error="Unknown Nexa error";return -1;}}
 std::string session(NexaContext*c,uint64_t id){auto it=c->ids.find(id);if(it==c->ids.end())throw std::out_of_range("Unknown C API session handle");return it->second;}
@@ -36,5 +36,10 @@ int nexa_breakpoint_clear(NexaContext*c,uint64_t id,size_t a){return guard(c,[&]
 int nexa_framebuffer_get(NexaContext*c,uint64_t id,size_t x,size_t y,int*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Pixel output pointer is null");if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");*out=c->sessions.machine(session(c,id)).pixel(x,y)?1:0;});}
 int nexa_framebuffer_draw(NexaContext*c,uint64_t id,size_t x,size_t y,int white){return guard(c,[&]{if(x>=nexa::VM::ScreenWidth||y>=nexa::VM::ScreenHeight)throw std::out_of_range("Pixel outside framebuffer");c->sessions.machine(session(c,id)).drawPixel(x,y,white!=0);});}
 int nexa_snapshot_save(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.saveSnapshot(session(c,id),path);});}
-int nexa_snapshot_load(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.loadSnapshot(session(c,id),path);});}
+int nexa_snapshot_load(NexaContext*c,uint64_t id,const char*path){return guard(c,[&]{if(!path)throw std::invalid_argument("Snapshot path is null");c->sessions.loadSnapshot(session(c,id),path);});}\nint nexa_disk_attach(NexaContext*c,uint64_t id,const char*path,size_t capacity){return guard(c,[&]{(void)session(c,id);if(!path||!*path)throw std::invalid_argument("Disk path is empty");if(capacity<512||capacity%512!=0)throw std::invalid_argument("Disk capacity must be a positive multiple of 512 bytes");auto disk=std::make_unique<nexa::VirtualDisk>(path,capacity);disk->load();c->disks[id]=std::move(disk);});}
+int nexa_disk_sector_count(NexaContext*c,uint64_t id,size_t*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Sector count output pointer is null");auto it=c->disks.find(id);if(it==c->disks.end())throw std::out_of_range("No disk attached to session");*out=it->second->size()/512;});}
+int nexa_disk_read_sector(NexaContext*c,uint64_t id,size_t sector,uint8_t*out){return guard(c,[&]{if(!out)throw std::invalid_argument("Sector output buffer is null");auto it=c->disks.find(id);if(it==c->disks.end())throw std::out_of_range("No disk attached to session");auto data=it->second->read(sector*512,512);std::memcpy(out,data.data(),512);});}
+int nexa_disk_write_sector(NexaContext*c,uint64_t id,size_t sector,const uint8_t*data){return guard(c,[&]{if(!data)throw std::invalid_argument("Sector input buffer is null");auto it=c->disks.find(id);if(it==c->disks.end())throw std::out_of_range("No disk attached to session");it->second->write(sector*512,std::vector<uint8_t>(data,data+512));});}
+int nexa_disk_flush(NexaContext*c,uint64_t id){return guard(c,[&]{auto it=c->disks.find(id);if(it==c->disks.end())throw std::out_of_range("No disk attached to session");it->second->flush();});}
+
 }
