@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | memlimit PID PAGES | oomstat | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | memlimit PID PAGES | oomstat | oomreap | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -191,7 +191,7 @@ process fault: "+found->faultReason; return out;
             if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
             return kernel_.reapProcess(static_cast<std::uint32_t>(pidValue))?"process reaped":"unknown or active process";
         }
-        if(command=="oomstat") {
+        if(command=="oomreap") {\n            if(security_.currentUser()!="root") return "permission denied";\n            const auto count=kernel_.reapTerminatedProcesses();\n            return "reaped_processes="+std::to_string(count)+" frames_free="+std::to_string(kernel_.memoryManager().freeFrames());\n        }\n        if(command=="oomstat") {
             const auto& mm=kernel_.memoryManager();
             const auto total=mm.totalFrames(),free=mm.freeFrames();
             const auto pressure=free==0?"critical":(free*10<=total?"high":"normal");
