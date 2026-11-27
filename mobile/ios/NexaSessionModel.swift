@@ -6,6 +6,7 @@ final class NexaSessionModel: ObservableObject {
     @Published var status = "Not connected"
     @Published var console = "Nexa VM core bridge"
     @Published var diskStatus = "No disk attached"
+    @Published var recoveryReport = ""
     private var context: OpaquePointer?
     private var session: UInt64 = 0
     private var timer: Timer?
@@ -35,7 +36,7 @@ final class NexaSessionModel: ObservableObject {
                 let attachStatus = persistentDisk.path.withCString {
                     nexa_disk_attach(ctx, handle, $0, diskSize)
                 }
-                guard attachStatus == 0 else { status = "Disk recovery attach failed: " + errorText(); return }
+                guard attachStatus == 0 else { status = "Disk recovery attach failed: " + errorText(); refreshRecoveryReport(); return }
             }
             if FileManager.default.fileExists(atPath: root.appendingPathComponent("manifest.txt").path) {
                 let restoreStatus = vm.withCString { vmPath in
@@ -43,7 +44,7 @@ final class NexaSessionModel: ObservableObject {
                         nexa_snapshot_restore_bundle(ctx, handle, vmPath, diskPath)
                     }
                 }
-                guard restoreStatus == 0 else { status = "Workspace restore failed: " + errorText(); return }
+                guard restoreStatus == 0 else { status = "Workspace restore failed: " + errorText(); refreshRecoveryReport(); return }
                 refreshConsole()
                 status = "Workspace restored"
             } else { status = "Ready · recovery checked" }
@@ -102,7 +103,7 @@ final class NexaSessionModel: ObservableObject {
             update(rc); refreshConsole()
         } catch { status = "Snapshot error: \(error.localizedDescription)" }
     }
-    private func tick() { guard let context else { return }; var state = NEXA_RUNNING; let rc = nexa_session_run(context, session, 128, &state); refreshConsole(); if rc != 0 { status = errorText(); timer?.invalidate(); timer = nil } else if state == NEXA_HALTED || state == NEXA_FAULTED { status = state == NEXA_HALTED ? "Halted" : "Faulted"; timer?.invalidate(); timer = nil } else { if state == NEXA_PAUSED { _ = nexa_session_resume(context, session) }; status = "Running" } }
+    private func refreshRecoveryReport() {\n        guard let context else { return }\n        var report = NexaRecoveryReport()\n        guard nexa_snapshot_recovery_report_get(context, &report) == 0, report.attempted != 0 else { recoveryReport = ""; return }\n        func field<T>(_ value: inout T) -> String {\n            withUnsafePointer(to: &value) { pointer in\n                pointer.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<T>.size) { String(cString: $0) }\n            }\n        }\n        let phase = field(&report.phase)\n        let path = field(&report.affected_path)\n        let reason = field(&report.reason)\n        let action = field(&report.recommended_action)\n        recoveryReport = "Recovery: \\(report.success != 0 ? "SUCCESS" : "NEEDS ATTENTION")\\nPhase: \\(phase)\\nAffected path: \\(path)\\nReason: \\(reason)\\nRecommended action: \\(action)"\n    }\n    private func tick() { guard let context else { return }; var state = NEXA_RUNNING; let rc = nexa_session_run(context, session, 128, &state); refreshConsole(); if rc != 0 { status = errorText(); timer?.invalidate(); timer = nil } else if state == NEXA_HALTED || state == NEXA_FAULTED { status = state == NEXA_HALTED ? "Halted" : "Faulted"; timer?.invalidate(); timer = nil } else { if state == NEXA_PAUSED { _ = nexa_session_resume(context, session) }; status = "Running" } }
     private func refreshConsole() { guard let context else { return }; var required = 0; guard nexa_console_read(context, session, nil, 0, &required) == 0, required > 0 else { return }; var bytes = [CChar](repeating: 0, count: required); let rc = bytes.withUnsafeMutableBufferPointer { nexa_console_read(context, session, $0.baseAddress, $0.count, &required) }; if rc == 0 { console = String(cString: bytes) } }
     private func update(_ rc: Int32) { status = rc == 0 ? "OK" : errorText() }
     private func errorText() -> String { guard let context, let p = nexa_last_error(context) else { return "Unknown core error" }; return String(cString: p) }
