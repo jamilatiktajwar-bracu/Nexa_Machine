@@ -2,6 +2,11 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.12.0] - 2026-11-27
+- Added transitive priority inheritance for mutex owners, preventing priority inversion across nested lock chains.
+- Added `syncstat` shell diagnostics for semaphore/mutex state, owners, wait queues, and effective priorities.
+- Added regression coverage for inheritance boost and restoration.
+
 ## [2.11.0] — Kernel synchronization
 - Added bounded counting semaphores and FIFO mutexes with owner validation and waiter handoff.
 - Added guest syscalls 14–17: SemaphoreWait, SemaphoreSignal, MutexLock and MutexUnlock; wait syscalls block and retry atomically after wakeup.
