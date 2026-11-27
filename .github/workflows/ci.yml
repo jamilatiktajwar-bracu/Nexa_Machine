@@ -88,6 +88,32 @@ jobs:
       - name: CLI install smoke (Windows)
         if: runner.os == 'Windows'
         run: .\\install-root\\bin\\nexa.exe
+      - name: GUI installed launch smoke
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, subprocess
+          executable = "install-root/bin/nexa_gui.exe" if os.name == "nt" else "install-root/bin/nexa_gui"
+          environment = os.environ.copy()
+          environment["QT_QPA_PLATFORM"] = "offscreen"
+          process = subprocess.Popen([executable, "-platform", "offscreen"],
+                                     env=environment, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.PIPE, text=True)
+          try:
+              _, error = process.communicate(timeout=8)
+          except subprocess.TimeoutExpired:
+              process.terminate()
+              try:
+                  process.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  process.kill()
+                  process.wait()
+              print("GUI event loop remained alive for the launch smoke window")
+          else:
+              if process.returncode != 0:
+                  raise SystemExit(f"GUI exited during launch smoke ({process.returncode}): {error}")
+              print("GUI exited cleanly during launch smoke")
+          PY
   mobile:
     timeout-minutes: 75
     runs-on: ubuntu-24.04
@@ -145,6 +171,17 @@ jobs:
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
       - name: Build SwiftUI simulator app
         run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app -configuration Debug CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+      - name: Launch iOS simulator app smoke
+        shell: bash
+        run: |
+          APP="mobile/ios/build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app"
+          DEVICE_ID="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ && /Shutdown|Booted/ {print $2; exit}')"
+          test -n "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl install "$DEVICE_ID" "$APP"
+          xcrun simctl launch "$DEVICE_ID" org.nexa.machine
+          xcrun simctl terminate "$DEVICE_ID" org.nexa.machine
       - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:
