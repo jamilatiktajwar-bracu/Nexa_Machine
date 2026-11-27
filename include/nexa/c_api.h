@@ -11,6 +11,8 @@ NexaContext* nexa_context_create(void);
 void nexa_context_destroy(NexaContext*);
 const char* nexa_last_error(NexaContext*);
 int nexa_session_create(NexaContext*,const char* name,size_t ram_bytes,uint64_t* out_id);
+/* Create a session and automatically recover VM state before disk devices are attached. */
+int nexa_session_create_recovering(NexaContext*,const char* name,size_t ram_bytes,const char* vm_state_path,const char* disk_snapshot_directory,uint64_t* out_id);
 int nexa_session_remove(NexaContext*,uint64_t id);
 int nexa_session_load_assembly(NexaContext*,uint64_t id,const char* source);
 int nexa_session_start(NexaContext*,uint64_t id);
