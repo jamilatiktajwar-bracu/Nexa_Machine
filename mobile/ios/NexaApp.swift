@@ -10,6 +10,7 @@ struct NexaApp: App {
 
 struct SessionView: View {
     @StateObject private var model = NexaSessionModel()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var source = "LOAD A, 19\nLOAD B, 23\nADD A, B\nOUT A, 1\nHALT"
     @State private var input = ""
     @State private var showingDiskImporter = false
@@ -50,6 +51,12 @@ struct SessionView: View {
             }
         }
         .task { model.create() }
-        .onDisappear { model.close() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { model.saveSnapshot() }
+        }
+        .onDisappear {
+            model.saveSnapshot()
+            model.close()
+        }
     }
 }
