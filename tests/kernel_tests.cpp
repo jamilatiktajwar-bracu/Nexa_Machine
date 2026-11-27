@@ -336,8 +336,6 @@ int main() {
         const auto baseB=static_cast<std::uint8_t>(70+(cycle%20)*2);
         assert(sharedStressKernel.mapSharedMemory(stressA,stressId,baseA));
         assert(sharedStressKernel.mapSharedMemory(stressB,stressId,baseB));
-        const auto addressA=static_cast<std::uint16_t>(baseA* n e x a::VirtualMemoryManager::PageSize);
-        (void)addressA;
         assert(sharedStressKernel.writeSharedMemory(stressA,stressId,299,static_cast<std::uint8_t>(cycle)));
         assert(sharedStressKernel.readSharedMemory(stressB,stressId,299)==static_cast<std::uint8_t>(cycle));
         assert(sharedStressKernel.unmapSharedMemory(stressA,stressId));
