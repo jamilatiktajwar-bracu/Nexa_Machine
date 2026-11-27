@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | memlimit PID PAGES | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | memlimit PID PAGES | oomstat | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | syncstat | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -189,7 +189,7 @@ std::string NexaShell::execute(const std::string& line) {
             if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
             return kernel_.reapProcess(static_cast<std::uint32_t>(pidValue))?"process reaped":"unknown or active process";
         }
-        if(command=="memstat") {
+        if(command=="oomstat") {\n            const auto& mm=kernel_.memoryManager();\n            const auto total=mm.totalFrames(),free=mm.freeFrames();\n            const auto pressure=free==0?"critical":(free*10<=total?"high":"normal");\n            return "pressure="+std::string(pressure)+\n                " free_percent="+std::to_string(total?free*100/total:0)+\n                " frames_free="+std::to_string(free)+\n                " frames_total="+std::to_string(total)+\n                " resident_pages="+std::to_string(mm.residentPages())+\n                " swapped_pages="+std::to_string(mm.swappedPages())+\n                " swap_ins="+std::to_string(mm.swapIns())+\n                " swap_outs="+std::to_string(mm.swapOuts())+\n                " swap_backend="+(mm.swapFilePath().empty()?"memory":"disk");\n        }\n        if(command=="memstat") {
             const auto& mm=kernel_.memoryManager();
             return "frames_used="+std::to_string(mm.residentPages())+
                 " frames_total="+std::to_string(mm.totalFrames())+
