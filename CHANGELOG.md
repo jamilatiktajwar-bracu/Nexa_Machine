@@ -2,6 +2,13 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.11.0] — Kernel synchronization
+- Added bounded counting semaphores and FIFO mutexes with owner validation and waiter handoff.
+- Added guest syscalls 14–17: SemaphoreWait, SemaphoreSignal, MutexLock and MutexUnlock; wait syscalls block and retry atomically after wakeup.
+- Added host APIs for synchronization-object creation and use; validation for invalid bounds, unknown IDs, overflow, wrong-owner unlock and recursive lock.
+- Added regression coverage for guest blocking/wakeup, semaphore saturation and mutex ownership/handoff.
+- Synchronization objects are kernel-global, host-created handles, limited to 255 per type; no shared-memory mapping or priority inheritance yet.
+
 ## [2.10.0] — Process signals and lifecycle control
 - Added TERM/KILL termination signals, STOP/CONT process suspension and resumption, and bounded FIFO USR1/USR2 queues.
 - Added guest `SYS GetSignal` service (13), returning the next pending user signal or zero.
