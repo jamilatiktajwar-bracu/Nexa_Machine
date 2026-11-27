@@ -15,8 +15,9 @@ Qt 6 Widgets is required. If Qt is not detected, the CLI build continues and CMa
 - **Open .nexa**: loads source text into the editor.
 - **Run / Step / Reset**: execute, single-step, or reset the current VM.
 - **Set breakpoint**: set an instruction-address breakpoint.
-- **Save snapshot / Restore snapshot**: save or restore VM execution state under the selected profile.
+- **Start / Pause / Resume / Stop / Reset**: timer-driven execution lifecycle controls. Stop halts the guest; Reset creates a fresh VM.\n- **Disk info / Flush disk**: inspect configured image metadata or initialize/flush a disk image.\n- **Import disk / Export disk**: import an image only if it fits configured capacity; export to a chosen file.\n- **Save snapshot / Restore snapshot**: save or restore VM execution state under the selected profile.
 
 Snapshots capture VM state, not the virtual disk image. Disk images and profile definitions remain separate workspace assets. The GUI currently uses profile RAM settings; disk I/O is managed by the CLI and workspace, not yet exposed as a GUI panel.
 
 Workspace is discovered through `NEXA_HOME` or the default `~/.nexa` (Windows uses the user profile home).
+\nSee [platform architecture and mobile roadmap](PLATFORM_ARCHITECTURE.md) for the shared-core design and future native frontends.\n
