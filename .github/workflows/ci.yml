@@ -4,16 +4,25 @@ on:
   pull_request:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Qt6 for optional desktop build
+      - name: Install Qt6 (Linux desktop test)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y qt6-base-dev
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=${{ runner.os == 'Linux' }}
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --config Release --parallel
       - name: Test
-        run: ctest --test-dir build --output-on-failure
-      - name: Run demo
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Run demo (Unix)
+        if: runner.os != 'Windows'
         run: ./build/nexa
+      - name: Run demo (Windows)
+        if: runner.os == 'Windows'
+        run: .\build\Release\nexa.exe
