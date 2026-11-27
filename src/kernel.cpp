@@ -90,8 +90,7 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     it->second.info.exitCode=137;
     it->second.info.terminationReason="killed";
     it->second.openFiles.clear();
-    for(auto id:it->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
-    it->second.sharedAttachments.clear();
+    releaseSharedAttachments(pid);
     it->second.inbox.clear();
     it->second.signals.clear();
     releaseOwnedMutexes(pid);
@@ -111,6 +110,7 @@ bool NexaKernel::sendSignal(std::uint32_t pid,ProcessSignal signal) {
         process.info.exitCode=signal==ProcessSignal::Terminate?143:137;
         process.info.terminationReason=signal==ProcessSignal::Terminate?"signal:TERM":"signal:KILL";
         process.openFiles.clear();
+        releaseSharedAttachments(pid);
         process.inbox.clear();
         process.signals.clear();
         releaseOwnedMutexes(pid);
@@ -204,6 +204,11 @@ bool NexaKernel::mutexUnlock(std::uint32_t pid,std::uint8_t id) {
         if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){mutex.owner=next;p->second.mutexGrants.push_back(id);p->second.info.state=ProcessState::Ready;return true;}
     }
     mutex.owner.reset();return true;
+}
+void NexaKernel::releaseSharedAttachments(std::uint32_t pid) {
+    auto p=processes_.find(pid);if(p==processes_.end())return;
+    for(auto id:p->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
+    p->second.sharedAttachments.clear();
 }
 void NexaKernel::releaseOwnedMutexes(std::uint32_t pid) {
     for(auto& [id,mutex]:mutexes_) {
@@ -324,6 +329,7 @@ bool NexaKernel::scheduleOne() {
                 proc.info.exitCode=124;
                 proc.info.terminationReason="budget";
                 proc.openFiles.clear();
+                releaseSharedAttachments(pid);
                 proc.inbox.clear();
                 break;
             }
@@ -361,6 +367,7 @@ bool NexaKernel::scheduleOne() {
     }
     if(proc.info.state==ProcessState::Faulted||proc.info.state==ProcessState::Halted) {
         proc.openFiles.clear();
+        releaseSharedAttachments(pid);
         proc.inbox.clear();
         proc.signals.clear();
         releaseOwnedMutexes(pid);
@@ -475,7 +482,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); it->second.signals.clear(); releaseOwnedMutexes(pid); return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); releaseSharedAttachments(pid); it->second.inbox.clear(); it->second.signals.clear(); releaseOwnedMutexes(pid); return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
