@@ -42,6 +42,7 @@ public:
     bool sendSignal(std::uint32_t pid,ProcessSignal signal);
     [[nodiscard]] std::optional<ProcessSignal> receiveSignal(std::uint32_t pid);
     [[nodiscard]] bool hasDeadlock() const noexcept;
+    [[nodiscard]] bool hasMutexDeadlock() const;
     void setPriority(std::uint32_t pid,std::uint8_t priority);
     void setInstructionBudget(std::uint32_t pid,std::uint64_t instructions);
     void setTimeQuantum(std::size_t instructions);
