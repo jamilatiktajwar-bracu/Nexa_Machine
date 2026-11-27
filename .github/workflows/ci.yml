@@ -159,6 +159,25 @@ jobs:
           heap-size: 512
           disable-animations: true
           script: gradle -p mobile/android connectedDebugAndroidTest
+      - name: Build signed Android APK and AAB
+        if: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 != '' && secrets.NEXA_ANDROID_STORE_PASSWORD != '' && secrets.NEXA_ANDROID_KEY_ALIAS != '' && secrets.NEXA_ANDROID_KEY_PASSWORD != '' }}
+        env:
+          NEXA_ANDROID_KEYSTORE_BASE64: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 }}
+          NEXA_ANDROID_STORE_PASSWORD: ${{ secrets.NEXA_ANDROID_STORE_PASSWORD }}
+          NEXA_ANDROID_KEY_ALIAS: ${{ secrets.NEXA_ANDROID_KEY_ALIAS }}
+          NEXA_ANDROID_KEY_PASSWORD: ${{ secrets.NEXA_ANDROID_KEY_PASSWORD }}
+          NEXA_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nexa-release.jks
+        run: |
+          echo "$NEXA_ANDROID_KEYSTORE_BASE64" | base64 --decode > "$NEXA_ANDROID_KEYSTORE_PATH"
+          gradle -p mobile/android assembleRelease bundleRelease
+      - name: Upload signed Android release artifacts
+        if: ${{ secrets.NEXA_ANDROID_KEYSTORE_BASE64 != '' && secrets.NEXA_ANDROID_STORE_PASSWORD != '' && secrets.NEXA_ANDROID_KEY_ALIAS != '' && secrets.NEXA_ANDROID_KEY_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-signed-release
+          path: |
+            mobile/android/app/build/outputs/apk/release/*.apk
+            mobile/android/app/build/outputs/bundle/release/*.aab
 
   ios-simulator:
     timeout-minutes: 60
@@ -187,3 +206,44 @@ jobs:
         with:
           name: nexa-ios-simulator
           path: mobile/ios/nexa-ios-simulator.zip
+      - name: Archive signed iOS application
+        if: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 != '' && secrets.NEXA_IOS_CERTIFICATE_PASSWORD != '' && secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.NEXA_IOS_TEAM_ID != '' }}
+        env:
+          NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          NEXA_IOS_CERTIFICATE_PASSWORD: ${{ secrets.NEXA_IOS_CERTIFICATE_PASSWORD }}
+          NEXA_IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 }}
+          NEXA_IOS_TEAM_ID: ${{ secrets.NEXA_IOS_TEAM_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/nexa-build.keychain"
+          security create-keychain -p "$RUNNER_TEMP" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$RUNNER_TEMP" "$KEYCHAIN"
+          echo "$NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          security import "$RUNNER_TEMP/distribution.p12" -k "$KEYCHAIN" -P "$NEXA_IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$RUNNER_TEMP" "$KEYCHAIN"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$NEXA_IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/nexa.mobileprovision"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< "$(security cms -D -i "$RUNNER_TEMP/nexa.mobileprovision")")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print Name' /dev/stdin <<< "$(security cms -D -i "$RUNNER_TEMP/nexa.mobileprovision")")"
+          cp "$RUNNER_TEMP/nexa.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          cd mobile/ios
+          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" DEVELOPMENT_TEAM="$NEXA_IOS_TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>$NEXA_IOS_TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>org.nexa.machine</key><string>$PROFILE_NAME</string></dict>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" -exportPath "$RUNNER_TEMP/nexa-ios-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Upload signed iOS archive export
+        if: ${{ secrets.NEXA_IOS_DISTRIBUTION_CERTIFICATE_BASE64 != '' && secrets.NEXA_IOS_CERTIFICATE_PASSWORD != '' && secrets.NEXA_IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.NEXA_IOS_TEAM_ID != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-ios-signed-archive
+          path: ${{ runner.temp }}/nexa-ios-export
