@@ -50,6 +50,8 @@ public:
     [[nodiscard]] std::size_t tlbMisses() const noexcept{return tlbMisses_;}
     [[nodiscard]] bool isMapped(std::uint32_t pid,std::uint8_t virtualPage) const;
     [[nodiscard]] std::size_t mappedPages(std::uint32_t pid) const;
+    [[nodiscard]] std::size_t residentPages(std::uint32_t pid) const;
+    [[nodiscard]] std::size_t swappedPages(std::uint32_t pid) const;
     [[nodiscard]] std::size_t freeFrames() const noexcept;
     [[nodiscard]] std::size_t swappedPages() const noexcept{return swappedPages_;}
     [[nodiscard]] std::size_t swapIns() const noexcept{return swapIns_;}
