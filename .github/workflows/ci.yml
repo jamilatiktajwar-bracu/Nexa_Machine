@@ -70,6 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
       - name: Android SDK/NDK setup
         run: |
           yes | sdkmanager --licenses
@@ -106,7 +107,7 @@ jobs:
       - name: Build iOS VM core
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
       - name: Build SwiftUI simulator app
-        run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Release-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
+        run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app -configuration Debug CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
       - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:
