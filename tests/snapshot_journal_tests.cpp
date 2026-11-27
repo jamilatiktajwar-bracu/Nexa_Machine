@@ -122,6 +122,55 @@ int main(int argc, char** argv) {
     }
 
 
+    // Windows uses MoveFileExW(REPLACE_EXISTING); exercise replacing an
+    // already-published PREPARED journal with its durable COMMITTED decision.
+    const auto replacementTarget = root / "replacement.img";
+    const auto replacementBackup = root / "replacement.rollback";
+    const auto replacementJournal = root / "replacement.journal";
+    write(replacementTarget, "replacement-before");
+    auto replacementEntries = nexa::snapshot::prepare(
+        replacementJournal, {{replacementTarget, replacementBackup}});
+    write(replacementTarget, "replacement-after");
+    nexa::snapshot::syncFile(replacementTarget);
+    nexa::snapshot::writeJournal(replacementJournal,
+        nexa::snapshot::JournalPhase::Committed, replacementEntries);
+    nexa::snapshot::JournalPhase replacementPhase{};
+    (void)nexa::snapshot::readJournal(replacementJournal, replacementPhase);
+    if (replacementPhase != nexa::snapshot::JournalPhase::Committed ||
+        fs::exists(fs::path(replacementJournal.string() + ".tmp"))) {
+        std::cerr << "atomic journal replacement did not publish COMMITTED phase\\n";
+        return 1;
+    }
+    nexa::snapshot::recover(replacementJournal);
+    if (read(replacementTarget) != "replacement-after") {
+        std::cerr << "journal replacement rolled back committed target\\n";
+        return 1;
+    }
+
+    // Simulate termination after the first rollback backup has already been
+    // deleted: COMMITTED cleanup must not need any remaining rollback image.
+    write(diskA, "cleanup-a-before");
+    write(diskB, "cleanup-b-before");
+    nexa::snapshot::prepareGroup(coordinator, {
+        {sidecarA, {diskA, backupA}}, {sidecarB, {diskB, backupB}}
+    });
+    write(diskA, "cleanup-a-committed");
+    write(diskB, "cleanup-b-committed");
+    nexa::snapshot::syncFile(diskA);
+    nexa::snapshot::syncFile(diskB);
+    nexa::snapshot::writeJournal(coordinator,
+        nexa::snapshot::JournalPhase::Committed,
+        nexa::snapshot::readJournal(coordinator, replacementPhase));
+    fs::remove(backupA); // Crash point: partial backup cleanup has happened.
+    nexa::snapshot::recoverCoordinator(coordinator);
+    if (read(diskA) != "cleanup-a-committed" ||
+        read(diskB) != "cleanup-b-committed" ||
+        fs::exists(coordinator) || fs::exists(backupB) ||
+        fs::exists(sidecarA) || fs::exists(sidecarB)) {
+        std::cerr << "partial committed cleanup did not recover cleanly\\n";
+        return 1;
+    }
+
     // Journal publication uses a temp file and atomic rename. A process that
     // dies while writing the temp file must leave the old target untouched.
     const auto publicationTarget=root/"publication-target.img";
