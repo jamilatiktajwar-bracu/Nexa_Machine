@@ -20,6 +20,12 @@ struct SessionView: View {
             VStack(spacing: 12) {
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
                 Text(model.diskStatus).font(.caption2).foregroundStyle(.secondary)
+                if !model.recoveryReport.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Recovery diagnostics").font(.headline)
+                        Text(model.recoveryReport).font(.caption.monospaced()).textSelection(.enabled)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(10).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                }
                 TextEditor(text: $source).font(.system(.body, design: .monospaced)).frame(minHeight: 180)
                 HStack {
                     Button("Load") { model.load(source) }
