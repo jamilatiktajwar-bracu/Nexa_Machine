@@ -130,10 +130,15 @@ inline void recover(const std::filesystem::path& journal) {
             std::filesystem::copy_file(e.backup, e.target,
                 std::filesystem::copy_options::overwrite_existing);
             syncFile(e.target);
+            syncDirectory(e.target.parent_path());
         }
     }
-    for (const auto& e : entries) std::filesystem::remove(e.backup);
+    for (const auto& e : entries) {
+        std::filesystem::remove(e.backup);
+        syncDirectory(e.backup.parent_path());
+    }
     std::filesystem::remove(journal);
+    syncDirectory(journal.parent_path());
 }
 inline std::vector<JournalEntry> prepare(const std::filesystem::path& journal,
     const std::vector<std::pair<std::filesystem::path, std::filesystem::path>>& files) {
@@ -144,6 +149,7 @@ inline std::vector<JournalEntry> prepare(const std::filesystem::path& journal,
             throw std::runtime_error("Snapshot transaction target is missing: " + target.string());
         std::filesystem::copy_file(target, backup, std::filesystem::copy_options::overwrite_existing);
         syncFile(backup);
+        syncDirectory(backup.parent_path());
         entries.push_back({target, backup, std::filesystem::file_size(backup), checksum(backup)});
     }
     writeJournal(journal, JournalPhase::Prepared, entries);
@@ -152,7 +158,11 @@ inline std::vector<JournalEntry> prepare(const std::filesystem::path& journal,
 inline void commit(const std::filesystem::path& journal,
                    const std::vector<JournalEntry>& entries) {
     writeJournal(journal, JournalPhase::Committed, entries);
-    for (const auto& e : entries) std::filesystem::remove(e.backup);
+    for (const auto& e : entries) {
+        std::filesystem::remove(e.backup);
+        syncDirectory(e.backup.parent_path());
+    }
     std::filesystem::remove(journal);
+    syncDirectory(journal.parent_path());
 }
 } // namespace nexa::snapshot
