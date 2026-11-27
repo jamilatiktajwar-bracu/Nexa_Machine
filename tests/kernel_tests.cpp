@@ -710,6 +710,27 @@ int main() {
     assert(reclaimKernel.reapProcess(reclaimPid));
     assert(reclaimKernel.memoryManager().freeFrames()==freeBefore);
     assert(reclaimKernel.processes().empty());
+    nexa::NexaKernel quotaKernel(1024);
+    const auto quotaPid=quotaKernel.spawn("memory-quota",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,300},
+        {nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,600},
+        {nexa::Opcode::Halt,0}}});
+    quotaKernel.setMemoryPageLimit(quotaPid,2); // one code page plus one data page
+    bool belowUsageRejected=false;
+    try { quotaKernel.setMemoryPageLimit(quotaPid,1); }
+    catch(const std::invalid_argument&) { belowUsageRejected=true; }
+    assert(belowUsageRejected);
+    quotaKernel.run();
+    bool quotaFaulted=false;
+    for(const auto& process:quotaKernel.processes()) if(process.pid==quotaPid) {
+        quotaFaulted=process.state==nexa::ProcessState::Faulted&&
+            process.faultReason.find("memory page limit exceeded")!=std::string::npos&&
+            process.memoryPageLimit==2&&process.virtualPages==2;
+    }
+    assert(quotaFaulted);
+    quotaKernel.setMemoryPageLimit(quotaPid,0);
+    for(const auto& process:quotaKernel.processes()) if(process.pid==quotaPid) assert(process.memoryPageLimit==0);
+
     nexa::NexaKernel kernel(1024);
     nexa::Executable basic{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};
     const auto first=kernel.spawn("alpha",basic);
