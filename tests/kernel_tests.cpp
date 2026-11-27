@@ -659,9 +659,23 @@ int main() {
         {nexa::Opcode::Load,200},{nexa::Opcode::Output,nexa::VM::DisplayPort},
         {nexa::Opcode::Halt,0}}});
     assert(pagingKernel.memoryManager().mappedPages(pagingPid)==0);
+    auto pagingStats=pagingKernel.processes();
+    for(const auto& process:pagingStats) if(process.pid==pagingPid) {
+        assert(process.virtualPages==1);
+        assert(process.residentPages==1);
+        assert(process.swappedPages==0);
+        assert(process.residentBytes==nexa::VirtualMemoryManager::PageSize);
+    }
     pagingKernel.run();
     assert(pagingKernel.memoryManager().read(pagingPid,200,nexa::MemoryAccess::Kernel)==90);
     assert(pagingKernel.memoryManager().mappedPages(pagingPid)==1);
+    pagingStats=pagingKernel.processes();
+    for(const auto& process:pagingStats) if(process.pid==pagingPid) {
+        assert(process.virtualPages==2);
+        assert(process.residentPages==2);
+        assert(process.swappedPages==0);
+        assert(process.residentBytes==2*nexa::VirtualMemoryManager::PageSize);
+    }
     assert(pagingKernel.memoryManager().pageFaults()>=1);
     assert(pagingKernel.takeConsoleOutput()=="Z");
     const auto executeFaultPid=pagingKernel.spawn("execute-protection",nexa::Executable{0,{
