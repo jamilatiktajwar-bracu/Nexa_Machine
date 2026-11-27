@@ -29,6 +29,7 @@ public:
     void setSwapFile(const std::string& hostPath);
     [[nodiscard]] const std::string& swapFilePath() const noexcept{return swapFilePath_;}
     void createAddressSpace(std::uint32_t pid);
+    void setPageLimit(std::uint32_t pid,std::size_t pages);
     void destroyAddressSpace(std::uint32_t pid);
     void mapPage(std::uint32_t pid,std::uint8_t virtualPage,bool writable=true,bool userAccessible=true,bool executable=true);
     [[nodiscard]] std::uint16_t createSharedFrame();
@@ -62,6 +63,7 @@ private:
     std::vector<std::uint8_t> physical_;
     std::vector<bool> usedFrames_;
     std::map<std::uint32_t,std::map<std::uint8_t,PageMapping>> spaces_;
+    std::map<std::uint32_t,std::size_t> pageLimits_;
     mutable std::unordered_map<std::uint64_t,PageMapping> tlb_;
     mutable std::size_t tlbHits_{0},tlbMisses_{0};
     mutable std::size_t pageFaults_{0};
