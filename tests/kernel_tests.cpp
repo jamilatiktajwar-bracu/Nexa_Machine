@@ -195,7 +195,7 @@ int main() {
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedRead)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,5},{nexa::Opcode::Store,41},{nexa::Opcode::LoadImmediate,0x77},{nexa::Opcode::Store,42},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedWrite)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,44},
-        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,516},{nexa::Opcode::Load,516},{nexa::Opcode::Store,45},
+        {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
         {nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedDetach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(shmGuestPid,43)==1);
