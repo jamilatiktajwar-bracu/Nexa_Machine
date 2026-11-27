@@ -159,6 +159,12 @@ int main() {
     for(const auto& proc:signalProcesses) if(proc.pid==termPid)
         termRecorded=proc.state==nexa::ProcessState::Halted&&proc.exitCode==143&&proc.terminationReason=="signal:TERM";
     assert(termRecorded&&!signalKernel.sendSignal(termPid,nexa::ProcessSignal::Continue));
+    const auto killSignalPid=signalKernel.spawn("kill-signal-target",looping);
+    assert(signalKernel.sendSignal(killSignalPid,nexa::ProcessSignal::Kill));
+    bool killSignalRecorded=false;
+    for(const auto& proc:signalKernel.processes()) if(proc.pid==killSignalPid)
+        killSignalRecorded=proc.state==nexa::ProcessState::Halted&&proc.exitCode==137&&proc.terminationReason=="signal:KILL";
+    assert(killSignalRecorded);
 
     nexa::NexaKernel signalShellKernel(256);
     const auto shellSignalPid=signalShellKernel.spawn("shell-signal-target",looping);
