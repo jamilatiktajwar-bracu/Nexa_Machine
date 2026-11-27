@@ -1,6 +1,10 @@
 #include "nexa/workspace.hpp"
 #include <cstdlib>
 #include <sstream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include <cctype>
 namespace nexa {
 namespace {
 std::filesystem::path homePath() {
@@ -25,6 +29,17 @@ void WorkspacePaths::initialize() const {
  std::filesystem::create_directories(disks);
  std::filesystem::create_directories(snapshots);
  std::filesystem::create_directories(logs);
+}
+std::filesystem::path WorkspacePaths::createProfile(const std::string& name) const {
+ if(name.empty() || name.size()>48 || !std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c)||c=='-'||c=='_';})) throw std::invalid_argument("Profile name must be 1-48 characters: letters, digits, dash or underscore.");
+ initialize(); const auto target=profiles/(name+".json"); if(std::filesystem::exists(target)) throw std::runtime_error("Profile already exists: "+name);
+ std::ofstream out(target,std::ios::binary|std::ios::out); if(!out) throw std::runtime_error("Cannot create profile: "+target.string());
+ out<<"{\\n  \\\"name\\\": \\\""<<name<<"\\\",\\n  \\\"ram_bytes\\\": 256,\\n  \\\"disk_path\\\": \\\""<<(disks/(name+".disk")).string()<<"\\\",\\n  \\\"disk_bytes\\\": 1048576\\n}\\n"; out.close(); if(!out) throw std::runtime_error("Failed writing profile file."); return target;
+}
+std::vector<std::string> WorkspacePaths::listProfiles() const {
+ std::vector<std::string> result; if(!std::filesystem::exists(profiles)) return result;
+ for(const auto& entry:std::filesystem::directory_iterator(profiles)) if(entry.is_regular_file()&&entry.path().extension()==".json") result.push_back(entry.path().stem().string());
+ std::sort(result.begin(),result.end()); return result;
 }
 std::string WorkspacePaths::summary() const {
  std::ostringstream out;
