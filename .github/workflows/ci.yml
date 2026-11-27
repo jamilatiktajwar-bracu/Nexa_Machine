@@ -70,7 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: android-actions/setup-android@v3
+      - name: Android SDK path setup
+        run: echo "$ANDROID_HOME/cmdline-tools/16.0/bin" >> "$GITHUB_PATH"
       - name: Android SDK/NDK setup
         run: |
           yes | sdkmanager --licenses
