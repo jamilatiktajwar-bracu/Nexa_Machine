@@ -30,3 +30,4 @@ int main(){
  bool duplicate=false; try{paths.createProfile("portable_dev");}catch(const std::runtime_error&){duplicate=true;} assert(duplicate);
  std::filesystem::remove_all(paths.root);
  std::cout<<"Workspace path tests passed\n";
+}
