@@ -70,7 +70,8 @@ public:
   connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});
   connect(importDisk,&QPushButton::clicked,this,[this](){importDiskImage();});
   connect(exportDisk,&QPushButton::clicked,this,[this](){exportDiskImage();});
-  connect(step,&QPushButton::clicked,this,[this](){timer.stop();execute(true);});\n  connect(clearBp,&QPushButton::clicked,this,[this](){vm->clearBreakpoints();status->setText("Breakpoints cleared");});
+  connect(step,&QPushButton::clicked,this,[this](){timer.stop();execute(true);});
+  connect(clearBp,&QPushButton::clicked,this,[this](){vm->clearBreakpoints();status->setText("Breakpoints cleared");});
   connect(reset,&QPushButton::clicked,this,[this](){timer.stop();vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
   connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm->setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint");});
   connect(sendInput,&QPushButton::clicked,this,[this,guestInput](){vm->queueKeyboardInput(guestInput->text().toStdString()+"\n");guestInput->clear();status->setText("Input queued");});
