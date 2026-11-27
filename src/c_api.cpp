@@ -5,6 +5,7 @@
 #include "nexa/snapshot_journal.hpp"
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -99,11 +100,11 @@ int nexa_snapshot_restore_bundle(NexaContext*c,uint64_t id,const char*vmPath,con
 bool recoveredPending=false;if(pi!=c->diskPaths.end())for(const auto&[device,path]:pi->second){(void)device;const auto pending=std::filesystem::path(path+".nexa-journal");if(std::filesystem::exists(pending)){nexa::snapshot::recover(pending);recoveredPending=true;}}if(recoveredPending){auto di=c->disks.find(id);if(di!=c->disks.end())for(const auto&[device,disk]:di->second){(void)device;disk->load();}}
 const auto rollbackDir=std::filesystem::path(std::string(diskDirectory)+".rollback");std::filesystem::remove_all(rollbackDir);std::filesystem::create_directories(rollbackDir);const auto rollbackVm=rollbackDir/"current.vm";auto&vm=c->sessions.machine(key);vm.saveState(rollbackVm.string());nexa::snapshot::syncFile(rollbackVm);nexa::snapshot::syncDirectory(rollbackDir);const auto coordinator=rollbackDir/"transaction.journal";std::vector<std::pair<std::filesystem::path,std::pair<std::filesystem::path,std::filesystem::path>>> groupFiles;if(pi!=c->diskPaths.end())for(const auto&[device,path]:pi->second){auto sidecar=std::filesystem::path(path+".nexa-journal");auto backup=rollbackDir/(std::string("device-")+std::to_string(device)+".disk");groupFiles.push_back({sidecar,{path,backup}});}nexa::snapshot::prepareGroup(coordinator,groupFiles);try{if(pi!=c->diskPaths.end()){for(const auto&[device,path]:pi->second){std::filesystem::copy_file(dir/(std::string("device-")+std::to_string(device)+".disk"),path,std::filesystem::copy_options::overwrite_existing);nexa::snapshot::syncFile(path);nexa::snapshot::syncDirectory(std::filesystem::path(path).parent_path());}}
 #ifdef NEXA_ENABLE_TEST_HOOKS
-if(snapshotRestoreFailpoint==1)throw std::runtime_error("Injected snapshot restore failure after disk replacement");
+if(snapshotRestoreFailpoint==1)throw std::runtime_error("Injected snapshot restore failure after disk replacement");if(snapshotRestoreFailpoint==3)std::_Exit(83);
 #endif
 auto di=c->disks.find(id);if(di!=c->disks.end())for(const auto&[device,disk]:di->second)disk->load();vm.loadState(vmFile.string());
 #ifdef NEXA_ENABLE_TEST_HOOKS
-if(snapshotRestoreFailpoint==2)throw std::runtime_error("Injected snapshot restore failure after VM load");
+if(snapshotRestoreFailpoint==2)throw std::runtime_error("Injected snapshot restore failure after VM load");if(snapshotRestoreFailpoint==4)std::_Exit(84);
 #endif
 }catch(...){nexa::snapshot::recover(coordinator);auto di=c->disks.find(id);if(di!=c->disks.end())for(const auto&[device,disk]:di->second){(void)device;disk->load();}vm.loadState(rollbackVm.string());throw;}nexa::snapshot::commitGroup(coordinator);std::filesystem::remove_all(rollbackDir);});}
 
