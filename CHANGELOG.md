@@ -2,6 +2,13 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.10.0] — Process signals and lifecycle control
+- Added TERM/KILL termination signals, STOP/CONT process suspension and resumption, and bounded FIFO USR1/USR2 queues.
+- Added guest `SYS GetSignal` service (13), returning the next pending user signal or zero.
+- Added root-only `signal PID SIGNAL`, stopped-state visibility and pending-signal counts in `ps`.
+- Added regression coverage for queue bounds, FIFO delivery, guest signal polling, process transitions and shell controls.
+- Signal delivery is intentionally a compact simulator ABI: no user-installed handlers, masks, real-time signals or Unix permission model.
+
 ## [2.9.1] — Scheduler quotas and VM safety polish
 - Per-process instruction budget controls, exact quota termination with exit code 124.
 - 4,096-entry VM stack cap and controlled stack overflow faults.
