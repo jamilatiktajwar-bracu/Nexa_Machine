@@ -43,8 +43,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
             memory_.protectPage(codeSpace,static_cast<std::uint8_t>(page),false,true,true);
     } catch(...) {
         if(codeSpaceCreated) memory_.destroyAddressSpace(codeSpace);
-        for(auto id:it->second.sharedAttachments){auto s=sharedSegments_.find(id);if(s!=sharedSegments_.end())s->second.attached.erase(pid);}
-    memory_.destroyAddressSpace(pid);
+        memory_.destroyAddressSpace(pid);
         throw;
     }
     p.machine.setMemoryAccessors(
