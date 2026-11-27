@@ -2,7 +2,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.21.1**
+**Current development milestone: Nexa OS 2.22.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
@@ -212,3 +212,11 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 - Guest syscalls `SendMessage` (11) and `ReceiveMessage` (12), validated RAM descriptors, bounded payloads and scheduler deadlock detection.
 - Shell diagnostics and administration: `ps`, `sched`, `memstat`, root-only `nice PID PRIORITY`, `limit PID INSTRUCTIONS`, `aging TICKS`, `quantum INSTRUCTIONS`, `timer TICKS`, `swapfile HOST_PATH`, `kill PID` and `reap PID` (`aging 0` disables aging).
 - See [Nexa OS 2.9 documentation](docs/NEXA_OS_2_9.md) for the guest ABI and scheduler semantics.
+
+
+## Nexa OS 2.22 — Mutex deadlock detection
+
+- `NexaKernel::hasMutexDeadlock()` traverses mutex wait-for dependencies and reports circular waits (including multi-process cycles).
+- Acyclic blocking is not reported as a mutex deadlock; the existing `hasDeadlock()` remains a scheduler-stall indicator for when no process is runnable.
+- Process termination cleanup and mutex owner handoff remove stale wait edges, allowing the cycle detector to recover.
+- This is deterministic graph analysis for the simulator's kernel-managed mutexes; it does not detect arbitrary guest-level logical deadlocks.
