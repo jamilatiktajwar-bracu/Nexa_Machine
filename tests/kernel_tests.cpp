@@ -146,7 +146,7 @@ int main() {
     const auto ownerPid=syncKernel.spawn("mutex-owner",looping);
     const auto lockWaiterPid=syncKernel.spawn("mutex-waiter",nexa::Executable{0,{
         {nexa::Opcode::LoadBImmediate,mutexId},
-        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,101},{nexa::Opcode::Halt,0}}});
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,101},{nexa::Opcode::Jump,4}}});
     assert(syncKernel.mutexLock(ownerPid,mutexId));
     assert(syncKernel.sendSignal(ownerPid,nexa::ProcessSignal::Stop));
     assert(syncKernel.scheduleOne());
@@ -162,7 +162,7 @@ int main() {
     const auto deathOwner=syncKernel.spawn("mutex-owner-dies",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
     const auto deathWaiter=syncKernel.spawn("mutex-death-waiter",nexa::Executable{0,{
         {nexa::Opcode::LoadBImmediate,deathMutex},
-        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,102},{nexa::Opcode::Halt,0}}});
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,102},{nexa::Opcode::Jump,4}}});
     assert(syncKernel.mutexLock(deathOwner,deathMutex));
     assert(syncKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
     assert(syncKernel.scheduleOne());
