@@ -19,7 +19,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::GetSignal)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::MutexUnlock)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -134,6 +134,66 @@ std::optional<ProcessSignal> NexaKernel::receiveSignal(std::uint32_t pid) {
     const auto signal=it->second.signals.front();
     it->second.signals.pop_front();
     return signal;
+}
+std::uint8_t NexaKernel::createSemaphore(std::uint8_t initial,std::uint8_t maximum) {
+    if(maximum==0||initial>maximum) throw std::invalid_argument("Semaphore requires 0 <= initial <= maximum and maximum > 0");
+    if(nextSemaphore_>MaxSyncObjects) throw std::runtime_error("Semaphore table exhausted");
+    const auto id=static_cast<std::uint8_t>(nextSemaphore_++);
+    semaphores_.emplace(id,Semaphore{initial,maximum,{}});
+    return id;
+}
+bool NexaKernel::semaphoreWait(std::uint32_t pid,std::uint8_t id) {
+    auto p=processes_.find(pid);auto s=semaphores_.find(id);
+    if(p==processes_.end()) throw std::out_of_range("Unknown process id");
+    if(s==semaphores_.end()) throw std::out_of_range("Unknown semaphore id");
+    if(p->second.info.state==ProcessState::Halted||p->second.info.state==ProcessState::Faulted) return false;
+    auto& sem=s->second;
+    if(sem.count>0){--sem.count;return true;}
+    if(std::find(sem.waiters.begin(),sem.waiters.end(),pid)==sem.waiters.end()) sem.waiters.push_back(pid);
+    p->second.info.state=ProcessState::Blocked;
+    p->second.machine.retryCurrentInstruction();
+    return false;
+}
+bool NexaKernel::semaphoreSignal(std::uint8_t id) {
+    auto s=semaphores_.find(id);if(s==semaphores_.end())throw std::out_of_range("Unknown semaphore id");
+    auto& sem=s->second;
+    while(!sem.waiters.empty()){
+        const auto pid=sem.waiters.front();sem.waiters.pop_front();
+        auto p=processes_.find(pid);
+        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){p->second.info.state=ProcessState::Ready;return true;}
+    }
+    if(sem.count==sem.maximum)return false;
+    ++sem.count;return true;
+}
+std::uint8_t NexaKernel::createMutex() {
+    if(nextMutex_>MaxSyncObjects)throw std::runtime_error("Mutex table exhausted");
+    const auto id=static_cast<std::uint8_t>(nextMutex_++);
+    mutexes_.emplace(id,Mutex{});
+    return id;
+}
+bool NexaKernel::mutexLock(std::uint32_t pid,std::uint8_t id) {
+    auto p=processes_.find(pid);auto m=mutexes_.find(id);
+    if(p==processes_.end())throw std::out_of_range("Unknown process id");
+    if(m==mutexes_.end())throw std::out_of_range("Unknown mutex id");
+    if(p->second.info.state==ProcessState::Halted||p->second.info.state==ProcessState::Faulted)return false;
+    auto& mutex=m->second;
+    if(!mutex.owner){mutex.owner=pid;return true;}
+    if(*mutex.owner==pid)return false;
+    if(std::find(mutex.waiters.begin(),mutex.waiters.end(),pid)==mutex.waiters.end())mutex.waiters.push_back(pid);
+    p->second.info.state=ProcessState::Blocked;
+    p->second.machine.retryCurrentInstruction();
+    return false;
+}
+bool NexaKernel::mutexUnlock(std::uint32_t pid,std::uint8_t id) {
+    auto m=mutexes_.find(id);if(m==mutexes_.end())throw std::out_of_range("Unknown mutex id");
+    auto& mutex=m->second;
+    if(!mutex.owner||*mutex.owner!=pid)return false;
+    while(!mutex.waiters.empty()){
+        const auto next=mutex.waiters.front();mutex.waiters.pop_front();
+        auto p=processes_.find(next);
+        if(p!=processes_.end()&&p->second.info.state==ProcessState::Blocked){mutex.owner=next;p->second.info.state=ProcessState::Ready;return true;}
+    }
+    mutex.owner.reset();return true;
 }
 bool NexaKernel::reapProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
@@ -324,6 +384,10 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
     case Syscall::Yield: it->second.yieldRequested=true; return 0;
     case Syscall::GetSignal: { const auto signal=receiveSignal(pid); return signal?static_cast<std::uint8_t>(*signal):0; }
+    case Syscall::SemaphoreWait: return semaphoreWait(pid,arg)?1:0;
+    case Syscall::SemaphoreSignal: return semaphoreSignal(arg)?1:0;
+    case Syscall::MutexLock: return mutexLock(pid,arg)?1:0;
+    case Syscall::MutexUnlock: return mutexUnlock(pid,arg)?1:0;
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     case Syscall::OpenRead:
     case Syscall::OpenWrite: {
