@@ -45,6 +45,9 @@ public:
     [[nodiscard]] std::size_t translate(std::uint32_t pid,std::uint16_t virtualAddress,MemoryAccess access=MemoryAccess::User,bool writeAccess=false,bool executeAccess=false) const;
     void setPageFaultHandler(std::function<void(std::uint32_t,std::uint8_t)> handler){pageFaultHandler_=std::move(handler);}
     void setAllocationRecoveryHandler(std::function<void()> handler){allocationRecoveryHandler_=std::move(handler);}
+    [[nodiscard]] std::size_t allocationRecoveryAttempts() const noexcept{return allocationRecoveryAttempts_;}
+    [[nodiscard]] std::size_t allocationRecoverySuccesses() const noexcept{return allocationRecoverySuccesses_;}
+    [[nodiscard]] std::size_t allocationRecoveryFailures() const noexcept{return allocationRecoveryFailures_;}
     [[nodiscard]] std::size_t pageFaults() const noexcept{return pageFaults_;}
     void flushTlb() const noexcept;
     void invalidateTlb(std::uint32_t pid) const noexcept;
@@ -76,6 +79,7 @@ private:
     std::function<void(std::uint32_t,std::uint8_t)> pageFaultHandler_;
     std::function<void()> allocationRecoveryHandler_;
     bool allocationRecoveryInProgress_{false};
+    std::size_t allocationRecoveryAttempts_{0},allocationRecoverySuccesses_{0},allocationRecoveryFailures_{0};
     static constexpr std::size_t TlbCapacity=16;
     [[nodiscard]] PageMapping& mapping(std::uint32_t pid,std::uint8_t page);
     [[nodiscard]] const PageMapping& mapping(std::uint32_t pid,std::uint8_t page) const;
