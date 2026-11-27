@@ -1,5 +1,12 @@
 
 
+## Nexa OS 2.28 — Per-process memory limits
+
+- Root can set a process page budget with `memlimit PID PAGES`; `0` disables the limit.
+- The quota covers executable and data pages, including shared-memory mappings, and is enforced when new pages are mapped.
+- A process exceeding its quota receives an isolated memory-limit fault; setting a limit below current usage is rejected.
+- `ps` reports the configured `memlimit` alongside resident and virtual memory metrics.
+
 ## Nexa OS 2.27 — Per-process memory accounting
 
 - `ProcessInfo` now reports each process's combined data/code virtual pages, resident pages, swapped pages, and resident bytes.
