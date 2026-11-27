@@ -13,6 +13,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.nexa.machine
         PRODUCT_NAME: NexaMachine
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_OBJC_BRIDGING_HEADER: Nexa-Bridging-Header.h
