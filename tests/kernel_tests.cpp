@@ -349,6 +349,38 @@ int main() {
         assert(sharedStressKernel.memoryManager().freeFrames()==stressFreeFrames);
     }
 
+    // A late-page collision must roll back earlier aliases without touching
+    // the guest's pre-existing mapping.
+    nexa::NexaKernel rollbackKernel(1024);
+    const auto rollbackPid=rollbackKernel.spawn("shm-map-rollback",looping);
+    const auto rollbackFree=rollbackKernel.memoryManager().freeFrames();
+    const auto rollbackId=rollbackKernel.createSharedMemory(300);
+    assert(rollbackKernel.attachSharedMemory(rollbackPid,rollbackId));
+    rollbackKernel.memoryManager().mapPage(rollbackPid,101,true,true,false);
+    bool mappingCollision=false;
+    try { (void)rollbackKernel.mapSharedMemory(rollbackPid,rollbackId,100); }
+    catch(const std::invalid_argument&) { mappingCollision=true; }
+    assert(mappingCollision);
+    assert(!rollbackKernel.memoryManager().isMapped(rollbackPid,100));
+    assert(rollbackKernel.memoryManager().isMapped(rollbackPid,101));
+    assert(rollbackKernel.memoryManager().mappedPages(rollbackPid)>=1);
+    rollbackKernel.memoryManager().unmapPage(rollbackPid,101);
+    assert(rollbackKernel.destroySharedMemory(rollbackId));
+    assert(rollbackKernel.memoryManager().freeFrames()==rollbackFree);
+
+    // Destroying a live mapped segment must revoke every guest alias and
+    // reclaim its backing frames even while the process remains alive.
+    const auto revokeId=rollbackKernel.createSharedMemory(300);
+    assert(rollbackKernel.attachSharedMemory(rollbackPid,revokeId));
+    assert(rollbackKernel.mapSharedMemory(rollbackPid,revokeId,110));
+    assert(rollbackKernel.memoryManager().isMapped(rollbackPid,110));
+    assert(rollbackKernel.memoryManager().isMapped(rollbackPid,111));
+    assert(rollbackKernel.destroySharedMemory(revokeId));
+    assert(!rollbackKernel.memoryManager().isMapped(rollbackPid,110));
+    assert(!rollbackKernel.memoryManager().isMapped(rollbackPid,111));
+    assert(!rollbackKernel.readSharedMemory(rollbackPid,revokeId,0));
+    assert(rollbackKernel.memoryManager().freeFrames()==rollbackFree);
+
     const auto mutex2=syncKernel.createMutex();
     assert(syncKernel.mutexLock(ownerPid,mutex2));
     assert(!syncKernel.mutexLock(ownerPid,mutex2));
