@@ -157,6 +157,18 @@ int main() {
     assert(syncKernel.readProcessMemory(lockWaiterPid,101)==1);
     assert(!syncKernel.mutexUnlock(ownerPid,mutexId));
     assert(syncKernel.mutexUnlock(lockWaiterPid,mutexId));
+    const auto deathMutex=syncKernel.createMutex();
+    const auto deathOwner=syncKernel.spawn("mutex-owner-dies",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
+    const auto deathWaiter=syncKernel.spawn("mutex-death-waiter",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},
+        {nexa::Opcode::LoadImmediate,deathMutex},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,102},{nexa::Opcode::Halt,0}}});
+    assert(syncKernel.mutexLock(deathOwner,deathMutex));
+    assert(syncKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
+    assert(syncKernel.scheduleOne());
+    assert(syncKernel.terminateProcess(deathOwner));
+    assert(syncKernel.scheduleOne());
+    assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
+    assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
     const auto mutex2=syncKernel.createMutex();
     assert(syncKernel.mutexLock(ownerPid,mutex2));
     assert(!syncKernel.mutexLock(ownerPid,mutex2));
