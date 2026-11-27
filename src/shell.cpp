@@ -39,7 +39,7 @@ std::string NexaShell::execute(const std::string& line) {
     }
     lastActivity_=now;
     try {
-        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | memstat | swapfile HOST_PATH | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
+        if(command=="help") return "help | whoami | logout | useradd USER PASSWORD | login USER PASSWORD | passwd [USER] PASSWORD | unlock USER | groupadd GROUP | usermod -g GROUP USER | usermod -aG GROUP USER | usermod -rG GROUP USER | groups [USER] | chgrp GROUP PATH | chmod MODE PATH | chown USER PATH | pwd | cd DIR | ls [DIR] | cat PATH | touch PATH | mkdir PATH | write PATH TEXT | rm PATH | run PATH | ps | nice PID PRIORITY | limit PID INSTRUCTIONS | aging TICKS | quantum INSTRUCTIONS | timer TICKS | sched | memstat | swapfile HOST_PATH | signal PID TERM|KILL|STOP|CONT|USR1|USR2 | kill PID | reap PID | savefs HOST_PATH | loadfs HOST_PATH";
         if(command=="whoami") return security_.loggedIn()?security_.currentUser():"(not logged in)";
         if(command=="logout") { security_.logout(); currentDirectory_="/"; return "session closed"; }
         if(!security_.loggedIn() && command!="login") return "session locked; login first";
@@ -145,6 +145,22 @@ std::string NexaShell::execute(const std::string& line) {
             kernel_.setPriority(static_cast<std::uint32_t>(pidValue),static_cast<std::uint8_t>(priorityValue));
             return "priority updated";
         }
+        if(command=="signal") {
+            std::string pidText,signalText; input>>pidText>>signalText;
+            if(pidText.empty()||signalText.empty()) return "usage: signal PID TERM|KILL|STOP|CONT|USR1|USR2";
+            if(security_.currentUser()!="root") return "permission denied";
+            std::size_t used=0; const auto pidValue=std::stoull(pidText,&used);
+            if(used!=pidText.size()||pidValue>0xFFFFFFFFu) return "invalid PID";
+            ProcessSignal signal;
+            if(signalText=="TERM") signal=ProcessSignal::Terminate;
+            else if(signalText=="KILL") signal=ProcessSignal::Kill;
+            else if(signalText=="STOP") signal=ProcessSignal::Stop;
+            else if(signalText=="CONT") signal=ProcessSignal::Continue;
+            else if(signalText=="USR1") signal=ProcessSignal::User1;
+            else if(signalText=="USR2") signal=ProcessSignal::User2;
+            else return "invalid signal (TERM, KILL, STOP, CONT, USR1, USR2)";
+            return kernel_.sendSignal(static_cast<std::uint32_t>(pidValue),signal)?"signal delivered":"signal not accepted";
+        }
         if(command=="kill") {
             std::string pidText; input>>pidText;
             if(pidText.empty()) return "usage: kill PID";
@@ -220,10 +236,10 @@ std::string NexaShell::execute(const std::string& line) {
         if(command=="ps") {
             std::string out;
             for(const auto& p:kernel_.processes()) {
-                const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Halted?"halted":"faulted";
+                const char* state=p.state==ProcessState::Ready?"ready":p.state==ProcessState::Running?"running":p.state==ProcessState::Blocked?"blocked":p.state==ProcessState::Stopped?"stopped":p.state==ProcessState::Halted?"halted":"faulted";
                 out+=std::to_string(p.pid)+" "+p.name+" "+state+" priority="+std::to_string(p.priority)+
                     " effective_priority="+std::to_string(p.effectivePriority)+" ticks="+std::to_string(p.ticks)+
-                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" budget="+std::to_string(p.instructionBudget)+" inbox="+std::to_string(p.pendingMessages)+
+                    " wait_ticks="+std::to_string(p.readyWaitTicks)+" budget="+std::to_string(p.instructionBudget)+" inbox="+std::to_string(p.pendingMessages)+" signals="+std::to_string(p.pendingSignals)+
                     " exit_code="+(p.exitCode?std::to_string(*p.exitCode):"-")+
                     " reason="+(p.terminationReason.empty()?"-":p.terminationReason);
                 if(!p.faultReason.empty()) out+=" fault="+p.faultReason;
