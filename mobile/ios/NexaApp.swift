@@ -46,7 +46,7 @@ struct SessionView: View {
         .fileImporter(isPresented: $showingDiskImporter, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls): if let url = urls.first { model.attachDisk(from: url) }
-            case .failure(let error): model.status = "Import error: \\(error.localizedDescription)"
+            case .failure(let error): model.status = "Import error: \(error.localizedDescription)"
             }
         }
         .task { model.create() }
