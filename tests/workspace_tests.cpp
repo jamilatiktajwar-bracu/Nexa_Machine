@@ -19,7 +19,7 @@ int main(){
  assert(std::filesystem::is_directory(paths.snapshots));
  assert(std::filesystem::is_directory(paths.logs));
  auto profile=paths.createProfile("portable_dev"); assert(std::filesystem::exists(profile));\n auto cfg=nexa::MachineConfig::load(profile.string()); assert(cfg.name=="portable_dev" && cfg.ramBytes==256 && cfg.diskBytes==1048576);\n auto custom=paths.createProfile("custom_vm",4096,8388608); auto customCfg=nexa::MachineConfig::load(custom.string()); assert(customCfg.ramBytes==4096&&customCfg.diskBytes==8388608);\n bool invalidSize=false;try{paths.createProfile("badsize",0,100);}catch(const std::invalid_argument&){invalidSize=true;}assert(invalidSize); assert(cfg.diskPath.find("portable_dev.disk")!=std::string::npos);
- auto names=paths.listProfiles(); assert(names.size()==1 && names[0]=="portable_dev");
+ auto names=paths.listProfiles(); assert(names.size()==2 && names[0]=="custom_vm" && names[1]=="portable_dev");
  bool rejected=false; try{paths.createProfile("../bad");}catch(const std::invalid_argument&){rejected=true;} assert(rejected);
  bool duplicate=false; try{paths.createProfile("portable_dev");}catch(const std::runtime_error&){duplicate=true;} assert(duplicate);
  std::filesystem::remove_all(paths.root);
