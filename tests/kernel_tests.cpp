@@ -593,9 +593,14 @@ int main() {
     assert(!mutexDeadlockKernel.hasMutexDeadlock());
     assert(!mutexDeadlockKernel.mutexLock(cycleB,cycleMutexA));
     assert(mutexDeadlockKernel.hasMutexDeadlock());
+    const auto detectedCycle=mutexDeadlockKernel.mutexDeadlockCycle();
+    assert(detectedCycle.size()==2);
+    assert(std::find(detectedCycle.begin(),detectedCycle.end(),cycleA)!=detectedCycle.end());
+    assert(std::find(detectedCycle.begin(),detectedCycle.end(),cycleB)!=detectedCycle.end());
     // Owner exit removes its wait edge and hands its mutex to the surviving waiter.
     assert(mutexDeadlockKernel.terminateProcess(cycleB));
     assert(!mutexDeadlockKernel.hasMutexDeadlock());
+    assert(mutexDeadlockKernel.mutexDeadlockCycle().empty());
     assert(mutexDeadlockKernel.mutexLock(cycleA,cycleMutexB));
 
     // Inbox capacity is bounded and FIFO; a full mailbox never overwrites messages.
