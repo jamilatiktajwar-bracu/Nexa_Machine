@@ -47,7 +47,7 @@ void WorkspacePaths::initialize() const {
 std::filesystem::path WorkspacePaths::createProfile(const std::string& name, std::size_t ramBytes, std::size_t diskBytes) const {
  if(!validProfileName(name))
   throw std::invalid_argument("Profile name must be 1-48 characters: letters, digits, dash or underscore.");
- if(ramBytes==0||ramBytes>65536||diskBytes==0) throw std::invalid_argument("RAM must be 1..65536 bytes and disk size must be positive.");
+ if(ramBytes==0||ramBytes>65536||diskBytes==0||diskBytes>134217728) throw std::invalid_argument("RAM must be 1..65536 bytes and disk size 1..128 MiB.");
  initialize();
  const auto target=profiles/(name+".json");
  if(std::filesystem::exists(target)) throw std::runtime_error("Profile already exists: "+name);
