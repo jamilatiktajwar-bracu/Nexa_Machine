@@ -40,3 +40,17 @@ targets:
           cmake -S "$ROOT" -B "$BUILD" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$SYSROOT" -DCMAKE_OSX_ARCHITECTURES="$ARCH_LIST" -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF
           cmake --build "$BUILD" --target nexa_vm_core --config Release --parallel
         basedOnDependencyAnalysis: false
+
+  NexaMachineTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: NexaMachineTests
+    dependencies:
+      - target: NexaMachine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.nexa.machine.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
