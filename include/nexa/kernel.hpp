@@ -27,7 +27,7 @@ struct ProcessInfo {
     std::uint64_t instructionBudget{0};
     std::size_t pendingSignals{0};
 };
-enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13 };
+enum class Syscall : std::uint8_t { Exit=0, Write=1, Read=2, GetPid=3, Yield=4, FileExists=5, OpenRead=6, OpenWrite=7, ReadByte=8, WriteByte=9, CloseFile=10, SendMessage=11, ReceiveMessage=12, GetSignal=13, SemaphoreWait=14, SemaphoreSignal=15, MutexLock=16, MutexUnlock=17 };
 enum class ProcessSignal : std::uint8_t { Terminate=1, Kill=2, Stop=3, Continue=4, User1=10, User2=12 };
 struct IpcMessage { std::uint32_t sender{}; std::vector<std::uint8_t> payload; };
 enum class FilePermission : std::uint8_t { None=0, Read=1, Write=2, Execute=4 };
@@ -52,6 +52,12 @@ public:
     [[nodiscard]] std::uint64_t timerInterrupts() const noexcept{return timerInterrupts_;}
     [[nodiscard]] std::uint64_t pendingTimerInterrupts() const noexcept{return pendingTimerInterrupts_;}
     bool acknowledgeTimerInterrupt() noexcept;
+    std::uint8_t createSemaphore(std::uint8_t initial,std::uint8_t maximum);
+    bool semaphoreWait(std::uint32_t pid,std::uint8_t id);
+    bool semaphoreSignal(std::uint8_t id);
+    std::uint8_t createMutex();
+    bool mutexLock(std::uint32_t pid,std::uint8_t id);
+    bool mutexUnlock(std::uint32_t pid,std::uint8_t id);
     bool sendMessage(std::uint32_t from,std::uint32_t to,std::vector<std::uint8_t> payload);
     [[nodiscard]] std::optional<IpcMessage> receiveMessage(std::uint32_t pid);
     bool scheduleOne();
@@ -70,6 +76,8 @@ public:
 private:
     struct OpenFile { std::string path; std::size_t position{}; bool writable{}; };
     struct Process { ProcessInfo info; VM machine; std::map<std::uint8_t, OpenFile> openFiles; std::uint16_t nextHandle{1}; std::deque<IpcMessage> inbox; std::deque<ProcessSignal> signals; bool yieldRequested{false}; std::uint64_t readyWaitTicks{0}; };
+    struct Semaphore { std::uint16_t count{},maximum{}; std::deque<std::uint32_t> waiters; };
+    struct Mutex { std::optional<std::uint32_t> owner{}; std::deque<std::uint32_t> waiters; };
     std::size_t ramBytes_;
     std::uint32_t nextPid_{1}, currentPid_{0};
     std::map<std::uint32_t, Process> processes_;
@@ -81,6 +89,10 @@ private:
     VirtualMemoryManager memory_;
     std::string output_;
     std::map<std::uint32_t, std::map<std::string, std::uint8_t>> filePermissions_;
+    std::map<std::uint8_t,Semaphore> semaphores_;
+    std::map<std::uint8_t,Mutex> mutexes_;
+    std::uint16_t nextSemaphore_{1},nextMutex_{1};
+    static constexpr std::size_t MaxSyncObjects=255;
     [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
 };
 }
