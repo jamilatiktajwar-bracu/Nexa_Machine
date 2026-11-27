@@ -285,6 +285,7 @@ void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructio
         it->second.openFiles.clear();
         it->second.inbox.clear();
         it->second.signals.clear();
+        cleanupSynchronizationState(pid);
         releaseOwnedMutexes(pid);
     }
 }
@@ -397,6 +398,7 @@ bool NexaKernel::scheduleOne() {
         releaseSharedAttachments(pid);
         proc.inbox.clear();
         proc.signals.clear();
+        cleanupSynchronizationState(pid);
         releaseOwnedMutexes(pid);
     }
     proc.yieldRequested=false;
@@ -573,7 +575,7 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); releaseSharedAttachments(pid); it->second.inbox.clear(); it->second.signals.clear(); releaseOwnedMutexes(pid); return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); releaseSharedAttachments(pid); it->second.inbox.clear(); it->second.signals.clear(); cleanupSynchronizationState(pid); releaseOwnedMutexes(pid); return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
