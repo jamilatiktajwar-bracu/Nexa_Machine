@@ -17,7 +17,7 @@ Current kernel capabilities include:
 - Kernel-managed shared-memory segments plus guest syscalls 18–21 and 25–27 for read/write or read-only attach, detach, byte and 16-bit atomic read-modify-write through checked descriptors; `shmstat` diagnostics.
 - Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
-Start with the [Nexa OS 2.17 guide](docs/NEXA_OS_2_17.md) or the [Nexa OS 2.16 guide](docs/NEXA_OS_2_15.md) or the [Nexa OS 2.12 guide](docs/NEXA_OS_2_12.md) or the [Nexa OS 2.11 guide](docs/NEXA_OS_2_11.md) or the [Nexa OS 2.10 guide](docs/NEXA_OS_2_10.md) or the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
+Start with the [Nexa OS 2.18 guide](docs/NEXA_OS_2_18.md) or the [Nexa OS 2.17 guide](docs/NEXA_OS_2_17.md) or the [Nexa OS 2.16 guide](docs/NEXA_OS_2_15.md) or the [Nexa OS 2.12 guide](docs/NEXA_OS_2_12.md) or the [Nexa OS 2.11 guide](docs/NEXA_OS_2_11.md) or the [Nexa OS 2.10 guide](docs/NEXA_OS_2_10.md) or the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
 ## Version 1.0 (OS kernel foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
