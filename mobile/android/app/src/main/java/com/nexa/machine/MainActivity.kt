@@ -45,7 +45,7 @@ private fun NexaScreen() {
             val rc = NexaNative.run(context, session, 128)
             console = NexaNative.console(context, session)
             if (rc != 0) { status = NexaNative.lastError(context); running = false }
-            else { status = "Running"; delay(15) }
+            else { val state = NexaNative.state(context, session); if (state == 4) { status = "Halted"; running = false } else if (state == 5) { status = "Faulted"; running = false } else { status = "Running"; delay(15) } }
         }
     }
 
