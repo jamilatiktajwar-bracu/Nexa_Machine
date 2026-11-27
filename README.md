@@ -308,3 +308,7 @@ Physical-memory pressure now triggers global LRU page eviction into simulated sw
 - Acyclic blocking is not reported as a mutex deadlock; the existing `hasDeadlock()` remains a scheduler-stall indicator for when no process is runnable.
 - Process termination cleanup and mutex owner handoff remove stale wait edges, allowing the cycle detector to recover.
 - This is deterministic graph analysis for the simulator's kernel-managed mutexes; it does not detect arbitrary guest-level logical deadlocks.
+
+## Desktop VM Manager (Qt 6)
+
+The desktop UI now supports selecting and creating VM profiles, loading assembly source files, Run/Step/Reset, breakpoints, interactive framebuffer drawing, RAM inspection, and saving/restoring VM snapshots. Snapshot state does not include virtual disk images. See [desktop VM manager guide](docs/GUI_VM_MANAGER.md).
