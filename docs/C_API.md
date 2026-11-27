@@ -38,3 +38,8 @@ For arbitrary guest RAM buffers, `nexa_disk_read_to_guest` and `nexa_disk_write_
 ## Guest descriptor I/O and cooperative completion
 
 A guest can submit a disk operation with `nexa_disk_submit_guest`. The descriptor is 11 bytes, little-endian: byte 0 is operation (0=read, 1=write), bytes 1–4 are the 32-bit device ID, bytes 5–8 are the 32-bit sector index, and bytes 9–10 are the guest RAM buffer address. The 512-byte buffer must fit in guest RAM. Submission returns a monotonically increasing request ID and queues the request; it does not perform disk I/O immediately. The host scheduler calls `nexa_disk_process_one` to process at most one request. Poll `nexa_disk_request_status`: 0 pending, 1 completed, -1 failed. On successful completion the VM receives the caller-selected interrupt vector through its existing interrupt controller. Failed requests expose a message through `nexa_disk_request_error` and do not trigger a completion interrupt. This is cooperative asynchronous architecture: queue submission and completion are separated, but processing is host-pumped and not a background thread.
+
+
+## Coordinated VM + disk snapshots
+
+Use `nexa_snapshot_save_bundle` to flush all currently attached disks, save VM execution state, and copy each attached image into a bundle directory named `device-<id>.disk`. `nexa_snapshot_restore_bundle` restores each currently attached disk image and reloads it into the virtual disk cache before restoring VM state. The caller must keep the same device IDs attached and serialize all context operations during save/restore. This is a coordinated single-process checkpoint, not a crash-atomic multi-file transaction; retain a backup of important disk images until stronger journaled atomicity is implemented.
