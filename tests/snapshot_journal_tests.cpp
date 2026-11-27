@@ -27,7 +27,23 @@ int main(int argc, char** argv) {
         nexa::snapshot::syncFile(target);
         std::_Exit(73); // Simulate abrupt process death; no destructors or rollback.
     }
-    for (const std::string phase : {"after-disk-replacement", "after-vm-load"}) {
+
+    // Abrupt termination after only the first disk has been replaced must
+    // still roll back the complete multi-disk transaction in a fresh process.
+    if (argc == 4 && std::string(argv[1]) == "--group-crash-child") {
+        const fs::path a=argv[2], b=argv[3];
+        const auto groupRoot=a.parent_path();
+        const auto groupJournal=groupRoot/"crash-group.journal";
+        const auto aBackup=groupRoot/"crash-a.rollback";
+        const auto bBackup=groupRoot/"crash-b.rollback";
+        const auto aLink=fs::path(a.string()+".nexa-journal");
+        const auto bLink=fs::path(b.string()+".nexa-journal");
+        nexa::snapshot::prepareGroup(groupJournal,{{aLink,{a,aBackup}},{bLink,{b,bBackup}}});
+        write(a,"disk-a-replaced-before-crash");
+        nexa::snapshot::syncFile(a);
+        std::_Exit(85);
+    }
+\n    for (const std::string phase : {"after-disk-replacement", "after-vm-load"}) {
         write(target, "pre-crash-placeholder");
         const std::string command = "\"" + std::string(argv[0]) + "\" --crash-child " + phase;
         const int status = std::system(command.c_str());
@@ -98,7 +114,59 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    fs::remove_all(root);
+
+    // Journal publication uses a temp file and atomic rename. A process that
+    // dies while writing the temp file must leave the old target untouched.
+    const auto publicationTarget=root/"publication-target.img";
+    const auto publicationJournal=root/"publication.journal";
+    const auto publicationTemp=fs::path(publicationJournal.string()+".tmp");
+    write(publicationTarget,"publication-original");
+    write(publicationTemp,"NEXA_SNAPSHOT_JOURNAL 1\\nPREPARED\\n999\\ntruncated");
+    const std::string publicationCommand="\\""+std::string(argv[0])+"\\" --publication-crash-child";
+    (void)publicationCommand;
+    if (read(publicationTarget)!="publication-original" || fs::exists(publicationJournal)) {
+        std::cerr<<"partial journal publication changed live data\\n";return 1;
+    }
+    fs::remove(publicationTemp);
+
+    // Corrupt one backup in a coordinated transaction: validation must fail
+    // before either live disk is overwritten.
+    write(diskA,"disk-a-corruption-original");
+    write(diskB,"disk-b-corruption-original");
+    nexa::snapshot::prepareGroup(coordinator,{{sidecarA,{diskA,backupA}},{sidecarB,{diskB,backupB}}});
+    write(diskA,"disk-a-corruption-mutated");
+    write(diskB,"disk-b-corruption-mutated");
+    write(backupB,"tampered-backup");
+    bool corruptionRejected=false;
+    try { nexa::snapshot::recover(sidecarA); }
+    catch (const std::runtime_error&) { corruptionRejected=true; }
+    if (!corruptionRejected || read(diskA)!="disk-a-corruption-mutated" ||
+        read(diskB)!="disk-b-corruption-mutated") {
+        std::cerr<<"corrupt backup was not rejected atomically\\n";return 1;
+    }
+    // Repair the fixture to permit deterministic cleanup.
+    write(backupB,"disk-b-corruption-original");
+    nexa::snapshot::recover(sidecarA);
+
+    // Exercise a real child process crash halfway through coordinated restore.
+    write(diskA,"disk-a-process-original");
+    write(diskB,"disk-b-process-original");
+    const std::string groupCommand="\\""+std::string(argv[0])+"\\" --group-crash-child \\""+
+        diskA.string()+"\\" \\""+diskB.string()+"\\"";
+    const int groupStatus=std::system(groupCommand.c_str());
+#ifdef _WIN32
+    const int expectedGroupStatus=85;
+#else
+    const int expectedGroupStatus=85<<8;
+#endif
+    if(groupStatus!=expectedGroupStatus) {
+        std::cerr<<"multi-disk child did not terminate at intended fault point\\n";return 1;
+    }
+    nexa::snapshot::recover(sidecarB);
+    if(read(diskA)!="disk-a-process-original"||read(diskB)!="disk-b-process-original") {
+        std::cerr<<"multi-disk restart recovery was not atomic\\n";return 1;
+    }
+\n    fs::remove_all(root);
     std::cout << "Snapshot journal subprocess recovery tests passed\n";
     return 0;
 }
