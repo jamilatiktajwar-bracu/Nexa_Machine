@@ -1,3 +1,10 @@
+# Nexa OS 2.31 — Automatic allocation recovery
+
+- The virtual-memory allocator can invoke a guarded recovery callback when all frames are pinned and no page can be evicted.
+- Kernel recovery reaps only already-Halted or Faulted processes; it never kills live workloads.
+- If recovery frees a frame, the allocator retries once; otherwise it preserves the explicit out-of-memory error.
+- Added regression coverage for callback recovery after shared-frame exhaustion.
+
 
 
 ## Nexa OS 2.28 — Per-process memory limits
