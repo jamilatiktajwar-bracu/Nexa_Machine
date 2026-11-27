@@ -36,10 +36,10 @@ class SessionPage final : public QWidget {
 public:
  explicit SessionPage(QString name,QWidget* parent=nullptr):QWidget(parent),name_(std::move(name)),id_(manager_.create(name_.toStdString(),1024)) {
   auto* root=new QVBoxLayout(this); auto* controls=new QHBoxLayout;
-  auto* start=new QPushButton("Start");auto* pause=new QPushButton("Pause");auto* resume=new QPushButton("Resume");auto* step=new QPushButton("Step");auto* reset=new QPushButton("Reset");
+  auto* start=new QPushButton("Start");auto* pause=new QPushButton("Pause");auto* resume=new QPushButton("Resume");auto* step=new QPushButton("Step");auto* reset=new QPushButton("Reset");auto* stop=new QPushButton("Stop");
   auto* attach=new QPushButton("Attach disk");auto* detach=new QPushButton("Detach disk");auto* flush=new QPushButton("Flush disk");auto* statusDisk=new QPushButton("Device status");
   auto* save=new QPushButton("Save VM + disk snapshot");auto* restore=new QPushButton("Restore VM + disk snapshot");
-  for(auto*b:{start,pause,resume,step,reset,attach,detach,flush,statusDisk,save,restore})controls->addWidget(b);
+  for(auto*b:{start,pause,resume,step,reset,stop,attach,detach,flush,statusDisk,save,restore})controls->addWidget(b);
   root->addLayout(controls);
   auto* split=new QHBoxLayout; editor_=new QPlainTextEdit;editor_->setPlainText("LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n");
   output_=new QTextEdit;output_->setReadOnly(true);memory_=new QTextEdit;memory_->setReadOnly(true);memory_->setMaximumWidth(260);
@@ -52,7 +52,7 @@ public:
   connect(pause,&QPushButton::clicked,this,[this]{try{autoRun_=false;timer_.stop();manager_.pause(id_);status_->setText("Paused");}catch(const std::exception&e){error(e.what());}});
   connect(resume,&QPushButton::clicked,this,[this]{try{manager_.resume(id_);autoRun_=true;timer_.start();status_->setText("Resumed");}catch(const std::exception&e){error(e.what());}});
   connect(step,&QPushButton::clicked,this,[this]{try{if(!loaded_){manager_.loadAssembly(id_,editor_->toPlainText().toStdString());loaded_=true;}std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());try{manager_.step(id_);}catch(...){std::cout.rdbuf(old);throw;}std::cout.rdbuf(old);if(!capture.str().empty())output_->append(QString::fromStdString(capture.str()));refresh();}catch(const std::exception&e){error(e.what());}});
-  connect(reset,&QPushButton::clicked,this,[this]{try{autoRun_=false;timer_.stop();manager_.reset(id_);loaded_=true;output_->clear();refresh();status_->setText("Reset");}catch(const std::exception&e){error(e.what());}});
+  connect(reset,&QPushButton::clicked,this,[this]{try{autoRun_=false;timer_.stop();manager_.reset(id_);loaded_=true;output_->clear();refresh();status_->setText("Reset");}catch(const std::exception&e){error(e.what());}});\n  connect(stop,&QPushButton::clicked,this,[this]{try{autoRun_=false;timer_.stop();manager_.stop(id_);refresh();status_->setText("Stopped — reset before restarting");}catch(const std::exception&e){error(e.what());}});
   connect(attach,&QPushButton::clicked,this,[this]{attachDisk();});connect(detach,&QPushButton::clicked,this,[this]{detachDisk();});connect(flush,&QPushButton::clicked,this,[this]{enqueue([this]{for(auto&[id,d]:disks_)d.disk->flush();status_->setText("All attached disks flushed");});});
   connect(statusDisk,&QPushButton::clicked,this,[this]{refreshDisks();QMessageBox::information(this,"Device status",QString("%1 disk device(s) attached. Queued I/O: %2").arg(disks_.size()).arg(ioQueue_.size()));});
   connect(save,&QPushButton::clicked,this,[this]{snapshot(true);});connect(restore,&QPushButton::clicked,this,[this]{snapshot(false);});
