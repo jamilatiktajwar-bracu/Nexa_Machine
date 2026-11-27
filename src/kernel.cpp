@@ -80,15 +80,21 @@ bool NexaKernel::hasDeadlock() const noexcept {
     }
     return blocked;
 }
-bool NexaKernel::hasMutexDeadlock() const {
-    // Build wait-for edges lazily: a blocked waiter depends on the current
-    // owner of every mutex whose queue contains that PID.
+std::vector<std::uint32_t> NexaKernel::mutexDeadlockCycle() const {
     std::map<std::uint32_t,std::uint8_t> visitState;
+    std::map<std::uint32_t,std::size_t> activePosition;
+    std::vector<std::uint32_t> path,cycle;
     const auto visit=[&](const auto& self,std::uint32_t pid)->bool {
         auto& state=visitState[pid];
-        if(state==1) return true;  // Back-edge: a circular wait exists.
+        if(state==1) {
+            const auto begin=activePosition.find(pid);
+            if(begin!=activePosition.end()) cycle.assign(path.begin()+static_cast<std::ptrdiff_t>(begin->second),path.end());
+            return true;
+        }
         if(state==2) return false;
         state=1;
+        activePosition[pid]=path.size();
+        path.push_back(pid);
         for(const auto& [id,mutex]:mutexes_) {
             (void)id;
             if(!mutex.owner||std::find(mutex.waiters.begin(),mutex.waiters.end(),pid)==mutex.waiters.end()) continue;
@@ -96,14 +102,20 @@ bool NexaKernel::hasMutexDeadlock() const {
             if(owner!=processes_.end()&&owner->second.info.state!=ProcessState::Halted&&
                owner->second.info.state!=ProcessState::Faulted&&self(self,*mutex.owner)) return true;
         }
+        path.pop_back();
+        activePosition.erase(pid);
         state=2;
         return false;
     };
     for(const auto& [pid,process]:processes_) {
-        if(process.info.state==ProcessState::Blocked&&visit(visit,pid)) return true;
+        if(process.info.state==ProcessState::Blocked&&visit(visit,pid)) break;
     }
-    return false;
+    return cycle;
 }
+bool NexaKernel::hasMutexDeadlock() const {
+    return !mutexDeadlockCycle().empty();
+}
+
 bool NexaKernel::terminateProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
     if(it==processes_.end()) return false;
