@@ -880,6 +880,8 @@ int main() {
     assert(shell.execute("ls").find("hello.nexa")!=std::string::npos);
     assert(shell.execute("run hello.nexa")=="");
     assert(shell.execute("ps").find("hello.nexa halted")!=std::string::npos);
+    assert(shell.execute("oomreap").find("reaped_processes=1")!=std::string::npos);
+    assert(shell.execute("ps").find("hello.nexa")==std::string::npos);
     assert(shell.execute("rm hello.nexa")=="removed /apps/hello.nexa");
     assert(shell.execute("cd ..")=="/");
     assert(shell.execute("chmod 700 /apps")=="mode updated");
