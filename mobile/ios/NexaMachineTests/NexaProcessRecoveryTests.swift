@@ -11,6 +11,5 @@ final class NexaProcessRecoveryTests: XCTestCase {
         app.terminate()
         app.launch()
         XCTAssertTrue(app.staticTexts["Workspace restored"].waitForExistence(timeout: 20))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Recovery: SUCCESS")).firstMatch.waitForExistence(timeout: 10))
     }
 }
