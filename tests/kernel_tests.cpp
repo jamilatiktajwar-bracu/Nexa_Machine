@@ -731,6 +731,17 @@ int main() {
     quotaKernel.setMemoryPageLimit(quotaPid,0);
     for(const auto& process:quotaKernel.processes()) if(process.pid==quotaPid) assert(process.memoryPageLimit==0);
 
+    nexa::NexaKernel zeroQuotaKernel(512);
+    const auto zeroQuotaPid=zeroQuotaKernel.spawn("zero-data-quota",nexa::Executable{0,{
+        {nexa::Opcode::LoadImmediate,9},{nexa::Opcode::Store,300},{nexa::Opcode::Halt,0}}});
+    zeroQuotaKernel.setMemoryPageLimit(zeroQuotaPid,1); // executable page only; no data pages allowed
+    zeroQuotaKernel.run();
+    bool zeroQuotaFaulted=false;
+    for(const auto& process:zeroQuotaKernel.processes()) if(process.pid==zeroQuotaPid)
+        zeroQuotaFaulted=process.state==nexa::ProcessState::Faulted&&
+            process.faultReason.find("memory page limit exceeded")!=std::string::npos&&process.virtualPages==1;
+    assert(zeroQuotaFaulted);
+
     nexa::NexaKernel kernel(1024);
     nexa::Executable basic{0,{{nexa::Opcode::LoadImmediate,65},{nexa::Opcode::Output,nexa::VM::DisplayPort},{nexa::Opcode::Halt,0}}};
     const auto first=kernel.spawn("alpha",basic);
