@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.21.0] - 2026-11-27
+- Added process-exit cleanup for semaphore and mutex wait queues, preventing terminated waiters from lingering in synchronization diagnostics.
+- Semaphore permits already handed to a process that exits before consuming them are transferred to the next live waiter or returned to the bounded semaphore count.
+- Added regression coverage for terminated semaphore and mutex waiters and semaphore grant handoff.
+
+
 ## [2.20.0] - 2026-11-27
 - Added late-page mapping-collision rollback tests proving partial aliases are removed without disturbing pre-existing guest mappings.
 - Added live-segment destruction tests proving guest aliases are revoked immediately and backing shared frames are reclaimed.
