@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <filesystem>
 #include <stdexcept>
 int main() {
     nexa::NexaSecurity freshSecurity;
@@ -109,10 +110,11 @@ int main() {
     nexa::NexaKernel shellMemoryKernel(256);
     nexa::NexaShell memoryShell(shellMemoryKernel);
     assert(memoryShell.execute("memstat").find("frames_total=")!=std::string::npos);
-    assert(memoryShell.execute("swapfile /tmp/nexa_shell_swap.img")=="disk swap configured");
-    assert(shellMemoryKernel.memoryManager().swapFilePath()=="/tmp/nexa_shell_swap.img");
+    const auto shellSwapPath=(std::filesystem::temp_directory_path()/"nexa_shell_swap.img").string();
+    assert(memoryShell.execute("swapfile "+shellSwapPath)=="disk swap configured");
+    assert(shellMemoryKernel.memoryManager().swapFilePath()==shellSwapPath);
     assert(memoryShell.execute("memstat").find("swap_backend=disk")!=std::string::npos);
-    std::remove("/tmp/nexa_shell_swap.img");
+    std::remove(shellSwapPath.c_str());
     nexa::NexaKernel processControlKernel(256);
     const auto framesBeforeManagedProcess=processControlKernel.memoryManager().freeFrames();
     const auto managedPid=processControlKernel.spawn("managed-loop",looping);
