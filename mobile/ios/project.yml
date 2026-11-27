@@ -34,6 +34,7 @@ targets:
           else
             SYSROOT="iphoneos"
           fi
-          cmake -S "$ROOT" -B "$BUILD" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$SYSROOT" -DCMAKE_OSX_ARCHITECTURES="$CURRENT_ARCH" -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF
+          ARCH_LIST="$(printf '%s' "${ARCHS:-arm64}" | tr ' ' ';')"
+          cmake -S "$ROOT" -B "$BUILD" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$SYSROOT" -DCMAKE_OSX_ARCHITECTURES="$ARCH_LIST" -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF
           cmake --build "$BUILD" --target nexa_vm_core --config Release --parallel
         basedOnDependencyAnalysis: false
