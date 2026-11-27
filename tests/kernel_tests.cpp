@@ -715,6 +715,7 @@ int main() {
         {nexa::Opcode::LoadImmediate,1},{nexa::Opcode::Store,300},
         {nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,600},
         {nexa::Opcode::Halt,0}}});
+    quotaKernel.writeProcessMemory(quotaPid,300,7); // establish one data page before lowering the limit
     quotaKernel.setMemoryPageLimit(quotaPid,2); // one code page plus one data page
     bool belowUsageRejected=false;
     try { quotaKernel.setMemoryPageLimit(quotaPid,1); }
