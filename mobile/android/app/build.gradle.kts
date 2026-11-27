@@ -3,7 +3,23 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseStoreFile = System.getenv("NEXA_ANDROID_KEYSTORE_PATH")
+val releaseStorePassword = System.getenv("NEXA_ANDROID_STORE_PASSWORD")
+val releaseKeyAlias = System.getenv("NEXA_ANDROID_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("NEXA_ANDROID_KEY_PASSWORD")
+
 android {
+    signingConfigs {
+        if (!releaseStoreFile.isNullOrBlank() && !releaseStorePassword.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
     namespace = "com.nexa.machine"
     compileSdk = 35
     defaultConfig {
@@ -16,6 +32,13 @@ android {
         versionName = "0.1.0"
         externalNativeBuild {
             cmake { cppFlags += "-std=c++20"; arguments += listOf("-DNEXA_BUILD_HOST_TOOLS=OFF", "-DNEXA_BUILD_GUI=OFF") }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (signingConfigs.findByName("release") != null) signingConfig = signingConfigs.getByName("release")
         }
     }
     buildFeatures { compose = true }
