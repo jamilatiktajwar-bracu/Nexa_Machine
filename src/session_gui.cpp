@@ -7,6 +7,7 @@
 #include <QPlainTextEdit>
 #include <QTextEdit>
 #include <QPushButton>
+#include <QLineEdit>
 #include <QLabel>
 #include <QTimer>
 #include <QFileDialog>
