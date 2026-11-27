@@ -5,9 +5,6 @@
 #include <filesystem>
 #include <stdexcept>
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\n'; return 1; } } while (false)
-#include <filesystem>
-#include <stdexcept>
-#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\\n'; return 1; } } while (false)
 int main() {
     nexa::NexaSecurity freshSecurity;
     nexa::NexaSecurity restoredFreshSecurity;
