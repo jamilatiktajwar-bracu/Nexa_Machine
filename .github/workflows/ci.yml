@@ -42,8 +42,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          xvfb-run -a bash -c 'timeout 8s ./build/nexa_gui || code=$?; test "$code" -eq 124 -o "$code" -eq 0'
-          xvfb-run -a bash -c 'timeout 8s ./build/nexa_gui || code=$?; test "$code" -eq 124 -o "$code" -eq 0'
+          xvfb-run -a bash -c 'set +e; timeout 8s ./build/nexa_gui; code=$?; test "$code" -eq 124 -o "$code" -eq 0'
+          xvfb-run -a bash -c 'set +e; timeout 8s ./build/nexa_gui; code=$?; test "$code" -eq 124 -o "$code" -eq 0'
       - name: GUI launch and restart smoke (macOS)
         if: runner.os == 'macOS'
         shell: bash
