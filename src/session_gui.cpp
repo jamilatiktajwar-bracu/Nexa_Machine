@@ -32,6 +32,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <chrono>
 #include <vector>
@@ -114,16 +115,16 @@ SessionWorkspace::SessionWorkspace(QWidget*parent):QWidget(parent){
  auto*add=new QPushButton("New VM session");auto*remove=new QPushButton("Close session");
  bar->addWidget(add);bar->addWidget(remove);bar->addStretch();layout->addLayout(bar);layout->addWidget(tabs);
  auto createNamed=[tabs](const QString&name){tabs->addTab(new SessionPage(name),name);tabs->setCurrentIndex(tabs->count()-1);};
- int nextId=1;auto sessionsRoot=WorkspacePaths::discover().root/"sessions";std::vector<std::string> savedNames;
+ auto nextId=std::make_shared<int>(1);auto sessionsRoot=WorkspacePaths::discover().root/"sessions";std::vector<std::string> savedNames;
  if(std::filesystem::exists(sessionsRoot)){for(const auto&entry:std::filesystem::directory_iterator(sessionsRoot)){
   if(!entry.is_directory())continue;auto name=entry.path().filename().string();
   if(!name.empty()&&std::all_of(name.begin(),name.end(),[](unsigned char c){return std::isalnum(c)||c==' '||c=='-'||c=='_';}))savedNames.push_back(name);
  }}
  std::sort(savedNames.begin(),savedNames.end());
  for(const auto&name:savedNames){createNamed(QString::fromStdString(name));
-  if(name.rfind("VM ",0)==0){try{nextId=std::max(nextId,std::stoi(name.substr(3))+1);}catch(...){}}
+  if(name.rfind("VM ",0)==0){try{*nextId=std::max(*nextId,std::stoi(name.substr(3))+1);}catch(...){}}
  }
  if(savedNames.empty())createNamed("VM 1");
- connect(add,&QPushButton::clicked,this,[createNamed,&nextId]{createNamed(QString("VM %1").arg(nextId++));});
+ connect(add,&QPushButton::clicked,this,[createNamed,nextId]{createNamed(QString("VM %1").arg((*nextId)++));});
  connect(remove,&QPushButton::clicked,this,[tabs]{if(tabs->count()){auto*w=tabs->currentWidget();tabs->removeTab(tabs->currentIndex());w->deleteLater();}});
 }
