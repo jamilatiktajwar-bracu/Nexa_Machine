@@ -20,6 +20,7 @@ Tests cover:
 - A blocked semaphore waiter exiting before a signal.
 - A process exiting after receiving a semaphore grant, with the grant handed to another waiter.
 - A blocked mutex waiter being terminated and removed from the queue.
+- TERM/KILL signal paths applying the same waiter and grant cleanup.
 - Existing owner-death handoff behavior.
 
 Nexa is an educational single-core VM/OS simulator. Synchronization operations are scheduler-coordinated and do not claim SMP hardware atomicity.
