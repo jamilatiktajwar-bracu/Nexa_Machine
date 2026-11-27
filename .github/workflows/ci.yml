@@ -14,11 +14,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Qt6 (Linux desktop test)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev
+      - name: Install Qt6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.3'
+          host: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'mac' || 'linux' }}
+          target: 'desktop'
+          arch: ${{ runner.os == 'Windows' && 'win64_msvc2022_64' || runner.os == 'macOS' && 'clang_64' || 'gcc_64' }}
+          modules: 'qtbase'
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=${{ runner.os == 'Linux' }}
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
@@ -26,7 +31,7 @@ jobs:
       - name: Build iOS VM core (macOS)
         if: runner.os == 'macOS'
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
-      - name: Run demo (Unix)
+      - name: Setup Android NDK (Linux)\n        if: runner.os == 'Linux'\n        uses: android-actions/setup-android@v3\n      - name: Build Android JNI core (Linux)\n        if: runner.os == 'Linux'\n        run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DANDROID=ON -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel\n      - name: Run demo (Unix)
         if: runner.os != 'Windows'
         run: ./build/nexa
       - name: Run demo (Windows)
