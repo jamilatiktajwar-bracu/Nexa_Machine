@@ -9,6 +9,10 @@ cmake --build build-core --target nexa_vm_core
 
 This produces a static library containing the VM, assembler, session registry, and C ABI. C ABI declarations are in `include/nexa/c_api.h`. All functions return 0 for success and -1 for failure (context creation returns null on failure); call `nexa_last_error` for details.
 
+## Session enumeration
+
+Use `nexa_session_list(context, nullptr, 0, &count)` to query the required array size, allocate `count` entries, then call again with the buffer and capacity. The function returns the required count in `out_count`; an undersized non-null buffer returns `-1` and sets the context error.
+
 ## Swift / Objective-C++ bridge
 Wrap the opaque `NexaContext*` and session handle in a Swift class. Use a bridging header importing `nexa/c_api.h`; keep assembly parsing and execution in the core. Call `nexa_session_step` from a bounded UI timer to keep the UI responsive, and update view state from `nexa_session_info`. File paths for snapshots should come from the iOS document picker and remain inside the app sandbox unless the user exports them.
 
