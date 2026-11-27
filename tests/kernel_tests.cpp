@@ -1,7 +1,8 @@
 #include "nexa/kernel.hpp"
 #include "nexa/shell.hpp"
 #include <algorithm>
-#include <cassert>
+#include <iostream>
+#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\\n'; return 1; } } while (false
 #include <cstdio>
 #include <filesystem>
 #include <stdexcept>
@@ -9,7 +10,7 @@ int main() {
     nexa::NexaSecurity freshSecurity;
     nexa::NexaSecurity restoredFreshSecurity;
     restoredFreshSecurity.deserialize(freshSecurity.serialize());
-    assert(restoredFreshSecurity.hasUser("root"));
+    CHECK(restoredFreshSecurity.hasUser("root"));
     assert(!restoredFreshSecurity.authenticate("root", "not-configured"));
 
 
