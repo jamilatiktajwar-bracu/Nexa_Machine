@@ -200,6 +200,18 @@ int main() {
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==1);
     assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,7)==1);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
+    // 16-bit little-endian atomic operations, including wraparound.
+    assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,10,0xfe));
+    assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,11,0xff));
+    assert(syncKernel.sharedAtomicAdd16(ownerPid,guestSegment,10,3)==0xfffe);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,10)==1);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,11)==0);
+    assert(syncKernel.sharedCompareSwap16(ownerPid,guestSegment,10,1,0x1234)==1);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,10)==0x34);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,11)==0x12);
+    assert(syncKernel.sharedCompareSwap16(ownerPid,guestSegment,10,1,0x5678)==0x1234);
+    assert(!syncKernel.sharedAtomicAdd16(ownerPid,guestSegment,15,1)); // segment boundary
+
     assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,8)==7);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,9)==7);
     const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
