@@ -212,8 +212,8 @@ int main() {
     const auto finishedGuest=std::find_if(guestFinished.begin(),guestFinished.end(),[&](const auto& process){return process.pid==shmGuestPid;});
     assert(finishedGuest!=guestFinished.end()&&finishedGuest->state==nexa::ProcessState::Halted);
     assert(syncKernel.readProcessMemory(shmGuestPid,43)==1);
-    assert(syncKernel.memoryManager().isMapped(shmGuestPid,2));
-    assert(syncKernel.sharedMemoryInfo().front().attachments==2);
+    assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2)); // Halt auto-detaches guest mappings
+    assert(syncKernel.sharedMemoryInfo().front().attachments==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,42)==0x33);
     assert(syncKernel.readProcessMemory(shmGuestPid,44)==1);
     assert(syncKernel.readProcessMemory(shmGuestPid,45)==0x66);
@@ -230,7 +230,7 @@ int main() {
     assert(sharedExecuteDenied);
     assert(syncKernel.detachSharedMemory(lockWaiterPid,guestSegment));
     assert(!syncKernel.memoryManager().isMapped(lockWaiterPid,3));
-    assert(syncKernel.detachSharedMemory(shmGuestPid,guestSegment));
+    assert(!syncKernel.detachSharedMemory(shmGuestPid,guestSegment)); // Guest already detached on exit
     assert(!syncKernel.memoryManager().isMapped(shmGuestPid,2));
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,5)==0x77);
     assert(!syncKernel.readSharedMemory(shmGuestPid,guestSegment,4));
