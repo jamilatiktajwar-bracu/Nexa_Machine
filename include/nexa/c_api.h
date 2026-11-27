@@ -7,6 +7,7 @@ extern "C" {
 typedef struct NexaContext NexaContext;
 typedef enum NexaSessionState { NEXA_READY=0,NEXA_RUNNING=1,NEXA_PAUSED=2,NEXA_STOPPED=3,NEXA_HALTED=4,NEXA_FAULTED=5 } NexaSessionState;
 typedef struct NexaSessionInfo { uint64_t id; char name[128]; NexaSessionState state; size_t pc,instructions,ram_bytes; int halted; } NexaSessionInfo;
+typedef struct NexaRecoveryReport { int attempted; int success; char phase[16]; char affected_path[512]; char reason[512]; char recommended_action[256]; } NexaRecoveryReport;
 typedef struct NexaCpuState { uint16_t pc; uint8_t accumulator,second_register; uint64_t instructions; size_t stack_depth; int halted; } NexaCpuState;
 NexaContext* nexa_context_create(void);
 void nexa_context_destroy(NexaContext*);
@@ -44,6 +45,8 @@ int nexa_snapshot_save_bundle(NexaContext*,uint64_t id,const char* vm_state_path
 int nexa_snapshot_restore_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
 /* Call after session_create and before disk attachment to recover an interrupted bundle transaction. */
 int nexa_snapshot_recover_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
+/* Last recovery attempt diagnostics; safe to query after recovery/restore errors. */
+int nexa_snapshot_recovery_report_get(NexaContext*,NexaRecoveryReport* out_report);
 #ifdef NEXA_ENABLE_TEST_HOOKS
 /* Test-only crash simulation: 0=disabled, 1/2=handled failures, 3/4=abrupt process exit after disk replacement/VM load. */
 void nexa_snapshot_test_set_failpoint(int failpoint);
