@@ -1,10 +1,11 @@
 #include "nexa/memory_manager.hpp"
-#include <cassert>
+#include <iostream>
+#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\\n'; return 1; } } while (false
 #include <stdexcept>
 #include <cstdio>
 int main(){
  nexa::VirtualMemoryManager mm(1024);
- assert(mm.totalFrames()==4&&mm.freeFrames()==4);
+ CHECK(mm.totalFrames()==4&&mm.freeFrames()==4);
  mm.createAddressSpace(1); mm.createAddressSpace(2);
  mm.mapPage(1,0); mm.mapPage(2,0);
  mm.write(1,0x0005,0x41); assert(mm.read(1,0x0005)==0x41);
