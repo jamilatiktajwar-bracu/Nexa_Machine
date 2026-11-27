@@ -34,7 +34,16 @@ int nexa_snapshot_save(NexaContext*,uint64_t id,const char* path);
 int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);
 /* 512-byte sectors. Guest SYS ABI: A=4 reads B=sector into RAM[0..511];
  * A=5 writes RAM[0..511] to B=sector. Requires >=512 bytes RAM. */
-int nexa_disk_attach(NexaContext*,uint64_t id,const char* path,size_t capacity_bytes);
+int nexa_disk_attach(NexaContext*,uint64_t id,const char* path,size_t capacity_bytes); /* device ID 0 compatibility */
+int nexa_disk_attach_device(NexaContext*,uint64_t id,uint32_t device_id,const char* path,size_t capacity_bytes);
+int nexa_disk_detach(NexaContext*,uint64_t id,uint32_t device_id,int flush_before_detach);
+int nexa_disk_device_count(NexaContext*,uint64_t id,size_t* out_count);
+int nexa_disk_sector_count_device(NexaContext*,uint64_t id,uint32_t device_id,size_t* out_count);
+int nexa_disk_read_sector_device(NexaContext*,uint64_t id,uint32_t device_id,size_t sector,uint8_t* out_512_bytes);
+int nexa_disk_write_sector_device(NexaContext*,uint64_t id,uint32_t device_id,size_t sector,const uint8_t* bytes_512);
+int nexa_disk_flush_device(NexaContext*,uint64_t id,uint32_t device_id);
+int nexa_disk_read_to_guest(NexaContext*,uint64_t id,uint32_t device_id,size_t sector,uint16_t guest_ram_address);
+int nexa_disk_write_from_guest(NexaContext*,uint64_t id,uint32_t device_id,size_t sector,uint16_t guest_ram_address);
 int nexa_disk_sector_count(NexaContext*,uint64_t id,size_t* out_count);
 int nexa_disk_read_sector(NexaContext*,uint64_t id,size_t sector,uint8_t* out_512_bytes);
 int nexa_disk_write_sector(NexaContext*,uint64_t id,size_t sector,const uint8_t* bytes_512);
