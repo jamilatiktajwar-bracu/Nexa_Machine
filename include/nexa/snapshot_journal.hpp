@@ -42,7 +42,7 @@ inline std::uint64_t checksum(const std::filesystem::path& path) {
 }
 inline void syncFile(const std::filesystem::path& path) {
 #ifdef _WIN32
-    const int fd = _open(path.string().c_str(), _O_RDONLY | _O_BINARY);
+    const int fd = _open(path.string().c_str(), _O_RDWR | _O_BINARY);
     if (fd < 0) throw std::runtime_error("Cannot open file for durable flush: " + path.string());
     const int result = _commit(fd); _close(fd);
 #else
@@ -51,6 +51,17 @@ inline void syncFile(const std::filesystem::path& path) {
     const int result = ::fsync(fd); ::close(fd);
 #endif
     if (result != 0) throw std::runtime_error("Durable file flush failed: " + path.string());
+}
+inline void syncDirectory(const std::filesystem::path& directory) {
+#ifndef _WIN32
+    const auto dir = directory.empty() ? std::filesystem::path(".") : directory;
+    const int fd = ::open(dir.c_str(), O_RDONLY | O_DIRECTORY);
+    if (fd < 0) throw std::runtime_error("Cannot open journal directory for durable flush");
+    const int result = ::fsync(fd); ::close(fd);
+    if (result != 0) throw std::runtime_error("Journal directory flush failed");
+#else
+    (void)directory; // MoveFileExW(..., MOVEFILE_WRITE_THROUGH) flushes publication.
+#endif
 }
 inline void writeJournal(const std::filesystem::path& journal, JournalPhase phase,
                          const std::vector<JournalEntry>& entries) {
@@ -75,6 +86,7 @@ inline void writeJournal(const std::filesystem::path& journal, JournalPhase phas
     std::error_code ec;
     std::filesystem::rename(temp, journal, ec);
     if (ec) throw std::runtime_error("Cannot publish snapshot transaction journal: " + ec.message());
+    syncDirectory(journal.parent_path());
 #endif
 }
 inline std::vector<JournalEntry> readJournal(const std::filesystem::path& journal,
