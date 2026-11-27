@@ -6,7 +6,6 @@
       "name": "default",
       "displayName": "Nexa portable default",
       "description": "Build CLI and optional Qt desktop frontend when Qt6 is available.",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "BUILD_TESTING": "ON", "NEXA_BUILD_GUI": "ON" }
     },
