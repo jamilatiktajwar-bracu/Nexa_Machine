@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 int main(){
 #ifdef _WIN32
  _putenv_s("NEXA_HOME","nexa-workspace-test");
