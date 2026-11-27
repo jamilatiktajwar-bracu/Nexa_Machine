@@ -16,6 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +38,7 @@ private fun NexaScreen() {
     var running by remember { mutableStateOf(false) }
     var diskStatus by remember { mutableStateOf("No disk attached") }
     val appContext = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val diskPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null && context != 0L && session != 0L) {
             runCatching {
@@ -56,14 +60,38 @@ private fun NexaScreen() {
         val snapshotRoot = File(appContext.filesDir, "nexa/snapshot")
         snapshotRoot.mkdirs()
         val vmState = File(snapshotRoot, "session.vm")
+        val snapshotDisks = File(snapshotRoot, "disks").apply { mkdirs() }
         session = if (ctx != 0L) NexaNative.createRecoveringSession(
-            ctx, "Android session", 4096, vmState.absolutePath, snapshotRoot.absolutePath
+            ctx, "Android session", 4096, vmState.absolutePath, snapshotDisks.absolutePath
         ) else 0L
-        status = if (session != 0L) "Ready" else "Core initialization failed"
+        if (session != 0L) {
+            val persistentDisk = File(appContext.filesDir, "nexa/guest-disk.img")
+            if (persistentDisk.isFile) {
+                val attachResult = NexaNative.attachDisk(ctx, session, persistentDisk.absolutePath)
+                if (attachResult != 0) status = "Disk recovery attach failed: " + NexaNative.lastError(ctx)
+            }
+            if (File(snapshotDisks, "manifest.txt").isFile) {
+                val restoreResult = NexaNative.restoreSnapshot(ctx, session, snapshotRoot.absolutePath)
+                status = if (restoreResult == 0) "Workspace restored" else "Workspace restore failed: " + NexaNative.lastError(ctx)
+                console = NexaNative.console(ctx, session)
+            } else if (status == "Initializing") status = "Ready"
+        } else status = "Core initialization failed"
         onDispose {
             running = false
             if (ctx != 0L) NexaNative.destroyContext(ctx)
         }
+    }
+
+    DisposableEffect(lifecycleOwner, context, session) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && context != 0L && session != 0L) {
+                val root = File(appContext.filesDir, "nexa/snapshot")
+                root.mkdirs()
+                NexaNative.saveSnapshot(context, session, root.absolutePath)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(running, context, session) {
