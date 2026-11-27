@@ -17,7 +17,9 @@ Qt 6 Widgets is required. If Qt is not detected, the CLI build continues and CMa
 - **New profile**: prompts for profile name, RAM size (1–65,536 bytes), and disk size (1–128 MiB).
 - **Open .nexa**: loads source text into the editor.
 - **Run / Step / Reset**: execute, single-step, or reset the current VM.
-- **Set / Clear breakpoints**: configure or clear instruction-address breakpoints.\n- **Send input**: queue keyboard bytes for guest INPUT instructions; Enter appends a newline.\n- **Export log**: save the current console transcript to a text file.
+- **Set / Clear breakpoints**: configure or clear instruction-address breakpoints.
+- **Send input**: queue keyboard bytes for guest INPUT instructions; Enter appends a newline.
+- **Export log**: save the current console transcript to a text file.
 - **Start / Pause / Resume / Stop / Reset**: timer-driven execution lifecycle controls. Stop halts the guest; Reset creates a fresh VM.
 - **Disk info / Flush disk**: inspect configured image metadata or initialize/flush a disk image.
 - **Import disk / Export disk**: import an image only if it fits configured capacity; export to a chosen file.
