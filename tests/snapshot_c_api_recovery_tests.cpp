@@ -123,9 +123,12 @@ int main(int argc, char** argv) {
         NexaContext* restarted = nexa_context_create();
         if (!restarted) return 5;
         uint64_t restartedSession = 0;
+        NexaRecoveryReport recoveryReport{};
         if (nexa_session_create_recovering(restarted, "restarted-session", 1024,
                                                vmState.string().c_str(), snapshotDir.string().c_str(),
                                                &restartedSession) != 0 ||
+            nexa_snapshot_recovery_report_get(restarted, &recoveryReport) != 0 ||
+            recoveryReport.attempted != 1 || recoveryReport.success != 1 ||
             !attachDisk(restarted, restartedSession, disk)) {
             std::cerr << "restart session recovery failed: "
                       << nexa_last_error(restarted) << '\n';
