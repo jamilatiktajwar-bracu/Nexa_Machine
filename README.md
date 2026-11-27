@@ -2,7 +2,7 @@
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.9.1**
+**Current development milestone: Nexa OS 2.10.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
@@ -11,9 +11,11 @@ Current kernel capabilities include:
 - Fixed-priority scheduling, configurable instruction quanta, timer-interrupt simulation and priority aging.
 - Bounded process mailboxes, blocking guest receive, automatic wakeup, and scheduler deadlock detection.
 - Per-process instruction quotas with deterministic termination and exit-code reporting.
+- Process signals: TERM/KILL termination, STOP/CONT lifecycle control, bounded FIFO USR1/USR2 delivery, and guest `SYS GetSignal` polling.
+- Signal queue diagnostics in `ps` and root-only `signal PID SIGNAL` administration.
 - Administrative process termination/reaping with exit-code and fault-reason reporting, automatic file-handle/mailbox cleanup, memory statistics and swap configuration.
 
-Start with the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
+Start with the [Nexa OS 2.10 guide](docs/NEXA_OS_2_10.md) or the [Nexa OS 2.9 guide](docs/NEXA_OS_2_9.md) or review the [project changelog](CHANGELOG.md). The build and test instructions are below. Earlier milestones are kept in this README as a development history.
 
 ## Version 1.0 (OS kernel foundation)
 - 8-bit A/B registers, arithmetic, 16-bit RAM addressing
