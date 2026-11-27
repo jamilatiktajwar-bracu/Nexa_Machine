@@ -39,7 +39,7 @@ std::filesystem::path WorkspacePaths::createProfile(const std::string& name) con
  if(std::filesystem::exists(target)) throw std::runtime_error("Profile already exists: "+name);
  std::ofstream out(target,std::ios::binary|std::ios::out);
  if(!out) throw std::runtime_error("Cannot create profile: "+target.string());
- out << "{\n  \\"name\\": \\""<<name<<"\\",\n  \\"ram_bytes\\": 256,\n  \\"disk_path\\": \\""<<(disks/(name+".disk")).generic_string()<<"\\",\n  \\"disk_bytes\\": 1048576\n}\n";
+ out << "{\n  \"name\": \""<<name<<"\",\n  \"ram_bytes\": 256,\n  \"disk_path\": \""<<(disks/(name+".disk")).generic_string()<<"\",\n  \"disk_bytes\": 1048576\n}\n";
  out.close();
  if(!out) throw std::runtime_error("Failed writing profile file.");
  return target;
