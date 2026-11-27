@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.27.0] - 2026-11-27
+- Added per-address-space resident and swapped page counters and exposed combined data/code virtual pages, resident pages, swapped pages, and resident bytes in `ProcessInfo`.
+- Extended `ps` with per-process memory usage and page residency diagnostics.
+- Added regression checks for process memory accounting before and after demand paging.
+
+
 ## [2.26.0] - 2026-11-27
 - Added live per-process open-file handle and shared-memory attachment counts to `ProcessInfo`.
 - Extended `ps` diagnostics with inbox payload bytes, open file handles, and shared-memory attachments.
