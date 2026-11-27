@@ -101,6 +101,7 @@ if(snapshotRestoreFailpoint==1)throw std::runtime_error("Injected snapshot resto
 auto di=c->disks.find(id);if(di!=c->disks.end())for(const auto&[device,disk]:di->second)disk->load();vm.loadState(vmFile.string());
 #ifdef NEXA_ENABLE_TEST_HOOKS
 if(snapshotRestoreFailpoint==2)throw std::runtime_error("Injected snapshot restore failure after VM load");
-#endif}catch(...){if(pi!=c->diskPaths.end())for(const auto&[device,path]:pi->second){std::filesystem::copy_file(rollbackDir/(std::string("device-")+std::to_string(device)+".disk"),path,std::filesystem::copy_options::overwrite_existing);c->disks.at(id).at(device)->load();}vm.loadState(rollbackVm.string());throw;}std::filesystem::remove_all(rollbackDir);});}
+#endif
+}catch(...){if(pi!=c->diskPaths.end())for(const auto&[device,path]:pi->second){std::filesystem::copy_file(rollbackDir/(std::string("device-")+std::to_string(device)+".disk"),path,std::filesystem::copy_options::overwrite_existing);c->disks.at(id).at(device)->load();}vm.loadState(rollbackVm.string());throw;}std::filesystem::remove_all(rollbackDir);});}
 
 }
