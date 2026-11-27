@@ -206,6 +206,9 @@ std::string NexaShell::execute(const std::string& line) {
                 " swapped_pages="+std::to_string(mm.swappedPages())+
                 " swap_ins="+std::to_string(mm.swapIns())+
                 " swap_outs="+std::to_string(mm.swapOuts())+
+                " recovery_attempts="+std::to_string(mm.allocationRecoveryAttempts())+
+                " recovery_successes="+std::to_string(mm.allocationRecoverySuccesses())+
+                " recovery_failures="+std::to_string(mm.allocationRecoveryFailures())+
                 " swap_backend="+(mm.swapFilePath().empty()?"memory":"disk");
         }
         if(command=="memstat") {
