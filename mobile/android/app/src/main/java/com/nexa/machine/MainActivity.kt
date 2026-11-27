@@ -66,6 +66,7 @@ private fun NexaScreen() {
             ctx, "Android session", 4096, vmState.absolutePath, snapshotDisks.absolutePath
         ) else 0L
         if (session != 0L) {
+            recoveryReport = NexaNative.recoveryReport(ctx)
             val persistentDisk = File(appContext.filesDir, "nexa/guest-disk.img")
             if (persistentDisk.isFile) {
                 val attachResult = NexaNative.attachDisk(ctx, session, persistentDisk.absolutePath)
@@ -74,6 +75,7 @@ private fun NexaScreen() {
             if (File(snapshotDisks, "manifest.txt").isFile) {
                 val restoreResult = NexaNative.restoreSnapshot(ctx, session, snapshotRoot.absolutePath)
                 status = if (restoreResult == 0) "Workspace restored" else "Workspace restore failed: " + NexaNative.lastError(ctx)
+                recoveryReport = NexaNative.recoveryReport(ctx)
                 console = NexaNative.console(ctx, session)
             } else if (status == "Initializing") status = "Ready"
         } else status = "Core initialization failed"
