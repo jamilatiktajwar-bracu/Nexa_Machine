@@ -1,5 +1,4 @@
 #include "nexa/c_api.h"
-#include "nexa/snapshot_journal.hpp"
 #include <array>
 #include <cstdlib>
 #include <filesystem>
@@ -9,48 +8,112 @@
 #include <string>
 
 namespace fs = std::filesystem;
-static fs::path rootPath() { return fs::temp_directory_path() / "nexa-c-api-crash-recovery"; }
+
+static fs::path rootPath() {
+    return fs::temp_directory_path() / "nexa-c-api-crash-recovery";
+}
 static void fillFile(const fs::path& path, unsigned char value) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    std::array<unsigned char, 512> bytes{}; bytes.fill(value);
-    out.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+    std::array<unsigned char, 512> bytes{};
+    bytes.fill(value);
+    out.write(reinterpret_cast<const char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
     out.flush();
     if (!out) throw std::runtime_error("failed to write disk fixture");
 }
+static std::string quote(const std::string& value) {
+    return "\"" + value + "\"";
+}
+static bool attachDisk(NexaContext* context, uint64_t& session,
+                       const fs::path& disk) {
+    return nexa_session_create(context, "restore-crash-test", 1024, &session) == 0 &&
+           nexa_disk_attach(context, session, disk.string().c_str(), 512) == 0;
+}
+
 int main(int argc, char** argv) {
     const auto root = rootPath();
     const auto disk = root / "guest.disk";
-    const auto backup = root / "guest.rollback";
+    const auto vmState = root / "snapshot.vm";
+    const auto snapshotDir = root / "bundle";
     const auto journal = fs::path(disk.string() + ".nexa-journal");
-    fs::create_directories(root);
-    if (argc > 1 && std::string(argv[1]) == "--crash-child") {
-        fillFile(disk, 0x41);
-        nexa::snapshot::prepare(journal, {{disk, backup}});
-        fillFile(disk, 0x42);
-        nexa::snapshot::syncFile(disk);
-        std::_Exit(91);
+
+    if (argc == 6 && std::string(argv[1]) == "--restore-crash-child") {
+        NexaContext* context = nexa_context_create();
+        if (!context) return 10;
+        uint64_t session = 0;
+        if (!attachDisk(context, session, disk)) {
+            std::cerr << "child attach failed: " << nexa_last_error(context) << '\\n';
+            nexa_context_destroy(context);
+            return 11;
+        }
+        nexa_snapshot_test_set_failpoint(std::stoi(argv[2]));
+        const int result = nexa_snapshot_restore_bundle(
+            context, session, argv[3], argv[4]);
+        std::cerr << "restore returned instead of crashing, result=" << result
+                  << " error=" << nexa_last_error(context) << '\\n';
+        nexa_context_destroy(context);
+        return 12;
     }
-    const std::string command = "\"" + std::string(argv[0]) + "\" --crash-child";
-    const int childStatus = std::system(command.c_str());
-    if (childStatus == 0 || !fs::exists(journal)) {
-        std::cerr << "child did not leave an interrupted transaction\n"; return 1;
-    }
-    NexaContext* context = nexa_context_create();
-    if (!context) return 2;
-    uint64_t session = 0;
-    if (nexa_session_create(context, "recovery-test", 1024, &session) != 0 ||
-        nexa_disk_attach(context, session, disk.string().c_str(), 512) != 0) {
-        std::cerr << "disk attachment recovery failed: " << nexa_last_error(context) << '\n';
-        nexa_context_destroy(context); return 3;
-    }
-    std::array<uint8_t, 512> sector{};
-    const int readStatus = nexa_disk_read_sector(context, session, 0, sector.data());
-    nexa_context_destroy(context);
-    if (readStatus != 0 || sector[0] != 0x41 || fs::exists(journal) || fs::exists(backup)) {
-        std::cerr << "C API attachment did not recover the original disk\n";
-        return 4;
-    }
+
     fs::remove_all(root);
-    std::cout << "C API crash recovery on disk attachment passed\n";
+    fs::create_directories(root);
+    fillFile(disk, 0x41);
+
+    // Save a real bundle through the public C API, then mutate the live disk.
+    NexaContext* setup = nexa_context_create();
+    if (!setup) return 1;
+    uint64_t setupSession = 0;
+    if (!attachDisk(setup, setupSession, disk) ||
+        nexa_snapshot_save_bundle(setup, setupSession, vmState.string().c_str(),
+                                  snapshotDir.string().c_str()) != 0) {
+        std::cerr << "snapshot setup failed: " << nexa_last_error(setup) << '\\n';
+        nexa_context_destroy(setup);
+        return 2;
+    }
+    std::array<uint8_t, 512> mutated{};
+    mutated.fill(0x42);
+    if (nexa_disk_write_sector(setup, setupSession, 0, mutated.data()) != 0 ||
+        nexa_disk_flush(setup, setupSession) != 0) {
+        std::cerr << "disk mutation failed: " << nexa_last_error(setup) << '\\n';
+        nexa_context_destroy(setup);
+        return 3;
+    }
+    nexa_context_destroy(setup);
+
+    for (const int failpoint : {3, 4}) {
+        const std::string command =
+            quote(argv[0]) + " --restore-crash-child " + std::to_string(failpoint) +
+            " " + quote(vmState.string()) + " " + quote(snapshotDir.string()) +
+            " " + quote(disk.string());
+        const int childStatus = std::system(command.c_str());
+        if (childStatus == 0 || !fs::exists(journal)) {
+            std::cerr << "restore child did not leave an interrupted transaction at failpoint "
+                      << failpoint << '\\n';
+            return 4;
+        }
+
+        // A fresh context models a new host process attaching the guest disk.
+        NexaContext* restarted = nexa_context_create();
+        if (!restarted) return 5;
+        uint64_t restartedSession = 0;
+        if (!attachDisk(restarted, restartedSession, disk)) {
+            std::cerr << "restart attachment recovery failed: "
+                      << nexa_last_error(restarted) << '\\n';
+            nexa_context_destroy(restarted);
+            return 6;
+        }
+        std::array<uint8_t, 512> observed{};
+        const int readStatus =
+            nexa_disk_read_sector(restarted, restartedSession, 0, observed.data());
+        nexa_context_destroy(restarted);
+        if (readStatus != 0 || observed[0] != 0x42 || fs::exists(journal)) {
+            std::cerr << "new context did not recover pre-restore disk state at failpoint "
+                      << failpoint << '\\n';
+            return 7;
+        }
+    }
+
+    fs::remove_all(root);
+    std::cout << "C API restore_bundle process-crash recovery tests passed\\n";
     return 0;
 }
