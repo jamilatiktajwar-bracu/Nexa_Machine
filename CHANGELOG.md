@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.25.0] - 2026-11-27
+- Added an 8,192-byte per-process IPC inbox payload quota alongside existing message-count and per-message limits.
+- Sending beyond the quota is rejected; receiving releases capacity immediately. Added regression tests for quota enforcement and recovery.
+
+
 ## [2.24.0] - 2026-11-27
 - Added `ProcessInfo::pendingMessageBytes` to expose per-process queued IPC payload bytes alongside message counts.
 - Added regression coverage for byte accounting during FIFO enqueue and dequeue.
