@@ -128,3 +128,4 @@ SessionWorkspace::SessionWorkspace(QWidget*parent):QWidget(parent){
  connect(add,&QPushButton::clicked,this,[createNamed,nextId]{createNamed(QString("VM %1").arg((*nextId)++));});
  connect(remove,&QPushButton::clicked,this,[tabs]{if(tabs->count()){auto*w=tabs->currentWidget();tabs->removeTab(tabs->currentIndex());w->deleteLater();}});
 }
+}
