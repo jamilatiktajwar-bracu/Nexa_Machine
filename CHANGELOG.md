@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.26.0] - 2026-11-27
+- Added live per-process open-file handle and shared-memory attachment counts to `ProcessInfo`.
+- Extended `ps` diagnostics with inbox payload bytes, open file handles, and shared-memory attachments.
+- Added regression coverage for resource counts during file open/exit and shared-memory attach/detach.
+
+
 ## [2.25.0] - 2026-11-27
 - Added an 8,192-byte per-process IPC inbox payload quota alongside existing message-count and per-message limits.
 - Sending beyond the quota is rejected; receiving releases capacity immediately. Added regression tests for quota enforcement and recovery.
