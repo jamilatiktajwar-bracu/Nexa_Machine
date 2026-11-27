@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
 private fun NexaScreen() {
     var context by remember { mutableLongStateOf(0L) }
     var session by remember { mutableLongStateOf(0L) }
-    var source by remember { mutableStateOf("LOAD A, 19\nLOAD B, 23\nADD A, B\nHALT") }
+    var source by remember { mutableStateOf("LOAD A, 19\nLOAD B, 23\nADD A, B\nOUT A, 1\nHALT") }
     var console by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("Initializing") }
     var input by remember { mutableStateOf("") }
