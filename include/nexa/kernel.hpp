@@ -21,6 +21,7 @@ struct ProcessInfo {
     std::string faultReason;
     std::uint8_t priority{0};
     std::size_t pendingMessages{0};
+    std::size_t pendingMessageBytes{0};
     std::uint8_t effectivePriority{0};
     std::uint64_t readyWaitTicks{0};
     std::optional<std::uint8_t> exitCode{};
