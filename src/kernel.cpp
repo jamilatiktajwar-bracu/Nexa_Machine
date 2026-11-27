@@ -89,6 +89,7 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     it->second.info.terminationReason="killed";
     it->second.openFiles.clear();
     it->second.inbox.clear();
+    it->second.signals.clear();
     if(currentPid_==pid) currentPid_=0;
     return true;
 }
@@ -166,6 +167,7 @@ void NexaKernel::setInstructionBudget(std::uint32_t pid,std::uint64_t instructio
         it->second.info.terminationReason="budget";
         it->second.openFiles.clear();
         it->second.inbox.clear();
+        it->second.signals.clear();
     }
 }
 void NexaKernel::setTimeQuantum(std::size_t instructions) {
