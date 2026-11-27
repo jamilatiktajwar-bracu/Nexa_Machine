@@ -20,7 +20,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::SharedCreate)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::SharedCompareSwap)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
