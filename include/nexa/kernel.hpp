@@ -104,7 +104,7 @@ private:
     std::uint32_t cursor_{0};
     std::size_t timeQuantum_{1};
     std::uint64_t systemTicks_{0},timerInterval_{0},timerInterrupts_{0},pendingTimerInterrupts_{0},priorityAgingThreshold_{0};
-    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxPendingSignals=32;
+    static constexpr std::size_t MaxInboxMessages=64,MaxIpcPayload=251,MaxInboxBytes=8192,MaxPendingSignals=32;
     VirtualFileSystem fs_;
     VirtualMemoryManager memory_;
     std::string output_;
