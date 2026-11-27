@@ -225,7 +225,7 @@ std::string NexaShell::execute(const std::string& line) {
             return "priority aging updated";
         }
         if(command=="syncstat") return kernel_.syncDiagnostics();
-        if(command=="shmstat") { std::string out; for(const auto& seg:kernel_.sharedMemoryInfo()) out+="id="+std::to_string(seg.id)+" size="+std::to_string(seg.size)+" attachments="+std::to_string(seg.attachments)+"\\n"; return out.empty()?"no shared-memory segments":out; }
+        if(command=="shmstat") { std::string out; for(const auto& seg:kernel_.sharedMemoryInfo()) out+="id="+std::to_string(seg.id)+" size="+std::to_string(seg.size)+" attachments="+std::to_string(seg.attachments)+"\n"; return out.empty()?"no shared-memory segments":out; }
         if(command=="sched") {
             return "policy=fixed-priority-round-robin quantum="+std::to_string(kernel_.timeQuantum())+
                 " ticks="+std::to_string(kernel_.systemTicks())+
