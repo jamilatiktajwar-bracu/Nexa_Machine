@@ -193,6 +193,13 @@ int main() {
     assert(syncKernel.sharedMemoryInfo().front().attachments==1);
     assert(syncKernel.destroySharedMemory(sharedId));
     assert(syncKernel.sharedMemoryInfo().empty());
+    const auto cleanupSegment=syncKernel.createSharedMemory(8);
+    const auto cleanupPid=syncKernel.spawn("shared-attachment-cleanup",looping);
+    assert(syncKernel.attachSharedMemory(cleanupPid,cleanupSegment));
+    assert(syncKernel.sharedMemoryInfo().front().attachments==1);
+    assert(syncKernel.terminateProcess(cleanupPid));
+    assert(syncKernel.sharedMemoryInfo().front().attachments==0);
+    assert(syncKernel.destroySharedMemory(cleanupSegment);
     bool invalidSharedSize=false;try{(void)syncKernel.createSharedMemory(0);}catch(const std::invalid_argument&){invalidSharedSize=true;}assert(invalidSharedSize);
     const auto mutex2=syncKernel.createMutex();
     assert(syncKernel.mutexLock(ownerPid,mutex2));
