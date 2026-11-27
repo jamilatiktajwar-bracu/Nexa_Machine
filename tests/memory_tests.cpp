@@ -53,6 +53,16 @@ int main(){
  recovery.destroyAddressSpace(42);
  recovery.releaseSharedFrame(pinnedA);
  assert(recovery.freeFrames()==recovery.totalFrames());
+ nexa::VirtualMemoryManager failedRecovery(512);
+ failedRecovery.createAddressSpace(43);
+ const auto failedPinA=failedRecovery.createSharedFrame();
+ const auto failedPinB=failedRecovery.createSharedFrame();
+ failedRecovery.setAllocationRecoveryHandler([]{});
+ bool allocationFailed=false;
+ try{failedRecovery.mapPage(43,0);}catch(const std::runtime_error&){allocationFailed=true;}
+ assert(allocationFailed&&failedRecovery.allocationRecoveryAttempts()==1&&failedRecovery.allocationRecoveryFailures()==1&&failedRecovery.allocationRecoverySuccesses()==0);
+ failedRecovery.releaseSharedFrame(failedPinA); failedRecovery.releaseSharedFrame(failedPinB); failedRecovery.destroyAddressSpace(43);
+ assert(failedRecovery.freeFrames()==failedRecovery.totalFrames());
 
  nexa::VirtualMemoryManager diskSwap(512);
  diskSwap.setSwapFile("nexa_swap_test.bin");
