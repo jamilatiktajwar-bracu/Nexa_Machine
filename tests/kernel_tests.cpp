@@ -188,6 +188,7 @@ int main() {
     assert(deathKernel.mutexUnlock(deathWaiter,deathMutex));
     // Guest syscalls attach, read, write and detach a kernel-created segment.
     const auto guestSegment=syncKernel.createSharedMemory(16);
+    assert(syncKernel.attachSharedMemory(ownerPid,guestSegment));
     assert(syncKernel.writeSharedMemory(ownerPid,guestSegment,4,0x33));
     const auto shmGuestPid=syncKernel.spawn("guest-shm-client",nexa::Executable{0,{
         {nexa::Opcode::LoadImmediate,guestSegment},{nexa::Opcode::Store,40},{nexa::Opcode::LoadImmediate,2},{nexa::Opcode::Store,41},{nexa::Opcode::LoadBImmediate,40},{nexa::Opcode::LoadImmediate,static_cast<std::uint8_t>(nexa::Syscall::SharedAttach)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,43},
