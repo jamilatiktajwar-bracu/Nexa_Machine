@@ -113,6 +113,7 @@ bool NexaKernel::sendSignal(std::uint32_t pid,ProcessSignal signal) {
         releaseSharedAttachments(pid);
         process.inbox.clear();
         process.signals.clear();
+        cleanupSynchronizationState(pid);
         releaseOwnedMutexes(pid);
         if(currentPid_==pid) currentPid_=0;
         return true;
