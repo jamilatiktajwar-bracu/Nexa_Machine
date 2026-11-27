@@ -25,10 +25,10 @@ Syscalls return 1 on success and 0 on rejection. A blocking wait preserves the e
 - `mutexLock(pid,id)`, `mutexUnlock(pid,id)`
 - `createSemaphore(initial,maximum)`, `createMutex()`
 
-Semaphore constraints: maximum must be nonzero, and initial cannot exceed maximum. Signal at maximum is rejected. Mutex unlock by a non-owner is rejected. Wait queues are FIFO and stale/non-blocking waiters are skipped.
+Semaphore constraints: maximum must be nonzero, and initial cannot exceed maximum. Signal at maximum is rejected. Mutex unlock by a non-owner is rejected. Wait queues are FIFO and stale/non-blocking waiters are skipped. If an owning process exits, is terminated, faults or exhausts its instruction quota, the kernel releases its mutexes and transfers ownership to the oldest valid blocked waiter.
 
 ## Scope
-Objects are kernel-global and IDs are host-created. There is no guest object creation or destruction, shared memory, priority inheritance, robust mutex recovery after owner death, or user-level authorization. The simulator API is educational, not POSIX-compatible.
+Objects are kernel-global and IDs are host-created. There is no guest object creation or destruction, shared memory, priority inheritance, or user-level authorization. Owner-death recovery is a simulator cleanup policy, not robust-mutex consistency semantics. The simulator API is educational, not POSIX-compatible.
 
 ## Tests
 Regression tests cover guest wait blocking and wakeup, semaphore limits, mutex ownership, recursive-lock rejection and FIFO owner handoff.
