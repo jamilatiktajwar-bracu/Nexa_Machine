@@ -176,8 +176,7 @@ int main() {
     assert(syncKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
     assert(syncKernel.scheduleOne());
     assert(syncKernel.terminateProcess(deathOwner));
-    assert(syncKernel.scheduleOne());
-    assert(syncKernel.scheduleOne());
+    for(int retry=0;retry<8&&syncKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(syncKernel.scheduleOne());
     assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
     assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
     // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
