@@ -203,8 +203,8 @@ int main() {
         {nexa::Opcode::LoadImmediate,0x66},{nexa::Opcode::Store,518},{nexa::Opcode::Load,518},{nexa::Opcode::Store,45},
         {nexa::Opcode::Halt,0}}});    syncKernel.setPriority(shmGuestPid,7);
     for(int retry=0;retry<100;++retry) {
-        const states=syncKernel.processes();
-        const guestState=std::find_if(states.begin(),states.end(),[&](const auto& process){return process.pid==shmGuestPid;});
+        const auto states=syncKernel.processes();
+        const auto guestState=std::find_if(states.begin(),states.end(),[&](const auto& process){return process.pid==shmGuestPid;});
         if(guestState!=states.end()&&guestState->state==nexa::ProcessState::Halted)break;
         assert(syncKernel.scheduleOne());
     }
