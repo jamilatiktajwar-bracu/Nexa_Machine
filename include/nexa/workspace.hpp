@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <string>
+#include <vector>
 namespace nexa {
 struct WorkspacePaths {
  std::filesystem::path root, config, profiles, disks, snapshots, logs;
