@@ -18,6 +18,8 @@
 #include <QFileDialog>
 #include <QFile>
 #include <QStringList>
+#include <QTimer>
+#include <QFileInfo>
 #include <functional>
 #include <sstream>
 #include <algorithm>
@@ -27,6 +29,7 @@
 #include "nexa/vm.hpp"
 #include "nexa/config.hpp"
 #include "nexa/workspace.hpp"
+#include "nexa/virtual_disk.hpp"
 class PixelCanvas:public QLabel {
 public: std::function<void(int,int,bool)> paintPixel;
 protected:
@@ -41,9 +44,9 @@ public:
   paths=nexa::WorkspacePaths::discover();paths.initialize();setWindowTitle("Nexa Machine — VM Manager");resize(1180,800);
   auto*w=new QWidget;auto*l=new QVBoxLayout(w);auto*bar=new QHBoxLayout;
   profiles=new QComboBox;profiles->setMinimumWidth(180);auto*refresh=new QPushButton("Refresh");auto*create=new QPushButton("New profile");auto*clone=new QPushButton("Clone");auto*del=new QPushButton("Delete");auto*exportProfile=new QPushButton("Export");auto*importProfile=new QPushButton("Import");auto*loadFile=new QPushButton("Open .nexa");
-  auto*saveSnap=new QPushButton("Save snapshot");auto*restoreSnap=new QPushButton("Restore snapshot");auto*run=new QPushButton("Run");auto*step=new QPushButton("Step");auto*reset=new QPushButton("Reset");
+  auto*saveSnap=new QPushButton("Save snapshot");auto*restoreSnap=new QPushButton("Restore snapshot");auto*run=new QPushButton("Start");auto*pause=new QPushButton("Pause");auto*resume=new QPushButton("Resume");auto*stop=new QPushButton("Stop");auto*step=new QPushButton("Step");auto*reset=new QPushButton("Reset");auto*diskInfo=new QPushButton("Disk info");auto*flushDisk=new QPushButton("Flush disk");
   auto*bp=new QLineEdit;bp->setPlaceholderText("Breakpoint address");bp->setMaximumWidth(150);auto*setBp=new QPushButton("Set breakpoint");status=new QLabel("Ready");
-  bar->addWidget(profiles);bar->addWidget(refresh);bar->addWidget(create);bar->addWidget(clone);bar->addWidget(del);bar->addWidget(exportProfile);bar->addWidget(importProfile);bar->addWidget(loadFile);bar->addWidget(saveSnap);bar->addWidget(restoreSnap);bar->addWidget(run);bar->addWidget(step);bar->addWidget(reset);bar->addWidget(bp);bar->addWidget(setBp);bar->addWidget(status);l->addLayout(bar);
+  bar->addWidget(profiles);bar->addWidget(refresh);bar->addWidget(create);bar->addWidget(clone);bar->addWidget(del);bar->addWidget(exportProfile);bar->addWidget(importProfile);bar->addWidget(loadFile);bar->addWidget(saveSnap);bar->addWidget(restoreSnap);bar->addWidget(run);bar->addWidget(pause);bar->addWidget(resume);bar->addWidget(stop);bar->addWidget(step);bar->addWidget(reset);bar->addWidget(diskInfo);bar->addWidget(flushDisk);bar->addWidget(bp);bar->addWidget(setBp);bar->addWidget(status);l->addLayout(bar);
   editor=new QPlainTextEdit;editor->setPlainText("LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n");l->addWidget(editor,2);
   auto*panels=new QHBoxLayout;output=new QTextEdit;output->setReadOnly(true);memory=new QTextEdit;memory->setReadOnly(true);memory->setMaximumWidth(330);graphics=new PixelCanvas;graphics->setMinimumSize(320,160);graphics->setAlignment(Qt::AlignCenter);panels->addWidget(output,2);panels->addWidget(memory,1);panels->addWidget(graphics,1);l->addLayout(panels,1);setCentralWidget(w);
   connect(refresh,&QPushButton::clicked,this,[this](){refreshProfiles();});
@@ -56,9 +59,9 @@ public:
   connect(loadFile,&QPushButton::clicked,this,[this](){auto file=QFileDialog::getOpenFileName(this,"Open assembly",QString(),"Nexa Assembly (*.nexa *.asm *.txt);;All files (*)");if(!file.isEmpty()){QFile f(file);if(f.open(QIODevice::ReadOnly|QIODevice::Text))editor->setPlainText(QString::fromUtf8(f.readAll()));loaded=false;status->setText("Source loaded");}});
   connect(saveSnap,&QPushButton::clicked,this,[this](){saveSnapshot();});
   connect(restoreSnap,&QPushButton::clicked,this,[this](){restoreSnapshot();});
-  connect(run,&QPushButton::clicked,this,[this](){execute(false);});
+  connect(run,&QPushButton::clicked,this,[this](){startExecution();});\n  connect(pause,&QPushButton::clicked,this,[this](){timer.stop();status->setText("Paused");});\n  connect(resume,&QPushButton::clicked,this,[this](){resumeExecution();});\n  connect(stop,&QPushButton::clicked,this,[this](){timer.stop();if(vm)vm->requestHalt();status->setText("Stopped");refreshMemory();});\n  connect(diskInfo,&QPushButton::clicked,this,[this](){showDiskInfo();});\n  connect(flushDisk,&QPushButton::clicked,this,[this](){flushDiskImage();});
   connect(step,&QPushButton::clicked,this,[this](){execute(true);});
-  connect(reset,&QPushButton::clicked,this,[this](){vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
+  connect(reset,&QPushButton::clicked,this,[this](){timer.stop();vm=std::make_unique<nexa::VM>(ramBytes);loaded=false;output->clear();status->setText("Reset");refreshMemory();});
   connect(setBp,&QPushButton::clicked,this,[this,bp](){bool ok=false;auto address=bp->text().toULong(&ok);if(ok){vm->setBreakpoint(address);status->setText(QString("Breakpoint at %1").arg(address));}else status->setText("Invalid breakpoint");});
   refreshProfiles();
  }
@@ -72,9 +75,14 @@ private:
  void selectProfile(){QString name=profiles->currentText();if(name.isEmpty())return;try{auto cfg=nexa::MachineConfig::load((paths.profiles/(name.toStdString()+".json")).string());ramBytes=cfg.ramBytes;vm=std::make_unique<nexa::VM>(ramBytes);activeProfile=name.toStdString();loaded=false;output->clear();status->setText(QString("Profile %1 | RAM %2 bytes").arg(name).arg(ramBytes));refreshMemory();}catch(const std::exception&e){QMessageBox::warning(this,"Profile load error",e.what());}}
  void saveSnapshot(){if(activeProfile.empty()){QMessageBox::information(this,"Snapshot","Create or select a profile first.");return;}bool ok=false;QString name=QInputDialog::getText(this,"Save snapshot","Snapshot name:",QLineEdit::Normal,"checkpoint",&ok);if(!ok||name.trimmed().isEmpty())return;try{auto path=paths.snapshotPath(activeProfile,name.trimmed().toStdString());vm->saveState(path.string());status->setText("Snapshot saved: "+name);}catch(const std::exception&e){QMessageBox::warning(this,"Snapshot error",e.what());}}
  void restoreSnapshot(){if(activeProfile.empty())return;auto names=paths.listSnapshots(activeProfile);if(names.empty()){QMessageBox::information(this,"Snapshots","No snapshots found for this profile.");return;}QStringList list;for(auto&n:names)list<<QString::fromStdString(n);bool ok=false;QString name=QInputDialog::getItem(this,"Restore snapshot","Snapshot:",list,0,false,&ok);if(!ok)return;try{vm->loadState(paths.snapshotPath(activeProfile,name.toStdString()).string());loaded=true;status->setText("Snapshot restored: "+name);refreshMemory();}catch(const std::exception&e){QMessageBox::warning(this,"Restore error",e.what());}}
+ void startExecution(){try{if(vm->halted()){QMessageBox::information(this,"VM","VM is halted. Reset before starting again.");return;}if(!loaded){vm->loadProgram(nexa::parseAssembly(editor->toPlainText().toStdString()));loaded=true;}timer.start(15);status->setText("Running");}catch(const std::exception&e){output->setPlainText(e.what());status->setText("Start error");}}
+ void resumeExecution(){if(!loaded||vm->halted()){QMessageBox::information(this,"VM","Load or reset a program before resuming.");return;}timer.start(15);status->setText("Resumed");}
+ void tick(){if(!vm||vm->halted()){timer.stop();status->setText("Halted");return;}try{std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());try{vm->stepInstruction();}catch(...){std::cout.rdbuf(old);throw;}std::cout.rdbuf(old);auto produced=capture.str();if(!produced.empty())output->append(QString::fromStdString(produced));refreshMemory();status->setText(QString("Running | PC=%1 A=%2 B=%3 | %4 instructions").arg(vm->programCounter()).arg(vm->accumulator()).arg(vm->secondRegister()).arg(vm->instructionsExecuted()));if(vm->halted()){timer.stop();status->setText(QString("Halted | %1 instructions").arg(vm->instructionsExecuted()));}}catch(const std::exception&e){timer.stop();output->append(QString::fromStdString(e.what()));status->setText("Execution fault");}}
+ void showDiskInfo(){if(activeProfile.empty()){QMessageBox::information(this,"Disk","Select a profile to inspect its disk.");return;}try{auto cfg=nexa::MachineConfig::load((paths.profiles/(activeProfile+".json")).string());QFileInfo info(QString::fromStdString(cfg.diskPath));QMessageBox::information(this,"Virtual disk",QString("Image: %1\\nConfigured capacity: %2 bytes\\nFile exists: %3\\nFile size: %4 bytes").arg(info.absoluteFilePath()).arg(cfg.diskBytes).arg(info.exists()?"Yes":"No").arg(info.exists()?info.size():0));}catch(const std::exception&e){QMessageBox::warning(this,"Disk info",e.what());}}
+ void flushDiskImage(){if(activeProfile.empty())return;try{auto cfg=nexa::MachineConfig::load((paths.profiles/(activeProfile+".json")).string());nexa::VirtualDisk disk(cfg.diskPath,cfg.diskBytes);disk.load();disk.flush();status->setText("Disk image initialized/flushed");}catch(const std::exception&e){QMessageBox::warning(this,"Disk error",e.what());}}
  void execute(bool singleStep){try{if(!loaded){vm->loadProgram(nexa::parseAssembly(editor->toPlainText().toStdString()));loaded=true;}std::ostringstream capture;auto*old=std::cout.rdbuf(capture.rdbuf());try{if(singleStep)vm->stepInstruction();else vm->run();}catch(...){std::cout.rdbuf(old);throw;}std::cout.rdbuf(old);output->append(QString::fromStdString(capture.str()));status->setText(QString("PC=%1 A=%2 B=%3 | %4 | %5 instructions").arg(vm->programCounter()).arg(vm->accumulator()).arg(vm->secondRegister()).arg(vm->halted()?"Halted":vm->hasBreakpoint(vm->programCounter())?"Breakpoint":"Paused").arg(vm->instructionsExecuted()));refreshMemory();}catch(const std::exception&e){output->setPlainText(e.what());status->setText("Error");}}
  void refreshGraphics(){QImage img(nexa::VM::ScreenWidth,nexa::VM::ScreenHeight,QImage::Format_RGB32);for(int y=0;y<int(nexa::VM::ScreenHeight);++y)for(int x=0;x<int(nexa::VM::ScreenWidth);++x)img.setPixel(x,y,vm->pixel(x,y)?qRgb(255,255,255):qRgb(0,0,0));graphics->setPixmap(QPixmap::fromImage(img).scaled(graphics->size(),Qt::KeepAspectRatio));}
  void refreshMemory(){if(!vm)return;refreshGraphics();QString text;for(unsigned row=0;row<64&&row<ramBytes;row+=16){text+=QString("%1: ").arg(row,4,16,QChar('0'));for(unsigned col=0;col<16&&row+col<ramBytes;++col)text+=QString("%1 ").arg(vm->readMemory(row+col),2,16,QChar('0'));text+="\n";}memory->setPlainText(text.toUpper());}
- nexa::WorkspacePaths paths;std::string activeProfile;std::size_t ramBytes{256};std::unique_ptr<nexa::VM>vm{std::make_unique<nexa::VM>()};QComboBox*profiles{};QPlainTextEdit*editor{};QTextEdit*output{};QTextEdit*memory{};QLabel*status{};PixelCanvas*graphics{};bool loaded=false;
+ nexa::WorkspacePaths paths;QTimer timer;std::string activeProfile;std::size_t ramBytes{256};std::unique_ptr<nexa::VM>vm{std::make_unique<nexa::VM>()};QComboBox*profiles{};QPlainTextEdit*editor{};QTextEdit*output{};QTextEdit*memory{};QLabel*status{};PixelCanvas*graphics{};bool loaded=false;
 };
 int main(int argc,char**argv){QApplication app(argc,argv);NexaWindow w;w.show();return app.exec();}
