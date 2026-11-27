@@ -165,3 +165,18 @@ Java_com_nexa_machine_NexaNative_restoreSnapshot(JNIEnv* env, jclass, jlong hand
     const std::string disks = base + "/disks";
     return nexa_snapshot_restore_bundle(context, static_cast<uint64_t>(session), vm.c_str(), disks.c_str());
 }
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_nexa_machine_NexaNative_recoveryReport(JNIEnv* env, jclass, jlong handle) {
+    auto* context = reinterpret_cast<NexaContext*>(handle);
+    if (!context) return env->NewStringUTF("");
+    NexaRecoveryReport report{};
+    if (nexa_snapshot_recovery_report_get(context, &report) != 0 || !report.attempted)
+        return env->NewStringUTF("");
+    const std::string text = std::string("Recovery: ") + (report.success ? "SUCCESS" : "NEEDS ATTENTION") +
+        "\\nPhase: " + report.phase +
+        "\\nAffected path: " + report.affected_path +
+        "\\nReason: " + report.reason +
+        "\\nRecommended action: " + report.recommended_action;
+    return env->NewStringUTF(text.c_str());
+}
