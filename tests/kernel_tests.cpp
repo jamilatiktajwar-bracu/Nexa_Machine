@@ -190,6 +190,28 @@ int main() {
     for(int retry=0;retry<20&&deathKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(deathKernel.scheduleOne());
     assert(deathKernel.readProcessMemory(deathWaiter,102)==1);
     assert(deathKernel.mutexUnlock(deathWaiter,deathMutex));
+    // Exiting semaphore waiters are removed, and an unconsumed grant is handed on.
+    nexa::NexaKernel waiterCleanupKernel;
+    const auto cleanupSemaphore=waiterCleanupKernel.createSemaphore(0,2);
+    const auto abandonedWaiter=waiterCleanupKernel.spawn("abandoned-sem-waiter",looping);
+    const auto survivingWaiter=waiterCleanupKernel.spawn("surviving-sem-waiter",looping);
+    assert(!waiterCleanupKernel.semaphoreWait(abandonedWaiter,cleanupSemaphore));
+    assert(!waiterCleanupKernel.semaphoreWait(survivingWaiter,cleanupSemaphore));
+    assert(waiterCleanupKernel.semaphoreSignal(cleanupSemaphore));
+    assert(waiterCleanupKernel.terminateProcess(abandonedWaiter));
+    assert(waiterCleanupKernel.semaphoreWait(survivingWaiter,cleanupSemaphore));
+    assert(waiterCleanupKernel.syncDiagnostics().find("waiters=0")!=std::string::npos);
+
+    // A process killed while waiting for a mutex must not remain in its queue.
+    const auto cleanupMutex=waiterCleanupKernel.createMutex();
+    const auto cleanupOwner=waiterCleanupKernel.spawn("cleanup-mutex-owner",looping);
+    const auto cleanupBlocked=waiterCleanupKernel.spawn("cleanup-mutex-waiter",looping);
+    assert(waiterCleanupKernel.mutexLock(cleanupOwner,cleanupMutex));
+    assert(!waiterCleanupKernel.mutexLock(cleanupBlocked,cleanupMutex));
+    assert(waiterCleanupKernel.terminateProcess(cleanupBlocked));
+    assert(waiterCleanupKernel.syncDiagnostics().find("waiters=[]")!=std::string::npos);
+    assert(waiterCleanupKernel.mutexUnlock(cleanupOwner,cleanupMutex));
+
     // Guest syscalls attach, read, write and detach a kernel-created segment.
     const auto guestSegment=syncKernel.createSharedMemory(16);
     assert(syncKernel.attachSharedMemory(ownerPid,guestSegment));
