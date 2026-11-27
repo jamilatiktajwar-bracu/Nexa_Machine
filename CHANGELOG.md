@@ -2,6 +2,10 @@
 
 All notable Nexa Machine milestones are documented here. This is an educational VM and OS simulator, not a production hypervisor or standalone OS.
 
+## [2.14.0] - 2026-11-27
+- Added guest shared-memory syscalls 18–21 (attach/detach/read/write) with checked descriptors and bounds/attachment validation.
+- Added `shmstat` shell diagnostics and isolated mutex owner-death regression test.
+
 ## [2.13.0] - 2026-11-27
 - Added kernel-managed shared memory segments with attach/detach, byte read/write APIs, lifecycle cleanup and diagnostics.
 - Shared memory remains host-accessible through kernel API; it is not yet mapped into guest virtual address spaces.
