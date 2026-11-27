@@ -15,10 +15,21 @@ final class NexaSessionModel: ObservableObject {
         guard let ctx = nexa_context_create() else { status = "Core initialization failed"; return }
         context = ctx
         var handle: UInt64 = 0
-        let rc = "iOS session".withCString { nexa_session_create(ctx, $0, 4096, &handle) }
-        guard rc == 0 else { status = errorText(); return }
-        session = handle
-        status = "Ready"
+        do {
+            let root = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("Nexa/Snapshot", isDirectory: true)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            let vm = root.appendingPathComponent("session.vm").path
+            let rc = "iOS session".withCString { name in
+                vm.withCString { vmPath in
+                    root.path.withCString { diskPath in
+                        nexa_session_create_recovering(ctx, name, 4096, vmPath, diskPath, &handle)
+                    }
+                }
+            }
+            guard rc == 0 else { status = errorText(); return }
+            session = handle
+            status = "Ready · recovery checked"
+        } catch { status = "Recovery startup error: \(error.localizedDescription)" }
     }
 
     func load(_ source: String) {
