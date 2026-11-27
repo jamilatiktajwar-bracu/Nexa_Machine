@@ -32,3 +32,8 @@ Objects are kernel-global and IDs are host-created. There is no guest object cre
 
 ## Tests
 Regression tests cover guest wait blocking and wakeup, semaphore limits, mutex ownership, recursive-lock rejection and FIFO owner handoff.
+
+
+## Nexa OS 2.12 — Priority inheritance
+
+Mutex owners dynamically inherit the highest effective priority of blocked waiters. The calculation propagates across mutex dependency chains and clamps priorities to 0–7. When waiters leave or ownership changes, the boost is recomputed instead of permanently modifying base priority. `syncstat` shows object counts, semaphore values, mutex owners, waiter queues, and effective priorities. This implementation is a scheduler-level simulation; it does not claim SMP atomicity or guest-visible synchronization object creation.
