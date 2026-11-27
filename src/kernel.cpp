@@ -19,7 +19,7 @@ std::uint32_t NexaKernel::spawn(const std::string& name,const Executable& image)
     p.machine.loadProgram(image.code);
     p.machine.setProgramCounter(image.entryPoint);
     p.machine.setSyscallHandler([this,pid](std::uint8_t service,std::uint8_t argument) {
-        if(service>static_cast<std::uint8_t>(Syscall::ReceiveMessage)) throw std::runtime_error("Unknown kernel syscall");
+        if(service>static_cast<std::uint8_t>(Syscall::GetSignal)) throw std::runtime_error("Unknown kernel syscall");
         return syscall(pid,static_cast<Syscall>(service),argument);
     });
     const auto codeSpace=pid|0x80000000u;
@@ -91,6 +91,48 @@ bool NexaKernel::terminateProcess(std::uint32_t pid) {
     it->second.inbox.clear();
     if(currentPid_==pid) currentPid_=0;
     return true;
+}
+bool NexaKernel::sendSignal(std::uint32_t pid,ProcessSignal signal) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) throw std::out_of_range("Unknown process id");
+    auto& process=it->second;
+    if(process.info.state==ProcessState::Halted||process.info.state==ProcessState::Faulted) return false;
+    switch(signal) {
+    case ProcessSignal::Terminate:
+    case ProcessSignal::Kill:
+        process.machine.requestHalt();
+        process.info.state=ProcessState::Halted;
+        process.info.exitCode=signal==ProcessSignal::Terminate?143:137;
+        process.info.terminationReason=signal==ProcessSignal::Terminate?"signal:TERM":"signal:KILL";
+        process.openFiles.clear();
+        process.inbox.clear();
+        process.signals.clear();
+        if(currentPid_==pid) currentPid_=0;
+        return true;
+    case ProcessSignal::Stop:
+        if(process.info.state==ProcessState::Stopped) return false;
+        process.info.state=ProcessState::Stopped;
+        if(currentPid_==pid) currentPid_=0;
+        return true;
+    case ProcessSignal::Continue:
+        if(process.info.state!=ProcessState::Stopped) return false;
+        process.info.state=ProcessState::Ready;
+        return true;
+    case ProcessSignal::User1:
+    case ProcessSignal::User2:
+        if(process.signals.size()>=MaxPendingSignals) return false;
+        process.signals.push_back(signal);
+        return true;
+    }
+    throw std::invalid_argument("Unsupported process signal");
+}
+std::optional<ProcessSignal> NexaKernel::receiveSignal(std::uint32_t pid) {
+    auto it=processes_.find(pid);
+    if(it==processes_.end()) throw std::out_of_range("Unknown process id");
+    if(it->second.signals.empty()) return std::nullopt;
+    const auto signal=it->second.signals.front();
+    it->second.signals.pop_front();
+    return signal;
 }
 bool NexaKernel::reapProcess(std::uint32_t pid) {
     auto it=processes_.find(pid);
@@ -238,6 +280,7 @@ bool NexaKernel::scheduleOne() {
     if(proc.info.state==ProcessState::Faulted||proc.info.state==ProcessState::Halted) {
         proc.openFiles.clear();
         proc.inbox.clear();
+        proc.signals.clear();
     }
     proc.yieldRequested=false;
     return true;
@@ -249,6 +292,7 @@ std::vector<ProcessInfo> NexaKernel::processes() const {
         (void)id;
         auto info=p.info;
         info.pendingMessages=p.inbox.size();
+        info.pendingSignals=p.signals.size();
         info.readyWaitTicks=p.readyWaitTicks;
         const auto boost=priorityAgingThreshold_==0?0:p.readyWaitTicks/priorityAgingThreshold_;
         if(boost>=static_cast<std::uint64_t>(7-p.info.priority)) info.effectivePriority=7;
@@ -272,11 +316,12 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     auto it=processes_.find(pid);
     if(it==processes_.end()) throw std::out_of_range("Unknown process id");
     switch(call) {
-    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); return 0;
+    case Syscall::Exit: it->second.info.state=ProcessState::Halted; it->second.info.exitCode=arg; it->second.info.terminationReason="exit"; it->second.openFiles.clear(); it->second.inbox.clear(); it->second.signals.clear(); return 0;
     case Syscall::Write: output_.push_back(static_cast<char>(arg)); return 0;
     case Syscall::Read: return it->second.machine.readMemory(arg);
     case Syscall::GetPid: return static_cast<std::uint8_t>(pid&255);
     case Syscall::Yield: it->second.yieldRequested=true; return 0;
+    case Syscall::GetSignal: { const auto signal=receiveSignal(pid); return signal?static_cast<std::uint8_t>(*signal):0; }
     case Syscall::FileExists: { const auto path="/"+std::to_string(arg); return hasFileAccess(pid,path,FilePermission::Read)&&fs_.exists(path)?1:0; }
     case Syscall::OpenRead:
     case Syscall::OpenWrite: {
