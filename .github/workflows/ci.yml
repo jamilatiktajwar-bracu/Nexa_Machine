@@ -4,7 +4,7 @@ on:
   pull_request:
 concurrency:
   group: nexa-ci-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   desktop:
     timeout-minutes: 75
