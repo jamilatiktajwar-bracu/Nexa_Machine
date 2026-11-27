@@ -132,6 +132,10 @@ inline void recoverCoordinator(const std::filesystem::path& journal) {
             syncFile(e.target);
             syncDirectory(e.target.parent_path());
         }
+        // Persist the completed rollback decision before deleting any backup.
+        // If cleanup itself is interrupted, the next recovery must finish
+        // cleanup rather than requiring backups already removed by this pass.
+        writeJournal(journal, JournalPhase::Committed, entries);
     }
     const auto linksFile = std::filesystem::path(journal.string() + ".links");
     if (std::filesystem::exists(linksFile)) {
