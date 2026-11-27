@@ -54,6 +54,13 @@
 
 # Nexa Machine
 
+## Cross-platform vision (Windows / macOS / Linux / iOS)
+
+Nexa is being designed around a portable C++20 VM/kernel core, so users can choose their host platform and keep compatible guest images and workflows. Desktop targets are Windows, macOS and Linux; iOS/iPadOS requires a touch-first, sandbox-aware frontend and constrained runtime.
+
+**Status:** CLI and optional Qt6 desktop frontend exist today. Mobile frontend, platform packaging, and Windows/macOS CI are not yet complete. See [cross-platform architecture and milestones](docs/CROSS_PLATFORM.md).
+
+
 ## Nexa OS 2.29 — Memory pressure diagnostics
 
 - Added `oomstat`, a read-only system memory pressure snapshot with used/free/total frames, swap activity and a simple pressure classification.
