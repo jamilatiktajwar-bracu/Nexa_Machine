@@ -210,6 +210,25 @@ int main() {
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,10)==0x34);
     assert(syncKernel.readSharedMemory(ownerPid,guestSegment,11)==0x12);
     assert(syncKernel.sharedCompareSwap16(ownerPid,guestSegment,10,1,0x5678)==0x1234);
+    // Guest ABI returns the low byte in A and writes the high byte beside the descriptor.
+    syncKernel.writeProcessMemory(ownerPid,200,guestSegment);
+    syncKernel.writeProcessMemory(ownerPid,201,10);
+    syncKernel.writeProcessMemory(ownerPid,202,1);
+    syncKernel.writeProcessMemory(ownerPid,203,0);
+    syncKernel.writeProcessMemory(ownerPid,204,0);
+    assert(syncKernel.syscall(ownerPid,nexa::Syscall::SharedAtomicAdd16,200)==0x34);
+    assert(syncKernel.readProcessMemory(ownerPid,204)==0x12);
+    syncKernel.writeProcessMemory(ownerPid,210,guestSegment);
+    syncKernel.writeProcessMemory(ownerPid,211,10);
+    syncKernel.writeProcessMemory(ownerPid,212,0x35);
+    syncKernel.writeProcessMemory(ownerPid,213,0x12);
+    syncKernel.writeProcessMemory(ownerPid,214,0xcd);
+    syncKernel.writeProcessMemory(ownerPid,215,0xab);
+    syncKernel.writeProcessMemory(ownerPid,216,0);
+    assert(syncKernel.syscall(ownerPid,nexa::Syscall::SharedCompareSwap16,210)==0x35);
+    assert(syncKernel.readProcessMemory(ownerPid,216)==0x12);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,10)==0xcd);
+    assert(syncKernel.readSharedMemory(ownerPid,guestSegment,11)==0xab);
     assert(!syncKernel.sharedAtomicAdd16(ownerPid,guestSegment,15,1)); // segment boundary
 
     assert(syncKernel.sharedCompareSwap(ownerPid,guestSegment,9,1,8)==7);
