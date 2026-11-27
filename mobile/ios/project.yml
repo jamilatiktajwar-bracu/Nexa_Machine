@@ -42,7 +42,7 @@ targets:
         basedOnDependencyAnalysis: false
 
   NexaMachineTests:
-    type: bundle.unit-test
+    type: bundle.ui-testing
     platform: iOS
     sources:
       - path: NexaMachineTests
