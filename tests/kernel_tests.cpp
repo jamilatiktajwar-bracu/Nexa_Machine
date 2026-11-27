@@ -1,6 +1,6 @@
 #include "nexa/kernel.hpp"
 #include "nexa/shell.hpp"
-#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\\n'; return 1; } } while (false
+#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\n'; return 1; } } while (false
 #include <iostream>
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\\n'; return 1; } } while (false
 #include <cstdio>
