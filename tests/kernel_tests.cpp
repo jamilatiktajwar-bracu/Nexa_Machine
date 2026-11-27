@@ -167,26 +167,25 @@ int main() {
     assert(syncKernel.readProcessMemory(lockWaiterPid,101)==1);
     assert(!syncKernel.mutexUnlock(ownerPid,mutexId));
     assert(syncKernel.mutexUnlock(lockWaiterPid,mutexId));
-    const auto deathMutex=syncKernel.createMutex();
-    const auto deathOwner=syncKernel.spawn("mutex-owner-dies",nexa::Executable{0,{{nexa::Opcode::Halt,0}}});
-    const auto deathWaiter=syncKernel.spawn("mutex-death-waiter",nexa::Executable{0,{
+    // Isolated owner-death handoff test so unrelated ready processes cannot interfere.
+    nexa::NexaKernel deathKernel;
+    const auto deathMutex=deathKernel.createMutex();
+    const auto deathOwner=deathKernel.spawn("mutex-owner-dies",looping);
+    const auto deathWaiter=deathKernel.spawn("mutex-death-waiter",nexa::Executable{0,{
         {nexa::Opcode::LoadBImmediate,deathMutex},
         {nexa::Opcode::LoadImmediate,static_cast<std::uint16_t>(nexa::Syscall::MutexLock)},{nexa::Opcode::Syscall,0},{nexa::Opcode::Store,102},{nexa::Opcode::Jump,4}}});
-    assert(syncKernel.mutexLock(deathOwner,deathMutex));
-    assert(syncKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
-    for(int retry=0;retry<20;++retry) {
-        const auto state=syncKernel.processes();
-        const auto waiter=std::find_if(state.begin(),state.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
-        if(waiter!=state.end()&&waiter->state==nexa::ProcessState::Blocked) break;
-        assert(syncKernel.scheduleOne());
-    }
-    auto state=syncKernel.processes();
-    auto waiter=std::find_if(state.begin(),state.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
-    assert(waiter!=state.end()&&waiter->state==nexa::ProcessState::Blocked);
-    assert(syncKernel.terminateProcess(deathOwner));
-    for(int retry=0;retry<20&&syncKernel.readProcessMemory(deathWaiter,102)!=1;++retry) assert(syncKernel.scheduleOne());
-    assert(syncKernel.readProcessMemory(deathWaiter,102)==1);
-    assert(syncKernel.mutexUnlock(deathWaiter,deathMutex));
+    assert(deathKernel.mutexLock(deathOwner,deathMutex));
+    deathKernel.setPriority(deathOwner,1);
+    deathKernel.setPriority(deathWaiter,7);
+    assert(deathKernel.sendSignal(deathOwner,nexa::ProcessSignal::Stop));
+    assert(deathKernel.scheduleOne());
+    auto deathState=deathKernel.processes();
+    auto deathWaiterState=std::find_if(deathState.begin(),deathState.end(),[&](const auto& proc){return proc.pid==deathWaiter;});
+    assert(deathWaiterState!=deathState.end()&&deathWaiterState->state==nexa::ProcessState::Blocked);
+    assert(deathKernel.terminateProcess(deathOwner));
+    assert(deathKernel.scheduleOne());
+    assert(deathKernel.readProcessMemory(deathWaiter,102)==1);
+    assert(deathKernel.mutexUnlock(deathWaiter,deathMutex));
     // Kernel-managed shared-memory segment API: attachment permissions and cleanup.
     const auto sharedId=syncKernel.createSharedMemory(32);
     assert(syncKernel.attachSharedMemory(ownerPid,sharedId));
