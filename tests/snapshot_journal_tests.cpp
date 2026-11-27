@@ -30,6 +30,13 @@ int main(int argc, char** argv) {
 
     // Abrupt termination after only the first disk has been replaced must
     // still roll back the complete multi-disk transaction in a fresh process.
+    if (argc == 3 && std::string(argv[1]) == "--publication-crash-child") {
+        const fs::path journal=argv[2];
+        const auto temp=fs::path(journal.string()+".tmp");
+        write(temp,"NEXA_SNAPSHOT_JOURNAL 1\\nPREPARED\\n999\\ntruncated");
+        nexa::snapshot::syncFile(temp);
+        std::_Exit(86); // Dies before atomic rename publishes the journal.
+    }
     if (argc == 4 && std::string(argv[1]) == "--group-crash-child") {
         const fs::path a=argv[2], b=argv[3];
         const auto groupRoot=a.parent_path();
@@ -121,11 +128,18 @@ int main(int argc, char** argv) {
     const auto publicationJournal=root/"publication.journal";
     const auto publicationTemp=fs::path(publicationJournal.string()+".tmp");
     write(publicationTarget,"publication-original");
-    write(publicationTemp,"NEXA_SNAPSHOT_JOURNAL 1\\nPREPARED\\n999\\ntruncated");
-    const std::string publicationCommand="\\""+std::string(argv[0])+"\\" --publication-crash-child";
-    (void)publicationCommand;
-    if (read(publicationTarget)!="publication-original" || fs::exists(publicationJournal)) {
-        std::cerr<<"partial journal publication changed live data\\n";return 1;
+    const std::string publicationCommand="\\""+std::string(argv[0])+"\\" --publication-crash-child \\""+
+        publicationJournal.string()+"\\"";
+    const int publicationStatus=std::system(publicationCommand.c_str());
+#ifdef _WIN32
+    const int expectedPublicationStatus=86;
+#else
+    const int expectedPublicationStatus=86<<8;
+#endif
+    if (publicationStatus!=expectedPublicationStatus ||
+        read(publicationTarget)!="publication-original" || fs::exists(publicationJournal) ||
+        !fs::exists(publicationTemp)) {
+        std::cerr<<"partial journal publication did not remain isolated in temp file\\n";return 1;
     }
     fs::remove(publicationTemp);
 
