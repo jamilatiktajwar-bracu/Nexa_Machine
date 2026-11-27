@@ -50,6 +50,51 @@ int main(int argc, char** argv) {
     if (read(target) != "new-committed-state") {
         std::cerr << "committed transaction was incorrectly rolled back\n"; return 1;
     }
+    // A single coordinator decision must recover every disk, even when
+    // recovery is first triggered by attaching only the second disk.
+    const auto diskA = root / "disk-a.img";
+    const auto diskB = root / "disk-b.img";
+    const auto backupA = root / "disk-a.rollback";
+    const auto backupB = root / "disk-b.rollback";
+    const auto sidecarA = fs::path(diskA.string() + ".nexa-journal");
+    const auto sidecarB = fs::path(diskB.string() + ".nexa-journal");
+    const auto coordinator = root / "coordinated.journal";
+    write(diskA, "disk-a-original");
+    write(diskB, "disk-b-original");
+    nexa::snapshot::prepareGroup(coordinator, {
+        {sidecarA, {diskA, backupA}},
+        {sidecarB, {diskB, backupB}}
+    });
+    write(diskA, "disk-a-mutated");
+    write(diskB, "disk-b-mutated");
+    nexa::snapshot::syncFile(diskA);
+    nexa::snapshot::syncFile(diskB);
+    nexa::snapshot::recover(sidecarB);
+    if (read(diskA) != "disk-a-original" || read(diskB) != "disk-b-original" ||
+        fs::exists(sidecarA) || fs::exists(sidecarB) || fs::exists(coordinator) ||
+        fs::exists(backupA) || fs::exists(backupB)) {
+        std::cerr << "coordinated rollback did not restore and clean every disk\\n";
+        return 1;
+    }
+
+    write(diskA, "disk-a-before-commit");
+    write(diskB, "disk-b-before-commit");
+    nexa::snapshot::prepareGroup(coordinator, {
+        {sidecarA, {diskA, backupA}},
+        {sidecarB, {diskB, backupB}}
+    });
+    write(diskA, "disk-a-committed");
+    write(diskB, "disk-b-committed");
+    nexa::snapshot::syncFile(diskA);
+    nexa::snapshot::syncFile(diskB);
+    nexa::snapshot::commitGroup(coordinator);
+    if (read(diskA) != "disk-a-committed" || read(diskB) != "disk-b-committed" ||
+        fs::exists(sidecarA) || fs::exists(sidecarB) || fs::exists(coordinator) ||
+        fs::exists(backupA) || fs::exists(backupB)) {
+        std::cerr << "coordinated commit did not retain and clean every disk\\n";
+        return 1;
+    }
+
     fs::remove_all(root);
     std::cout << "Snapshot journal subprocess recovery tests passed\n";
     return 0;
