@@ -151,13 +151,15 @@ Run `nexa console`, then type `os`. Commands: help, echo, clear, mem, run FILE, 
 
 ## VM profiles
 
-Create a named profile with `nexa --profile-create NAME`; use `nexa --profile-list` to enumerate them and `nexa --profile-show NAME` to inspect RAM and disk settings. Launch assembly using that profile with `nexa --profile-run NAME SOURCE.nexa`. Profile JSON is parsed by the existing machine configuration loader; each profile has a dedicated disk image path. Names are restricted to safe filename characters and duplicate creation is rejected.
+Create a profile with `nexa --profile-create NAME [RAM_BYTES DISK_BYTES]`; sizes default to 256 bytes RAM and 1 MiB disk. Use `nexa --profile-list` to enumerate profiles and `nexa --profile-show NAME` to inspect them. Run assembly with a profile using `nexa --profile-run NAME SOURCE.nexa`. Profile values are validated and stored as JSON with a dedicated virtual disk path. Names are restricted to safe filename characters and duplicate creation is rejected.
 
 ## Portable workspace
 
 `nexa --workspace` prints Nexa data paths; `nexa --init-workspace` creates the standard directory structure. Set `NEXA_HOME` to relocate the workspace (useful for portable drives or separate development profiles). The workspace separates config, profiles, disks, snapshots and logs.
 
 ## Host diagnostics
+
+
 
 
 
