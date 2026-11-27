@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     NexaSessionInfo expectedCpuState{};
     int guestAlive = 0;
     if (!createSession(setup, setupSession) || !attachDisk(setup, setupSession, disk) ||
-        nexa_session_load_assembly(setup, setupSession, "LOAD A, 12\\nHALT\\n") != 0 ||
+        nexa_session_load_assembly(setup, setupSession, "LOAD A, 12\nHALT\n") != 0 ||
         nexa_session_start(setup, setupSession) != 0 ||
         nexa_session_step(setup, setupSession, &guestAlive) != 0 ||
         nexa_session_info(setup, setupSession, &expectedCpuState) != 0 ||
