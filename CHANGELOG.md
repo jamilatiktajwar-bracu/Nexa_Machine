@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.24.0] - 2026-11-27
+- Added `ProcessInfo::pendingMessageBytes` to expose per-process queued IPC payload bytes alongside message counts.
+- Added regression coverage for byte accounting during FIFO enqueue and dequeue.
+
+
 ## [2.23.0] - 2026-11-27
 - Added `mutexDeadlockCycle()` to return the process IDs participating in a detected circular mutex wait, alongside the boolean `hasMutexDeadlock()` query.
 - Added tests verifying cycle membership and that termination cleanup clears the reported cycle.
