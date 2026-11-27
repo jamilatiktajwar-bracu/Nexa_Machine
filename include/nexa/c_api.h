@@ -38,6 +38,10 @@ int nexa_snapshot_load(NexaContext*,uint64_t id,const char* path);
 /* Coordinated bundle: VM state plus every attached disk image. Serialize context access. */
 int nexa_snapshot_save_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
 int nexa_snapshot_restore_bundle(NexaContext*,uint64_t id,const char* vm_state_path,const char* disk_snapshot_directory);
+#ifdef NEXA_ENABLE_TEST_HOOKS
+/* Test-only crash simulation: 0=disabled, 1=after disk replacement, 2=after VM load. */
+void nexa_snapshot_test_set_failpoint(int failpoint);
+#endif
 /* 512-byte sectors. Guest SYS ABI: A=4 reads B=sector into RAM[0..511];
  * A=5 writes RAM[0..511] to B=sector. Requires >=512 bytes RAM. */
 int nexa_disk_attach(NexaContext*,uint64_t id,const char* path,size_t capacity_bytes); /* device ID 0 compatibility */
