@@ -54,3 +54,14 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
+
+schemes:
+  NexaMachine:
+    build:
+      targets:
+        NexaMachine: all
+        NexaMachineTests: [test]
+    test:
+      targets:
+        - NexaMachineTests
+      config: Debug
