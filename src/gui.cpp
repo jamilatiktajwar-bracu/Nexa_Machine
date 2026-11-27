@@ -33,6 +33,8 @@
 #include "nexa/config.hpp"
 #include "nexa/workspace.hpp"
 #include "nexa/virtual_disk.hpp"
+#include "nexa/session_gui.hpp"
+#include <QTabWidget>
 class PixelCanvas:public QLabel {
 public: std::function<void(int,int,bool)> paintPixel;
 protected:
@@ -51,7 +53,7 @@ public:
   auto*bp=new QLineEdit;bp->setPlaceholderText("Breakpoint address");bp->setMaximumWidth(150);auto*setBp=new QPushButton("Set breakpoint");auto*clearBp=new QPushButton("Clear breakpoints");auto*guestInput=new QLineEdit;guestInput->setPlaceholderText("Keyboard input to guest");guestInput->setMaximumWidth(170);auto*sendInput=new QPushButton("Send input");auto*exportLog=new QPushButton("Export log");status=new QLabel("Ready");
   bar->addWidget(profiles);bar->addWidget(refresh);bar->addWidget(create);bar->addWidget(clone);bar->addWidget(del);bar->addWidget(exportProfile);bar->addWidget(importProfile);bar->addWidget(loadFile);bar->addWidget(saveSnap);bar->addWidget(restoreSnap);bar->addWidget(deleteSnap);bar->addWidget(run);bar->addWidget(pause);bar->addWidget(resume);bar->addWidget(stop);bar->addWidget(step);bar->addWidget(reset);bar->addWidget(diskInfo);bar->addWidget(flushDisk);bar->addWidget(importDisk);bar->addWidget(exportDisk);bar->addWidget(bp);bar->addWidget(setBp);bar->addWidget(clearBp);bar->addWidget(guestInput);bar->addWidget(sendInput);bar->addWidget(exportLog);bar->addWidget(status);l->addLayout(bar);
   editor=new QPlainTextEdit;editor->setPlainText("LOAD A, 19\nLOAD B, 23\nADD A, B\nPRINT A\nHALT\n");l->addWidget(editor,2);
-  auto*panels=new QHBoxLayout;output=new QTextEdit;output->setReadOnly(true);memory=new QTextEdit;memory->setReadOnly(true);memory->setMaximumWidth(330);graphics=new PixelCanvas;graphics->setMinimumSize(320,160);graphics->setAlignment(Qt::AlignCenter);panels->addWidget(output,2);panels->addWidget(memory,1);panels->addWidget(graphics,1);l->addLayout(panels,1);setCentralWidget(w);
+  auto*panels=new QHBoxLayout;output=new QTextEdit;output->setReadOnly(true);memory=new QTextEdit;memory->setReadOnly(true);memory->setMaximumWidth(330);graphics=new PixelCanvas;graphics->setMinimumSize(320,160);graphics->setAlignment(Qt::AlignCenter);panels->addWidget(output,2);panels->addWidget(memory,1);panels->addWidget(graphics,1);l->addLayout(panels,1);auto* workspaceTabs=new QTabWidget;workspaceTabs->addTab(w,"Profile VM");workspaceTabs->addTab(new nexa::SessionWorkspace(workspaceTabs),"Multi-session workspace");setCentralWidget(workspaceTabs);
   connect(refresh,&QPushButton::clicked,this,[this](){refreshProfiles();});
   connect(create,&QPushButton::clicked,this,[this](){createProfile();});
   connect(clone,&QPushButton::clicked,this,[this](){cloneProfile();});
