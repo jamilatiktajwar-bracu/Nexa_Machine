@@ -404,12 +404,13 @@ std::uint8_t NexaKernel::createSharedMemory(std::size_t bytes) {
     if(bytes==0||bytes>65536) throw std::invalid_argument("Shared memory size must be between 1 and 65536 bytes");
     if(nextSharedSegment_>MaxSyncObjects) throw std::runtime_error("Shared memory table exhausted");
     const auto id=static_cast<std::uint8_t>(nextSharedSegment_++);
-    sharedSegments_.emplace(id,SharedSegment{std::vector<std::uint8_t>(bytes,0),{}});
+    SharedSegment segment; segment.size=bytes; const auto pages=(bytes+VirtualMemoryManager::PageSize-1)/VirtualMemoryManager::PageSize; try { for(std::size_t i=0;i<pages;++i) segment.frames.push_back(memory_.createSharedFrame()); } catch(...) { for(auto frame:segment.frames) memory_.releaseSharedFrame(frame); throw; } sharedSegments_.emplace(id,std::move(segment));
     return id;
 }
 bool NexaKernel::destroySharedMemory(std::uint8_t id) {
     auto it=sharedSegments_.find(id);if(it==sharedSegments_.end())return false;
-    for(auto pid:it->second.attached) {auto p=processes_.find(pid);if(p!=processes_.end())p->second.sharedAttachments.erase(id);}
+    for(auto pid:it->second.attached) {auto p=processes_.find(pid);if(p!=processes_.end()) {unmapSharedMemory(pid,id);p->second.sharedAttachments.erase(id);}}
+    for(auto frame:it->second.frames) memory_.releaseSharedFrame(frame);
     sharedSegments_.erase(it);return true;
 }
 bool NexaKernel::attachSharedMemory(std::uint32_t pid,std::uint8_t id) {
@@ -422,21 +423,50 @@ bool NexaKernel::detachSharedMemory(std::uint32_t pid,std::uint8_t id) {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
     if(p==processes_.end()||s==sharedSegments_.end())return false;
     if(!p->second.sharedAttachments.erase(id))return false;
-    s->second.attached.erase(pid);return true;
+    s->second.attached.erase(pid);unmapSharedMemory(pid,id);return true;
 }
 std::optional<std::uint8_t> NexaKernel::readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
     if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return std::nullopt;
-    return s->second.bytes[offset];
+    return memory_.readSharedFrame(s->second.frames[offset/VirtualMemoryManager::PageSize],offset%VirtualMemoryManager::PageSize);
 }
 bool NexaKernel::writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value) {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
     if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return false;
-    s->second.bytes[offset]=value;return true;
+    memory_.writeSharedFrame(s->second.frames[offset/VirtualMemoryManager::PageSize],offset%VirtualMemoryManager::PageSize,value);return true;
+}
+bool NexaKernel::mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage) {
+    auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
+    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id))return false;
+    const auto pages=s->second.frames.size();
+    if(static_cast<std::size_t>(basePage)+pages>256)return false;
+    if(p->second.sharedMappings.contains(id))return false;
+    std::vector<std::uint8_t> mapped;
+    try {
+        for(std::size_t index=0;index<pages;++index) {
+            const auto page=static_cast<std::uint8_t>(basePage+index);
+            memory_.mapSharedFrame(pid,page,s->second.frames[index],true,true);
+            mapped.push_back(page);
+        }
+    } catch(...) { for(auto page:mapped) memory_.unmapPage(pid,page); return false; }
+    p->second.sharedMappings[id]=basePage;
+    return true;
+}
+bool NexaKernel::unmapSharedMemory(std::uint32_t pid,std::uint8_t id) {
+    auto p=processes_.find(pid);if(p==processes_.end())return false;
+    auto mapping=p->second.sharedMappings.find(id);if(mapping==p->second.sharedMappings.end())return false;
+    const auto segment=sharedSegments_.find(id);
+    const auto pages=segment==sharedSegments_.end()?0:segment->second.frames.size();
+    for(std::size_t index=0;index<pages;++index) {
+        const auto page=static_cast<std::uint8_t>(mapping->second+index);
+        if(memory_.isMapped(pid,page))memory_.unmapPage(pid,page);
+    }
+    p->second.sharedMappings.erase(mapping);
+    return true;
 }
 std::vector<SharedMemoryInfo> NexaKernel::sharedMemoryInfo() const {
     std::vector<SharedMemoryInfo> result;result.reserve(sharedSegments_.size());
-    for(const auto& [id,segment]:sharedSegments_)result.push_back({id,segment.bytes.size(),segment.attached.size()});
+    for(const auto& [id,segment]:sharedSegments_)result.push_back({id,segment.size,segment.attached.size()});
     return result;
 }
 std::string NexaKernel::syncDiagnostics() const {
@@ -491,8 +521,8 @@ std::uint8_t NexaKernel::syscall(std::uint32_t pid,Syscall call,std::uint8_t arg
     case Syscall::SemaphoreSignal: return semaphoreSignal(arg)?1:0;
     case Syscall::MutexLock: return mutexLock(pid,arg)?1:0;
     case Syscall::MutexUnlock: return mutexUnlock(pid,arg)?1:0;
-    case Syscall::SharedAttach: return attachSharedMemory(pid,arg)?1:0;
-    case Syscall::SharedDetach: return detachSharedMemory(pid,arg)?1:0;
+    case Syscall::SharedAttach: { if(static_cast<std::size_t>(arg)+2>it->second.machine.ramSize()) throw std::runtime_error("Shared attach descriptor outside process RAM"); const auto id=it->second.machine.readMemory(arg); const auto base=it->second.machine.readMemory(static_cast<std::uint16_t>(arg+1)); if(!attachSharedMemory(pid,id))return 0; return mapSharedMemory(pid,id,base)?1:0; }
+    case Syscall::SharedDetach: { if(static_cast<std::size_t>(arg)+1>it->second.machine.ramSize()) throw std::runtime_error("Shared detach descriptor outside process RAM"); return detachSharedMemory(pid,it->second.machine.readMemory(arg))?1:0; }
     case Syscall::SharedRead: {
         if(static_cast<std::size_t>(arg)+2>it->second.machine.ramSize()) throw std::runtime_error("Shared-memory read descriptor outside process RAM");
         const auto segment=it->second.machine.readMemory(arg);
