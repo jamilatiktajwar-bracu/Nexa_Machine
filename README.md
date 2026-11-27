@@ -1,8 +1,17 @@
+
+
+## Nexa OS 2.23 — Deadlock cycle diagnostics
+
+- `mutexDeadlockCycle()` returns the process IDs in the first detected circular mutex wait, allowing diagnostics to identify the affected processes.
+- `hasMutexDeadlock()` remains the quick boolean query and is implemented using the cycle report.
+- The cycle list is empty when no circular mutex dependency exists; termination and owner handoff are reflected immediately.
+- See [Nexa OS 2.23 documentation](docs/NEXA_OS_2_23.md).
+
 # Nexa Machine
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.22.0**
+**Current development milestone: Nexa OS 2.23.0**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
