@@ -59,7 +59,8 @@ int nexa_disk_flush(NexaContext*,uint64_t id);
 int nexa_disk_submit_guest(NexaContext*,uint64_t id,uint16_t descriptor_address,uint8_t completion_interrupt_vector,uint64_t* out_request_id);
 /* Cooperative scheduler: executes at most one queued request per call. */
 int nexa_disk_process_one(NexaContext*,uint64_t* out_completed_request_id);
-/* status: 0=pending, 1=completed, -1=failed. */
+/* status: 0=pending, 1=completed, -1=failed, -2=cancelled. */
+int nexa_disk_cancel_request(NexaContext*,uint64_t request_id);
 int nexa_disk_request_status(NexaContext*,uint64_t request_id,int* out_status);
 int nexa_disk_request_error(NexaContext*,uint64_t request_id,char* out_error,size_t capacity);
 #ifdef __cplusplus
