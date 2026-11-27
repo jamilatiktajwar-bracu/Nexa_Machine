@@ -33,6 +33,9 @@ int main() {
     assert(full);
     assert(queue.size() == nexa::GuestDiskQueue::MaxPendingRequests);
 
+    assert(queue.cancel(first.requestId));
+    assert(!queue.cancel(first.requestId));
+    assert(queue.size() == nexa::GuestDiskQueue::MaxPendingRequests - 1);
     queue.clearSession(42);
     assert(queue.empty());
     assert(!queue.hasDevice(42, 7));
