@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Shared, portable VM engine and C ABI for desktop/mobile host frontends.
-add_library(nexa_vm_core STATIC src/vm.cpp src/assembler.cpp src/session_manager.cpp src/c_api.cpp)
+add_library(nexa_vm_core STATIC src/vm.cpp src/assembler.cpp src/session_manager.cpp src/c_api.cpp src/virtual_disk.cpp)
 target_include_directories(nexa_vm_core PUBLIC include)
 set_target_properties(nexa_vm_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(MSVC)
