@@ -59,7 +59,7 @@ int main(int argc,char**argv){
   if(argc==2&&std::string(argv[1])=="--workspace"){std::cout<<nexa::WorkspacePaths::discover().summary()<<"\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--init-workspace"){auto paths=nexa::WorkspacePaths::discover();paths.initialize();std::cout<<"Workspace initialized.\n"<<paths.summary()<<"\n";return 0;}
   if(argc==2&&std::string(argv[1])=="--platform"){std::cout<<nexa::platformSummary()<<"\n";return 0;}
-  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"Usage: nexa --profile-create NAME | nexa --profile-list | nexa --profile-show NAME | nexa --profile-run NAME SOURCE | nexa --workspace | nexa --init-workspace | nexa --platform | nexa [program.nexa] | nexa --compile source.nexa output.nexe | nexa --exe program.nexe | nexa console | nexa --os | nexa --config config.json program.nexa\n";return 0;}
+  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"Usage: nexa --profile-create NAME [RAM_BYTES DISK_BYTES] | nexa --profile-list | nexa --profile-show NAME | nexa --profile-run NAME SOURCE | nexa --workspace | nexa --init-workspace | nexa --platform | nexa [program.nexa] | nexa --compile source.nexa output.nexe | nexa --exe program.nexe | nexa console | nexa --os | nexa --config config.json program.nexa\n";return 0;}
   std::string program=demo;nexa::MachineConfig config;
   if(argc==2)program=readFile(argv[1]);
   else if(argc==4&&std::string(argv[1])=="--config"){config=nexa::MachineConfig::load(argv[2]);program=readFile(argv[3]);}
