@@ -10,19 +10,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.3'
-          host: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'mac' || 'linux' }}
-          target: 'desktop'
-          arch: ${{ runner.os == 'Windows' && 'win64_msvc2022_64' || runner.os == 'macOS' && 'clang_64' || 'gcc_64' }}
-      - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON
+      - name: Install Qt6 (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev
+      - name: Install Qt6 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install qt
+      - name: Install Qt6 (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install qtbase:x64-windows
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
@@ -42,17 +51,15 @@ jobs:
       - name: Install Android app build tools (Linux)
         if: runner.os == 'Linux'
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018'
-      - name: Setup Java and Gradle (Linux)
+      - name: Setup Java (Linux)
         if: runner.os == 'Linux'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Setup Gradle (Linux)
+      - name: Install Gradle (Linux)
         if: runner.os == 'Linux'
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+        run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o "$RUNNER_TEMP/gradle.zip" && unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
       - name: Build Android Compose app (Linux)
         if: runner.os == 'Linux'
         run: gradle -p mobile/android assembleDebug
@@ -61,4 +68,4 @@ jobs:
         run: ./build/nexa
       - name: Run demo (Windows)
         if: runner.os == 'Windows'
-        run: .\build\Release\nexa.exe
+        run: .\\build\\Release\\nexa.exe
