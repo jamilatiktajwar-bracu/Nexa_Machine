@@ -427,12 +427,12 @@ bool NexaKernel::detachSharedMemory(std::uint32_t pid,std::uint8_t id) {
 }
 std::optional<std::uint8_t> NexaKernel::readSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset) const {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
-    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return std::nullopt;
+    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.size)return std::nullopt;
     return memory_.readSharedFrame(s->second.frames[offset/VirtualMemoryManager::PageSize],offset%VirtualMemoryManager::PageSize);
 }
 bool NexaKernel::writeSharedMemory(std::uint32_t pid,std::uint8_t id,std::size_t offset,std::uint8_t value) {
     auto p=processes_.find(pid);auto s=sharedSegments_.find(id);
-    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.bytes.size())return false;
+    if(p==processes_.end()||s==sharedSegments_.end()||!p->second.sharedAttachments.contains(id)||offset>=s->second.size)return false;
     memory_.writeSharedFrame(s->second.frames[offset/VirtualMemoryManager::PageSize],offset%VirtualMemoryManager::PageSize,value);return true;
 }
 bool NexaKernel::mapSharedMemory(std::uint32_t pid,std::uint8_t id,std::uint8_t basePage) {
