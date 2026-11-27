@@ -107,5 +107,6 @@ private:
     static constexpr std::size_t MaxSyncObjects=255;
     [[nodiscard]] std::string readGuestPath(const VM& machine, std::uint8_t address) const;
     void releaseOwnedMutexes(std::uint32_t pid);
+    void releaseSharedAttachments(std::uint32_t pid);
 };
 }
