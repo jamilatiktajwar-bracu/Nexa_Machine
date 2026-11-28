@@ -869,15 +869,17 @@ int main() {
     CHECK(shell.execute("login guest renewed-secret")=="logged in as guest");
     CHECK(shell.execute("write /team.txt shared")=="wrote 6 bytes");
     CHECK(shell.execute("login root root-secret")=="logged in as root");
-    CHECK(shell.execute("savefs /tmp/nexa_security_test.img")=="filesystem image saved");
+    const auto securityImage =
+        (std::filesystem::temp_directory_path() / "nexa_security_test.img").string();
+    CHECK(shell.execute("savefs " + securityImage)=="filesystem image saved");
     nexa::NexaKernel restoredKernel(1024);
     nexa::NexaShell restoredShell(restoredKernel);
-    CHECK(restoredShell.execute("loadfs /tmp/nexa_security_test.img")=="filesystem image loaded");
+    CHECK(restoredShell.execute("loadfs " + securityImage)=="filesystem image loaded");
     CHECK(restoredShell.execute("whoami")=="root");
     CHECK(restoredShell.execute("login guest renewed-secret")=="logged in as guest");
     CHECK(restoredShell.execute("cat /shared.txt")=="allowed");
     CHECK(restoredShell.execute("write /shared.txt persisted")=="wrote 9 bytes");
-    std::remove("/tmp/nexa_security_test.img");
+    std::remove(securityImage.c_str());
     CHECK(shell.execute("login root root-secret")=="logged in as root");
     CHECK(shell.execute("mkdir /apps")=="created directory /apps");
     CHECK(shell.execute("cd /apps")=="/apps");
