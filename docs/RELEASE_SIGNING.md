@@ -2,6 +2,8 @@
 
 Nexa's release workflow produces preview artifacts when distribution-signing credentials are not configured. A preview APK signed with the Android debug key and an iOS Simulator build are useful for testing, but they are **not** production distribution artifacts.
 
+Nexa's mobile projects default to version **2.34.0** (Android version code **23400**). For a tagged release such as `v2.35.1`, the release workflow derives the Android version name/code and iOS marketing/build versions from the tag; manual dispatches on a non-version branch fall back to the project defaults.
+
 ## Android signing
 
 Add these repository or environment secrets in GitHub Actions:
