@@ -1,9 +1,13 @@
 name: C++ build and tests
 on:
   push:
+    branches:
+      - main
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
 concurrency:
-  group: nexa-ci-${{ github.ref }}
+  group: nexa-ci-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   desktop:
@@ -20,19 +24,35 @@ jobs:
         run: sudo find /etc/apt/sources.list.d -type f -exec grep -l 'packages.microsoft.com' {} + | xargs -r sudo rm -f; sudo apt-get update; sudo apt-get install -y qt6-base-dev xvfb
       - name: Install Qt6 (macOS)
         if: runner.os == 'macOS'
-        run: brew install qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.12.1'
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
       - name: Install Qt6 (Windows)
         if: runner.os == 'Windows'
-        run: vcpkg install qtbase:x64-windows
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.12.1'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install openssl:x64-windows
       - name: Configure Linux
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON
       - name: Configure macOS
         if: runner.os == 'macOS'
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
       - name: Configure Windows
         if: runner.os == 'Windows'
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
@@ -48,12 +68,17 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+          gui="./build/nexa_gui.app/Contents/MacOS/nexa_gui"
+          test -x "$gui"
           for attempt in 1 2; do
-            ./build/nexa_gui >gui-smoke.log 2>&1 &
+            "$gui" >gui-smoke.log 2>&1 &
             pid=$!
             sleep 5
-            kill -0 "$pid"
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat gui-smoke.log
+              exit 1
+            fi
             kill "$pid"
             wait "$pid" || true
           done
@@ -61,9 +86,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $tool = Get-ChildItem "$env:VCPKG_INSTALLATION_ROOT/installed" -Filter windeployqt.exe -Recurse | Select-Object -First 1
-          if (-not $tool) { throw 'windeployqt was not found in vcpkg Qt installation' }
-          & $tool.FullName --release --no-translations build/Release/nexa_gui.exe
+          $tool = Join-Path $env:QT_ROOT_DIR 'bin/windeployqt.exe'
+          if (-not (Test-Path $tool)) { throw "windeployqt was not found under QT_ROOT_DIR: $tool" }
+          & $tool --release --no-translations build/Release/nexa_gui.exe
           if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed' }
       - name: GUI launch and restart smoke (Windows)
         if: runner.os == 'Windows'
@@ -81,33 +106,65 @@ jobs:
         shell: bash
         run: |
           test -x install-root/bin/nexa || test -f install-root/bin/nexa.exe
-          test -f install-root/bin/nexa_gui || test -f install-root/bin/nexa_gui.exe
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            APP="install-root/nexa_gui.app"
+            test -x "$APP/Contents/MacOS/nexa_gui"
+            test -f "$APP/Contents/Info.plist"
+            test -n "$(find "$APP/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
+            test -n "$(find "$APP/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
+            otool -l "$APP/Contents/MacOS/nexa_gui" | grep -F '@executable_path/../Frameworks'
+            test -n "$(find install-root/lib -maxdepth 1 -type f -name 'libcrypto*.dylib' -print -quit)"
+            otool -l install-root/bin/nexa | grep -F '@loader_path/../lib'
+          else
+            test -f install-root/bin/nexa_gui || test -f install-root/bin/nexa_gui.exe
+          fi
       - name: Package
         run: cpack --config build/CPackConfig.cmake -B release
       - name: Verify Unix package archive
         if: runner.os != 'Windows'
         shell: bash
         run: |
+          set -euo pipefail
           pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
           test -n "$pkg"
-          tar -tzf "$pkg" | grep -E '(^|/)bin/nexa_gui$'
-          tar -tzf "$pkg" | grep -E '(^|/)bin/nexa$'
+          listing="$(tar -tzf "$pkg")"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            printf '%s\n' "$listing" | grep -E '(^|/)nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
+            printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
+            printf '%s\n' "$listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
+          else
+            printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa_gui$'
+          fi
+          printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa$'
       - name: Verify Windows package archive
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $pkg = Get-ChildItem release -Filter *.zip | Select-Object -First 1
           if (-not $pkg) { throw 'ZIP package not found' }
-          $items = tar -tf $pkg.FullName
-          if (-not ($items | Select-String 'bin/nexa_gui.exe')) { throw 'GUI executable missing' }
-          if (-not ($items | Select-String 'bin/nexa.exe')) { throw 'CLI executable missing' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($pkg.FullName)
+          try {
+            $items = $archive.Entries | ForEach-Object { $_.FullName }
+            if (-not ($items | Where-Object { $_ -match '(^|/)bin/nexa\\.exe$' })) { throw 'CLI executable missing' }
+            if (-not ($items | Where-Object { $_ -match '(^|/)bin/nexa_gui\\.exe$' })) { throw 'GUI executable missing' }
+            if (-not ($items | Where-Object { $_ -match 'libcrypto.*\\.dll$' })) { throw 'OpenSSL runtime DLL missing' }
+          } finally {
+            $archive.Dispose()
+          }
       - name: Generate release metadata (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          pkg=$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
-          sha256sum "$pkg" > release/SHA256SUMS
-          printf 'NexaMachine\\nVersion: %s\\nCommit: %s\\nPlatform: %s\\n' '${{ github.ref_name }}' '${{ github.sha }}' '${{ runner.os }}' > release/BUILDINFO.txt
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            (cd release && shasum -a 256 "$(basename "$pkg")" > SHA256SUMS)
+          else
+            (cd release && sha256sum "$(basename "$pkg")" > SHA256SUMS)
+          fi
+          printf 'NexaMachine\nVersion: %s\nCommit: %s\nPlatform: %s\n' '${{ github.ref_name }}' '${{ github.sha }}' '${{ runner.os }}' > release/BUILDINFO.txt
       - name: Generate release metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -115,6 +172,102 @@ jobs:
           $pkg = Get-ChildItem release -Filter *.zip | Select-Object -First 1
           (Get-FileHash $pkg.FullName -Algorithm SHA256).Hash + '  ' + $pkg.Name | Out-File release/SHA256SUMS -Encoding ascii
           "NexaMachine`nCommit: ${{ github.sha }}`nPlatform: Windows" | Out-File release/BUILDINFO.txt -Encoding utf8
+      - name: Extract and launch packaged outputs (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          mkdir -p package-install
+          tar -xzf "$pkg" -C package-install
+          cli="$(find package-install -type f -path '*/bin/nexa' -print -quit)"
+          gui="$(find package-install -type f -path '*/bin/nexa_gui' -print -quit)"
+          test -x "$cli" && test -x "$gui"
+          export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
+          "$cli" --profile-create ci-smoke 256 1024
+          "$cli" --profile-delete ci-smoke
+          source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
+          executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
+          "$cli" --compile "$source_file" "$executable_file"
+          output="$("$cli" --exe "$executable_file")"
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
+          for attempt in 1 2; do
+            xvfb-run -a bash -c 'set +e; timeout 8s "$1"; result=$?; test "$result" -eq 124 -o "$result" -eq 0' _ "$gui"
+          done
+          (cd release && sha256sum -c SHA256SUMS)
+      - name: Extract and launch packaged outputs (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          mkdir -p package-install
+          tar -xzf "$pkg" -C package-install
+          cli="$(find package-install -type f -path '*/bin/nexa' -print -quit)"
+          app_bundle="$(find package-install -type d -name 'nexa_gui.app' -print -quit)"
+          gui="$app_bundle/Contents/MacOS/nexa_gui"
+          test -x "$cli" && test -x "$gui"
+          test -f "$app_bundle/Contents/Info.plist"
+          test -n "$(find "$app_bundle/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
+          test -n "$(find "$app_bundle/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
+          otool -l "$gui" | grep -F '@executable_path/../Frameworks'
+          test -n "$(find package-install -path '*/lib/libcrypto*.dylib' -print -quit)"
+          otool -l "$cli" | grep -F '@loader_path/../lib'
+          export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
+          "$cli" --profile-create ci-smoke 256 1024
+          "$cli" --profile-delete ci-smoke
+          source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
+          executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
+          "$cli" --compile "$source_file" "$executable_file"
+          output="$("$cli" --exe "$executable_file")"
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
+          for attempt in 1 2; do
+            "$gui" > packaged-gui-smoke.log 2>&1 &
+            pid=$!
+            sleep 5
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat packaged-gui-smoke.log
+              exit 1
+            fi
+            kill "$pid"
+            wait "$pid" || true
+          done
+          (cd release && shasum -a 256 -c SHA256SUMS)
+      - name: Extract and launch packaged outputs (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw 'Packaged ZIP was not found' }
+          Expand-Archive -LiteralPath $package.FullName -DestinationPath package-install -Force
+          $cli = Get-ChildItem package-install -Filter nexa.exe -Recurse | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          $gui = Get-ChildItem package-install -Filter nexa_gui.exe -Recurse | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          if (-not $cli -or -not $gui) { throw 'Packaged CLI or GUI executable is missing' }
+          $env:NEXA_HOME = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke'
+          & $cli.FullName --profile-create ci-smoke 256 1024
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile create failed' }
+          & $cli.FullName --profile-delete ci-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile cleanup failed' }
+          $sourceFile = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke.asm'
+          $executableFile = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke.nexa'
+          @('LOAD A, 2', 'LOAD B, 3', 'ADD A, B', 'HALT') | Set-Content -LiteralPath $sourceFile -Encoding ascii
+          & $cli.FullName --compile $sourceFile $executableFile
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI assembly compilation failed' }
+          $executionOutput = & $cli.FullName --exe $executableFile
+          if ($LASTEXITCODE -ne 0 -or ($executionOutput -notlike '*Executable halted.*')) { throw 'Packaged CLI VM execution failed' }
+          $expected = (Get-Content release/SHA256SUMS -Raw).Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)[0]
+          $actual = (Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected.ToLowerInvariant()) { throw 'Packaged ZIP checksum mismatch' }
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $proc = Start-Process -FilePath $gui.FullName -PassThru
+            Start-Sleep -Seconds 5
+            if ($proc.HasExited) { throw "Packaged GUI exited during launch ($attempt)" }
+            Stop-Process -Id $proc.Id -Force
+          }
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
@@ -125,7 +278,7 @@ jobs:
         run: ./install-root/bin/nexa
       - name: CLI install smoke (Windows)
         if: runner.os == 'Windows'
-        run: .\\install-root\\bin\\nexa.exe
+        run: .\\install-root\\bin\nexa.exe
   mobile:
     timeout-minutes: 75
     runs-on: ubuntu-24.04
@@ -142,7 +295,7 @@ jobs:
           license_status=${PIPESTATUS[1]}
           set -o pipefail
           test "$license_status" -eq 0
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-34;default;x86_64'
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-34;default;x86_64'
       - name: Build Android native core
         run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
       - uses: actions/setup-java@v4
@@ -172,17 +325,18 @@ jobs:
           ram-size: 4096
           heap-size: 512
           disable-animations: true
-          script: |
-            set -euo pipefail
-            adb wait-for-device
-            for attempt in $(seq 1 60); do
-              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              [ "$BOOTED" = "1" ] && break
-              sleep 2
-            done
-            [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]
-            gradle -p mobile/android connectedDebugAndroidTest
-
+          script: bash ci/android-emulator.sh instrumentation
+      - name: Upload Android instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-instrumentation-diagnostics
+          path: |
+            mobile/android/app/build/reports/androidTests/connected/debug/
+            mobile/android/app/build/outputs/androidTest-results/connected/debug/
+            mobile/android/app/build/diagnostics/
+          if-no-files-found: ignore
+          retention-days: 7
   ios-simulator:
     timeout-minutes: 60
     runs-on: macos-latest
@@ -192,8 +346,34 @@ jobs:
         run: brew install xcodegen
       - name: Build iOS VM core
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
-      - name: Install iOS Simulator runtime
-        run: xcodebuild -downloadPlatform iOS && xcrun simctl list runtimes
+      - name: Discover or install iOS Simulator runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          has_ios_runtime() {
+            xcrun simctl list -j runtimes | python3 -c 'import json,sys; data=json.load(sys.stdin); sys.exit(0 if any(r.get("isAvailable") and r.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-") for r in data.get("runtimes", [])) else 1)'
+          }
+          if has_ios_runtime; then
+            echo "Reusing the iOS Simulator runtime preinstalled on this runner."
+          else
+            installed=false
+            for attempt in 1 2 3; do
+              echo "Downloading iOS Simulator runtime (attempt $attempt/3)."
+              if xcodebuild -downloadPlatform iOS; then
+                installed=true
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                sleep 20
+              fi
+            done
+            if [ "$installed" != true ] && ! has_ios_runtime; then
+              echo "No usable iOS Simulator runtime is available after three download attempts." >&2
+              xcrun simctl list runtimes || true
+              exit 1
+            fi
+          fi
+          xcrun simctl list runtimes
       - name: Build SwiftUI simulator app
         run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app -configuration Debug CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
       - name: iOS app termination and relaunch recovery tests

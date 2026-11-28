@@ -13,6 +13,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.nexa.machine
         PRODUCT_NAME: NexaMachine
+        MARKETING_VERSION: "2.34.0"
+        CURRENT_PROJECT_VERSION: "23400"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_VERSION: "5.0"

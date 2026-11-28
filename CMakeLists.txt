@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 project(NexaMachine VERSION 2.34.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 20)
@@ -24,7 +24,28 @@ if(NEXA_BUILD_HOST_TOOLS)
  add_executable(nexa src/main.cpp src/config.cpp src/virtual_disk.cpp src/vm_manager.cpp src/executable.cpp src/vfs.cpp src/kernel.cpp src/shell.cpp src/memory_manager.cpp src/platform.cpp src/workspace.cpp)
  target_include_directories(nexa PRIVATE include)
  target_link_libraries(nexa PRIVATE nexa_vm_core OpenSSL::Crypto)
- install(TARGETS nexa RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ if(WIN32)
+  install(TARGETS nexa
+   RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+   POST_EXCLUDE_REGEXES ".*[Ss]ystem32/.*\\.dll"
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ elseif(APPLE)
+  # The macOS CLI uses OpenSSL for password hashing. Bundle non-system
+  # dylibs and resolve them relative to the installed bin/ executable.
+  set_target_properties(nexa PROPERTIES INSTALL_RPATH "@loader_path/../lib")
+  install(TARGETS nexa
+   RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   PRE_EXCLUDE_REGEXES "^/System/Library/" "^/usr/lib/"
+   POST_EXCLUDE_REGEXES "^/System/Library/" "^/usr/lib/"
+   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ else()
+  install(TARGETS nexa RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ endif()
  if(MSVC)
   target_compile_options(nexa PRIVATE /W4 /permissive-)
  else()
@@ -78,11 +99,14 @@ if(NEXA_BUILD_HOST_TOOLS)
   target_link_libraries(nexa_os_tests PRIVATE nexa_vm_core)
   target_include_directories(nexa_os_tests PRIVATE include)
   add_test(NAME nexa_os_tests COMMAND nexa_os_tests)
+  add_executable(nexa_process_helper_tests tests/process_helper_tests.cpp)
+  target_include_directories(nexa_process_helper_tests PRIVATE include tests)
+  add_test(NAME nexa_process_helper_tests COMMAND nexa_process_helper_tests)
  endif()
  # Keep assertions active in Release test binaries; several legacy tests use assert
  # to execute API calls, and NDEBUG would silently remove those calls.
  if(BUILD_TESTING)
-  foreach(test_target nexa_tests nexa_platform_tests nexa_disk_scheduler_tests nexa_session_tests nexa_snapshot_c_api_recovery_tests nexa_snapshot_journal_tests nexa_c_api_tests nexa_workspace_tests nexa_feature_tests nexa_kernel_tests nexa_memory_tests nexa_os_tests)
+  foreach(test_target nexa_tests nexa_platform_tests nexa_disk_scheduler_tests nexa_session_tests nexa_snapshot_c_api_recovery_tests nexa_snapshot_journal_tests nexa_c_api_tests nexa_workspace_tests nexa_feature_tests nexa_kernel_tests nexa_memory_tests nexa_os_tests nexa_process_helper_tests)
    if(TARGET ${test_target})
     if(MSVC)
      target_compile_options(${test_target} PRIVATE /UNDEBUG)
@@ -97,16 +121,49 @@ endif()
 if(NEXA_BUILD_GUI)
  find_package(Qt6 COMPONENTS Widgets QUIET)
  if(Qt6Widgets_FOUND)
-  add_executable(nexa_gui src/gui.cpp src/session_gui.cpp src/config.cpp src/workspace.cpp src/virtual_disk.cpp)
+  set(NEXA_GUI_SOURCES
+   src/gui.cpp src/session_gui.cpp src/config.cpp src/workspace.cpp src/virtual_disk.cpp)
+  if(APPLE)
+   # Qt's macOS deployment helper requires a proper .app bundle. A plain
+   # executable skips framework/plugin deployment and crashes after packaging.
+   add_executable(nexa_gui MACOSX_BUNDLE ${NEXA_GUI_SOURCES})
+   set_target_properties(nexa_gui PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER "org.nexa.machine.desktop"
+    MACOSX_BUNDLE_BUNDLE_NAME "Nexa Machine"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    INSTALL_RPATH "@executable_path/../Frameworks")
+   install(TARGETS nexa_gui BUNDLE DESTINATION .)
+  else()
+   add_executable(nexa_gui ${NEXA_GUI_SOURCES})
+   install(TARGETS nexa_gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
   target_include_directories(nexa_gui PRIVATE include)
   target_link_libraries(nexa_gui PRIVATE Qt6::Widgets nexa_vm_core)
-  install(TARGETS nexa_gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  # Qt's generated deployment script is supported on Windows/macOS.
   # Linux packages rely on distribution-provided Qt6 runtime dependencies:
   # the generic script can fail rewriting RPATH on distro plugin ELF files.
   if(WIN32 OR APPLE)
    qt_generate_deploy_app_script(TARGET nexa_gui OUTPUT_SCRIPT NEXA_QT_DEPLOY_SCRIPT NO_UNSUPPORTED_PLATFORM_ERROR)
    install(SCRIPT ${NEXA_QT_DEPLOY_SCRIPT})
+   if(APPLE)
+    # macdeployqt copies frameworks, but some Qt 6.12 kits leave the main
+    # executable without the loader-relative framework search path.
+    install(CODE [[
+      set(_nexa_gui_executable "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/nexa_gui.app/Contents/MacOS/nexa_gui")
+      execute_process(COMMAND /usr/bin/otool -l "${_nexa_gui_executable}"
+        OUTPUT_VARIABLE _nexa_gui_load_commands RESULT_VARIABLE _nexa_otool_result)
+      if(NOT _nexa_otool_result EQUAL 0)
+        message(FATAL_ERROR "Unable to inspect the deployed Nexa macOS app executable")
+      endif()
+      string(FIND "${_nexa_gui_load_commands}" "@executable_path/../Frameworks" _nexa_framework_rpath)
+      if(_nexa_framework_rpath EQUAL -1)
+        execute_process(COMMAND /usr/bin/install_name_tool -add_rpath "@executable_path/../Frameworks" "${_nexa_gui_executable}"
+          RESULT_VARIABLE _nexa_rpath_result)
+        if(NOT _nexa_rpath_result EQUAL 0)
+          message(FATAL_ERROR "Unable to add framework RPATH to Nexa macOS app executable")
+        endif()
+      endif()
+    ]])
+   endif()
   endif()
  elseif(NEXA_REQUIRE_GUI)
   message(FATAL_ERROR "NEXA_REQUIRE_GUI is ON but Qt6 Widgets was not found")

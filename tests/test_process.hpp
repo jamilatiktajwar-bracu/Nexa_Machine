@@ -60,7 +60,7 @@ inline int runChildProcess(const std::filesystem::path& executable,
         command += quoteWindowsArgument(std::filesystem::path(argument).wstring());
     }
     std::vector<wchar_t> mutableCommand(command.begin(), command.end());
-    mutableCommand.push_back(L'\\0');
+    mutableCommand.push_back(L'\0');
 
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
