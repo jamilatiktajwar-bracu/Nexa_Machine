@@ -107,7 +107,7 @@ jobs:
         run: |
           test -x install-root/bin/nexa || test -f install-root/bin/nexa.exe
           if [ "$RUNNER_OS" = "macOS" ]; then
-            APP="install-root/bin/nexa_gui.app"
+            APP="install-root/nexa_gui.app"
             test -x "$APP/Contents/MacOS/nexa_gui"
             test -f "$APP/Contents/Info.plist"
             test -n "$(find "$APP/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
@@ -128,7 +128,7 @@ jobs:
           test -n "$pkg"
           listing="$(tar -tzf "$pkg")"
           if [ "$RUNNER_OS" = "macOS" ]; then
-            printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\n' "$listing" | grep -E '(^|/)nexa_gui[.]app/Contents/MacOS/nexa_gui$'
             printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
             printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
             printf '%s\n' "$listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
