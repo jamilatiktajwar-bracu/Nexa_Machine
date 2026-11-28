@@ -56,9 +56,11 @@
 
 ## Cross-platform vision (Windows / macOS / Linux / iOS / Android)
 
-Nexa is being designed around a portable C++20 VM/kernel core, so users can choose their host platform and keep compatible guest images and workflows. Desktop targets are Windows, macOS and Linux; iOS/iPadOS requires a touch-first, sandbox-aware frontend and constrained runtime.
+Nexa is built around a portable C++20 VM/kernel core, with host frontends for desktop and mobile platforms. Desktop targets are Windows, macOS and Linux; iOS/iPadOS uses a touch-first, sandbox-aware SwiftUI frontend, while Android uses a Jetpack Compose frontend backed by the same native C API/JNI bridge.
 
-**Status:** CLI and optional Qt6 desktop frontend exist today. Mobile frontend, platform packaging, and Windows/macOS CI are not yet complete. See [cross-platform architecture and milestones](docs/CROSS_PLATFORM.md) and [platform frontend roadmap](docs/PLATFORM_ARCHITECTURE.md).
+**Current implementation:** the repository contains the VM/kernel core, CLI, Qt6 desktop GUI, Android Compose app and native JNI bridge, and SwiftUI iOS app with a C bridging header. CI is configured to build/test all three desktop platforms, run desktop GUI restart and extracted-package launch checks, exercise Android force-stop/relaunch recovery, and run iOS Simulator terminate/relaunch recovery tests.
+
+**Release integrity:** desktop archives are checked after extraction and launch. Android/iOS production distribution signing is conditional on repository signing secrets; preview APK/simulator artifacts are not described as production-signed releases. A signed release is considered verified only after the platform signature and checksum checks pass. See [cross-platform architecture and milestones](docs/CROSS_PLATFORM.md), [platform frontend roadmap](docs/PLATFORM_ARCHITECTURE.md), and [cross-platform frontend and recovery status](docs/CROSS_PLATFORM_FRONTENDS.md).
 
 
 ## Nexa OS 2.29 — Memory pressure diagnostics
@@ -70,7 +72,7 @@ Nexa is being designed around a portable C++20 VM/kernel core, so users can choo
 
 Nexa Machine is an educational C++20 virtual machine and OS-kernel simulator. It is not a hypervisor or a standalone bootable operating system.
 
-**Current development milestone: Nexa OS 2.26.0**
+**Current core project version: Nexa Machine 2.34.0 (CMake project metadata).**
 
 Current kernel capabilities include:
 - Isolated guest processes with demand-paged virtual memory, TLB simulation, LRU replacement and optional disk-backed swap.
