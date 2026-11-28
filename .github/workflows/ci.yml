@@ -128,14 +128,14 @@ jobs:
           test -n "$pkg"
           listing="$(tar -tzf "$pkg")"
           if [ "$RUNNER_OS" = "macOS" ]; then
-            printf '%s\\n' "$listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
-            printf '%s\\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
-            printf '%s\\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
-            printf '%s\\n' "$listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
+            printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
+            printf '%s\n' "$listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
+            printf '%s\n' "$listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
           else
-            printf '%s\\n' "$listing" | grep -E '(^|/)bin/nexa_gui$'
+            printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa_gui$'
           fi
-          printf '%s\\n' "$listing" | grep -E '(^|/)bin/nexa$'
+          printf '%s\n' "$listing" | grep -E '(^|/)bin/nexa$'
       - name: Verify Windows package archive
         if: runner.os == 'Windows'
         shell: pwsh
@@ -188,10 +188,10 @@ jobs:
           "$cli" --profile-delete ci-smoke
           source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
           executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
-          printf 'LOAD A, 2\\nLOAD B, 3\\nADD A, B\\nHALT\\n' > "$source_file"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
           "$cli" --compile "$source_file" "$executable_file"
           output="$("$cli" --exe "$executable_file")"
-          printf '%s\\n' "$output" | grep -F 'Executable halted.'
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
           for attempt in 1 2; do
             xvfb-run -a bash -c 'set +e; timeout 8s "$1"; result=$?; test "$result" -eq 124 -o "$result" -eq 0' _ "$gui"
           done
@@ -219,10 +219,10 @@ jobs:
           "$cli" --profile-delete ci-smoke
           source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
           executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
-          printf 'LOAD A, 2\\nLOAD B, 3\\nADD A, B\\nHALT\\n' > "$source_file"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
           "$cli" --compile "$source_file" "$executable_file"
           output="$("$cli" --exe "$executable_file")"
-          printf '%s\\n' "$output" | grep -F 'Executable halted.'
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
           for attempt in 1 2; do
             "$gui" > packaged-gui-smoke.log 2>&1 &
             pid=$!
@@ -276,7 +276,7 @@ jobs:
         run: ./install-root/bin/nexa
       - name: CLI install smoke (Windows)
         if: runner.os == 'Windows'
-        run: .\\install-root\\bin\\nexa.exe
+        run: .\\install-root\\bin\nexa.exe
   mobile:
     timeout-minutes: 75
     runs-on: ubuntu-24.04
