@@ -24,7 +24,13 @@ jobs:
         run: sudo grep -rl 'packages.microsoft.com' /etc/apt/sources.list.d | xargs -r sudo rm -f && sudo apt-get update && sudo apt-get install -y qt6-base-dev
       - name: Install Qt (macOS)
         if: runner.os == 'macOS'
-        run: brew install qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
       - name: Install Qt (Windows)
         if: runner.os == 'Windows'
         uses: jurplel/install-qt-action@v4
@@ -42,7 +48,7 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON
       - name: Configure macOS
         if: runner.os == 'macOS'
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
       - name: Configure Windows
         if: runner.os == 'Windows'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
