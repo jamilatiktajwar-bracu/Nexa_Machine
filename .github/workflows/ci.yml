@@ -192,8 +192,34 @@ jobs:
         run: brew install xcodegen
       - name: Build iOS VM core
         run: cmake -S . -B build-ios -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-ios --config Release --parallel
-      - name: Install iOS Simulator runtime
-        run: xcodebuild -downloadPlatform iOS && xcrun simctl list runtimes
+      - name: Discover or install iOS Simulator runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          has_ios_runtime() {
+            xcrun simctl list -j runtimes | python3 -c 'import json,sys; data=json.load(sys.stdin); sys.exit(0 if any(r.get("isAvailable") and r.get("identifier", "").startswith("com.apple.CoreSimulator.SimRuntime.iOS-") for r in data.get("runtimes", [])) else 1)'
+          }
+          if has_ios_runtime; then
+            echo "Reusing the iOS Simulator runtime preinstalled on this runner."
+          else
+            installed=false
+            for attempt in 1 2 3; do
+              echo "Downloading iOS Simulator runtime (attempt $attempt/3)."
+              if xcodebuild -downloadPlatform iOS; then
+                installed=true
+                break
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                sleep 20
+              fi
+            done
+            if [ "$installed" != true ] && ! has_ios_runtime; then
+              echo "No usable iOS Simulator runtime is available after three download attempts." >&2
+              xcrun simctl list runtimes || true
+              exit 1
+            fi
+          fi
+          xcrun simctl list runtimes
       - name: Build SwiftUI simulator app
         run: cd mobile/ios && xcodegen generate && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-app -configuration Debug CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-app/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip
       - name: iOS app termination and relaunch recovery tests
