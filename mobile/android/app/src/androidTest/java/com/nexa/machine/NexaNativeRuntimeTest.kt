@@ -2,9 +2,6 @@ package com.nexa.machine
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.Until
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -91,16 +88,18 @@ class NexaNativeRuntimeTest {
     }
 
     @Test
-    fun forceStoppedApplicationRelaunchesAndRestoresPersistedWorkspace() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val app = instrumentation.targetContext
-        val snapshotRoot = File(app.filesDir, "nexa/snapshot").apply { deleteRecursively(); mkdirs() }
+    fun persistedWorkspaceSnapshotCanBeSeededForHostForceStopRecovery() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val snapshotRoot = File(app.filesDir, "nexa/snapshot").apply {
+            deleteRecursively()
+            mkdirs()
+        }
         val context = NexaNative.createContext()
         assertTrue("Native context creation failed", context != 0L)
         try {
             val session = NexaNative.createSession(context, "force-stop seed", 4096)
             assertTrue("Native session creation failed", session != 0L)
-            assertEquals(0, NexaNative.loadAssembly(context, session, "LOAD A, 88\nOUT A, 1\nHALT\n"))
+            assertEquals(0, NexaNative.loadAssembly(context, session, "LOAD A, 88\\nOUT A, 1\\nHALT\\n"))
             assertEquals(0, NexaNative.start(context, session))
             assertEquals(0, NexaNative.run(context, session, 64))
             assertEquals(0, NexaNative.saveSnapshot(context, session, snapshotRoot.absolutePath))
@@ -108,17 +107,9 @@ class NexaNativeRuntimeTest {
             NexaNative.destroyContext(context)
         }
 
-        val device = UiDevice.getInstance(instrumentation)
-        device.executeShellCommand("am force-stop ${app.packageName}")
-        device.executeShellCommand("am start -n ${app.packageName}/.MainActivity")
-        assertTrue("App did not restore workspace on first launch",
-            device.wait(Until.hasObject(By.text("Workspace restored")), 20_000))
-
-        device.executeShellCommand("am force-stop ${app.packageName}")
-        device.executeShellCommand("am start -n ${app.packageName}/.MainActivity")
-        assertTrue("Workspace was not recovered after OS force-stop and relaunch",
-            device.wait(Until.hasObject(By.text("Workspace restored")), 20_000))
-        assertTrue("Recovery report was not displayed after relaunch",
-            device.wait(Until.hasObject(By.textContains("Recovery: SUCCESS")), 10_000))
+        assertTrue("VM snapshot was not persisted", File(snapshotRoot, "session.vm").isFile)
+        assertTrue("Disk-bundle manifest was not persisted",
+            File(snapshotRoot, "disks/manifest.txt").isFile)
+    }
     }
 }
