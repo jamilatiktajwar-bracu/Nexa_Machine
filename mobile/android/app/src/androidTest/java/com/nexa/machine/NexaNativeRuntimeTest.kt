@@ -90,7 +90,11 @@ class NexaNativeRuntimeTest {
     @Test
     fun persistedWorkspaceSnapshotCanBeSeededForHostForceStopRecovery() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext
-        val snapshotRoot = File(app.filesDir, "nexa/snapshot").apply {
+        val workspaceRoot = File(app.filesDir, "nexa").apply { mkdirs() }
+        val persistentDisk = File(workspaceRoot, "guest-disk.img").apply {
+            writeBytes(ByteArray(4096))
+        }
+        val snapshotRoot = File(workspaceRoot, "snapshot").apply {
             deleteRecursively()
             mkdirs()
         }
@@ -99,6 +103,7 @@ class NexaNativeRuntimeTest {
         try {
             val session = NexaNative.createSession(context, "force-stop seed", 4096)
             assertTrue("Native session creation failed", session != 0L)
+            assertEquals(0, NexaNative.attachDisk(context, session, persistentDisk.absolutePath))
             assertEquals(0, NexaNative.loadAssembly(context, session, "LOAD A, 88\nOUT A, 1\nHALT\n"))
             assertEquals(0, NexaNative.start(context, session))
             assertEquals(0, NexaNative.run(context, session, 64))
@@ -108,7 +113,11 @@ class NexaNativeRuntimeTest {
         }
 
         assertTrue("VM snapshot was not persisted", File(snapshotRoot, "session.vm").isFile)
-        assertTrue("Disk-bundle manifest was not persisted",
-            File(snapshotRoot, "disks/manifest.txt").isFile)
+        val manifest = File(snapshotRoot, "disks/manifest.txt")
+        assertTrue("Disk-bundle manifest was not persisted", manifest.isFile && manifest.length() > 0L)
+        assertTrue(
+            "Snapshot did not include the attached guest disk",
+            File(snapshotRoot, "disks").listFiles()?.any { it.isFile && it.name != manifest.name } == true
+        )
     }
 }
