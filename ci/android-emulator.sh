@@ -34,6 +34,7 @@ case "$MODE" in
     verify_workspace_recovery() {
       local attempt="$1"
       local ui_dump="${RUNNER_TEMP:-/tmp}/nexa-android-ui-$attempt.xml"
+      mkdir -p "$(dirname "$ui_dump")"
       for ui_attempt in $(seq 1 20); do
         adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
         adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
