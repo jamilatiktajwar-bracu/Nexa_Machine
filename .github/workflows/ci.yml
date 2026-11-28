@@ -107,9 +107,14 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          pkg=$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
-          sha256sum "$pkg" > release/SHA256SUMS
-          printf 'NexaMachine\\nVersion: %s\\nCommit: %s\\nPlatform: %s\\n' '${{ github.ref_name }}' '${{ github.sha }}' '${{ runner.os }}' > release/BUILDINFO.txt
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            (cd release && shasum -a 256 "$(basename "$pkg")" > SHA256SUMS)
+          else
+            (cd release && sha256sum "$(basename "$pkg")" > SHA256SUMS)
+          fi
+          printf 'NexaMachine\nVersion: %s\nCommit: %s\nPlatform: %s\n' '${{ github.ref_name }}' '${{ github.sha }}' '${{ runner.os }}' > release/BUILDINFO.txt
       - name: Generate release metadata (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
