@@ -178,9 +178,8 @@ int main(int argc, char** argv) {
     const auto publicationJournal=root/"publication.journal";
     const auto publicationTemp=fs::path(publicationJournal.string()+".tmp");
     write(publicationTarget,"publication-original");
-    const std::string publicationCommand="\""+std::string(argv[0])+"\" --publication-crash-child \""+
-        publicationJournal.string()+"\"";
-    const int publicationStatus=std::system(publicationCommand.c_str());
+    const int publicationStatus = nexa_test::runChildProcess(
+        argv[0], {"--publication-crash-child", publicationJournal.string()});
 const int expectedPublicationStatus = 86;
     if (publicationStatus!=expectedPublicationStatus ||
         read(publicationTarget)!="publication-original" || fs::exists(publicationJournal) ||
@@ -211,9 +210,8 @@ const int expectedPublicationStatus = 86;
     // Exercise a real child process crash halfway through coordinated restore.
     write(diskA,"disk-a-process-original");
     write(diskB,"disk-b-process-original");
-    const std::string groupCommand="\""+std::string(argv[0])+"\" --group-crash-child \""+
-        diskA.string()+"\" \""+diskB.string()+"\"";
-    const int groupStatus=std::system(groupCommand.c_str());
+    const int groupStatus = nexa_test::runChildProcess(
+        argv[0], {"--group-crash-child", diskA.string(), diskB.string()});
 const int expectedGroupStatus = 85;
     if(groupStatus!=expectedGroupStatus) {
         std::cerr<<"multi-disk child did not terminate at intended fault point\\n";return 1;
