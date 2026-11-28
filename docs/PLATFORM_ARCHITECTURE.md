@@ -10,7 +10,7 @@ Nexa is an educational VM and OS-kernel simulator. It is not a type-1/type-2 hyp
 
 The Qt 6 Widgets application provides profiles, source editing, single-step, timer-driven execution, pause/resume, stop/reset, breakpoints, framebuffer display, memory inspection, named snapshots, virtual-disk inspection/import/export, and a separate multi-session workspace.
 
-The CI workflow builds the GUI on Linux, macOS and Windows, runs CTest and GUI launch/restart smoke checks, stages an installation, creates a CPack archive, extracts that archive and launches its packaged CLI/GUI, and verifies the archive checksum. These are workflow checks; consult the latest run for each platform's current result.
+The CI workflow builds the GUI on Linux, macOS and Windows, runs CTest and GUI launch/restart smoke checks, stages an installation, creates a CPack archive, extracts that archive and launches its packaged CLI/GUI, and verifies the archive checksum. On macOS the Qt GUI is a real `nexa_gui.app` bundle; Qt's generated deployment script copies its frameworks/plugins into the bundle before packaging. Windows Qt 6.12.1 installation uses a pinned upstream `aqtinstall` revision containing the current flattened repository and Qt 6.12 metadata handling. These are workflow checks; consult the latest run for each platform's current result.
 
 ## Mobile frontends
 
