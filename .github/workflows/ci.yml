@@ -137,6 +137,12 @@ jobs:
           export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
           "$cli" --profile-create ci-smoke 256 1024
           "$cli" --profile-delete ci-smoke
+          source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
+          executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
+          "$cli" --compile "$source_file" "$executable_file"
+          output="$("$cli" --exe "$executable_file")"
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
           xvfb-run -a bash -c 'set +e; timeout 8s "$1"; result=$?; test "$result" -eq 124 -o "$result" -eq 0' _ "$gui"
           (cd release && sha256sum -c SHA256SUMS)
       - name: Extract and launch packaged outputs (macOS)
@@ -154,6 +160,12 @@ jobs:
           export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
           "$cli" --profile-create ci-smoke 256 1024
           "$cli" --profile-delete ci-smoke
+          source_file="$RUNNER_TEMP/nexa-package-smoke.asm"
+          executable_file="$RUNNER_TEMP/nexa-package-smoke.nexa"
+          printf 'LOAD A, 2\nLOAD B, 3\nADD A, B\nHALT\n' > "$source_file"
+          "$cli" --compile "$source_file" "$executable_file"
+          output="$("$cli" --exe "$executable_file")"
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
           for attempt in 1 2; do
             "$gui" > packaged-gui-smoke.log 2>&1 &
             pid=$!
@@ -178,6 +190,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile create failed' }
           & $cli.FullName --profile-delete ci-smoke
           if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile cleanup failed' }
+          $sourceFile = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke.asm'
+          $executableFile = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke.nexa'
+          @('LOAD A, 2', 'LOAD B, 3', 'ADD A, B', 'HALT') | Set-Content -LiteralPath $sourceFile -Encoding ascii
+          & $cli.FullName --compile $sourceFile $executableFile
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI assembly compilation failed' }
+          $executionOutput = & $cli.FullName --exe $executableFile
+          if ($LASTEXITCODE -ne 0 -or ($executionOutput -notmatch 'Executable halted\\.')) { throw 'Packaged CLI VM execution failed' }
           $expected = (Get-Content release/SHA256SUMS -Raw).Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)[0]
           $actual = (Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected.ToLowerInvariant()) { throw 'Packaged ZIP checksum mismatch' }
