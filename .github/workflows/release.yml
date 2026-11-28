@@ -114,6 +114,19 @@ jobs:
           "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-34;default;x86_64'
       - name: Install Gradle
         run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o gradle.zip && unzip -q gradle.zip -d "$RUNNER_TEMP" && echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Resolve Android release version
+        id: android-version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            code=$((10#${BASH_REMATCH[1]} * 10000 + 10#${BASH_REMATCH[2]} * 100 + 10#${BASH_REMATCH[3]}))
+          else
+            version="2.34.0"
+            code=23400
+          fi
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
       - name: Configure Android signing
         if: env.NEXA_ANDROID_SIGNING_READY == 'true'
         env:
@@ -129,10 +142,16 @@ jobs:
           echo "NEXA_ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
       - name: Build signed Android release
         if: env.NEXA_ANDROID_SIGNING_READY == 'true'
-        run: gradle -p mobile/android bundleRelease assembleRelease
+        env:
+          NEXA_VERSION_NAME: ${{ steps.android-version.outputs.name }}
+          NEXA_VERSION_CODE: ${{ steps.android-version.outputs.code }}
+        run: gradle -p mobile/android bundleRelease assembleRelease -PnexaVersionName="$NEXA_VERSION_NAME" -PnexaVersionCode="$NEXA_VERSION_CODE"
       - name: Build unsigned Android preview
         if: env.NEXA_ANDROID_SIGNING_READY != 'true'
-        run: gradle -p mobile/android assembleDebug
+        env:
+          NEXA_VERSION_NAME: ${{ steps.android-version.outputs.name }}
+          NEXA_VERSION_CODE: ${{ steps.android-version.outputs.code }}
+        run: gradle -p mobile/android assembleDebug -PnexaVersionName="$NEXA_VERSION_NAME" -PnexaVersionCode="$NEXA_VERSION_CODE"
       - name: Android release APK install and force-stop smoke
         uses: reactivecircus/android-emulator-runner@v2
         env:
@@ -202,6 +221,19 @@ jobs:
       - name: Generate Xcode project
         working-directory: mobile/ios
         run: xcodegen generate
+      - name: Resolve iOS release version
+        id: ios-version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            code=$((10#${BASH_REMATCH[1]} * 10000 + 10#${BASH_REMATCH[2]} * 100 + 10#${BASH_REMATCH[3]}))
+          else
+            version="2.34.0"
+            code=23400
+          fi
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
       - name: Build signed iOS archive
         if: env.NEXA_IOS_SIGNING_READY == 'true'
         env:
@@ -224,7 +256,7 @@ jobs:
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profile.plist")
           cp "$RUNNER_TEMP/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_NAME.mobileprovision"
           cd mobile/ios
-          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" DEVELOPMENT_TEAM="$NEXA_IOS_TEAM_ID" CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" archive
+          xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" DEVELOPMENT_TEAM="$NEXA_IOS_TEAM_ID" CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" MARKETING_VERSION="${{ steps.ios-version.outputs.name }}" CURRENT_PROJECT_VERSION="${{ steps.ios-version.outputs.code }}" archive
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -247,7 +279,10 @@ jobs:
           shasum -a 256 -c nexa-ios-appstore.zip.sha256
       - name: Build iOS Simulator preview
         if: env.NEXA_IOS_SIGNING_READY != 'true'
-        run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-preview CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-preview/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip && shasum -a 256 nexa-ios-simulator.zip > nexa-ios-simulator.zip.sha256 && shasum -a 256 -c nexa-ios-simulator.zip.sha256
+        env:
+          NEXA_VERSION_NAME: ${{ steps.ios-version.outputs.name }}
+          NEXA_VERSION_CODE: ${{ steps.ios-version.outputs.code }}
+        run: cd mobile/ios && xcodebuild -project NexaMachine.xcodeproj -scheme NexaMachine -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build-ios-preview MARKETING_VERSION="$NEXA_VERSION_NAME" CURRENT_PROJECT_VERSION="$NEXA_VERSION_CODE" CODE_SIGNING_ALLOWED=NO build && ditto -c -k --sequesterRsrc --keepParent build-ios-preview/Build/Products/Debug-iphonesimulator/NexaMachine.app nexa-ios-simulator.zip && shasum -a 256 nexa-ios-simulator.zip > nexa-ios-simulator.zip.sha256 && shasum -a 256 -c nexa-ios-simulator.zip.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-ios-release
