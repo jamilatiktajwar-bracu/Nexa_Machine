@@ -40,7 +40,7 @@ jobs:
           target: desktop
           arch: win64_msvc2022_64
           cache: true
-          aqtsource: git+https://github.com/miurahr/aqtinstall.git@8c3695d4a4e1ceabf6a74dc6c79681656dc6b74b
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@4c759852b1108cc801d8e24979136b895b5155d4
       - name: Install OpenSSL (Windows)
         if: runner.os == 'Windows'
         run: vcpkg install openssl:x64-windows
