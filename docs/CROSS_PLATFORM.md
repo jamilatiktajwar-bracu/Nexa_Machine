@@ -19,6 +19,7 @@ Nexa is intended to be usable on **Windows, macOS, Linux, and iOS**, with the sa
 | macOS (Apple Silicon + Intel where practical) | CLI + Qt desktop, native windowing | CMake/Apple Clang; signed/notarized DMG later |
 | Linux x86_64 (and ARM64) | CLI + Qt desktop, distro-friendly | CMake/GCC/Clang; AppImage/Flatpak/deb later |
 | iOS/iPadOS | Touch-first profile/image manager and constrained interactive simulator | Xcode + Qt for iOS or native Swift shell over defined C++ core; sandbox and resource constraints respected |
+| Android | Kotlin/Jetpack Compose VM client, document-picker disk import and private workspace recovery | Android Gradle Plugin + Java 17, NDK/CMake JNI bridge; signed APK/AAB when signing credentials are configured |
 
 iOS is not a desktop port: background execution, storage, memory, JIT restrictions, and App Store rules require a mobile-specific frontend/runtime. Initial mobile scope is profiles, importing/exporting images, and supported simulator workloads; arbitrary native executable loading and unrestricted host access are out of scope.
 
@@ -32,13 +33,22 @@ iOS is not a desktop port: background execution, storage, memory, JIT restrictio
 - Save-state policy and autosave interval.
 - Optional telemetry disabled by default; guest data is never uploaded.
 
-## Milestones
-1. Portable build baseline; remove platform assumptions; add Windows/macOS CI and reproducible builds.
-2. Desktop UI polish: VM controls, terminal, display/canvas, settings, shortcuts, native file dialogs.
-3. Portable data: versioned profiles, safe image import/export, stable paths, migration and save-state checks.
-4. Mobile-core audit: isolate dependencies; remove desktop-only APIs from VM/kernel.
-5. iOS frontend: touch controls, profiles, import/export, foreground execution limits, suspend/resume recovery.
-6. Distribution: signed builds, release artifacts, checksums and platform installation instructions.
+## Delivered implementation
+
+- Portable C++20 VM/kernel core and C API are shared by desktop and mobile hosts.
+- Desktop CLI and Qt6 GUI include multi-session workspace, disk handling, VM controls and snapshot support.
+- Android has a Kotlin/Jetpack Compose frontend backed by the NDK/JNI bridge, private disk storage and VM-plus-disk snapshot recovery.
+- iOS/iPadOS has a SwiftUI frontend backed by the C bridging header, document-picker disk import and VM-plus-disk snapshot recovery.
+- CI is configured for Linux, macOS and Windows desktop builds/CTest/GUI and package checks, Android emulator instrumentation, and iOS Simulator recovery XCTest.
+
+## Remaining validation and distribution work
+
+1. Complete the current Windows CTest and extracted-package GUI/CLI validation; fix any remaining platform-specific failures.
+2. Keep Android force-stop/relaunch tests and iOS terminate/relaunch XCTest green on the latest commit.
+3. Configure Android and Apple distribution signing secrets, then verify signed APK/AAB and iOS archive/export signatures.
+4. Complete device installation and launch checks for signed mobile artifacts and document store distribution.
+5. Continue touch/accessibility polish, mobile resource-limit testing, workspace migration and cross-version snapshot compatibility.
 
 ## Current reality
-The repository currently builds a C++20 CLI and optional Qt6 desktop executable. The iOS frontend, release packaging, and automated Windows/macOS builds are **planned, not yet implemented**. Keep status accurate in release notes.
+
+The frontends and CI workflows are present in the repository; their status is determined by the latest per-platform workflow run, not by source presence alone. Preview artifacts are not production-signed releases. GitHub Release publishing is gated on both Android and iOS signing readiness and signature/checksum verification. Nexa remains an educational VM/OS simulator, not a hardware hypervisor or bootable host operating system.
