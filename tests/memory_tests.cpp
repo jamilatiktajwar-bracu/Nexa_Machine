@@ -3,7 +3,13 @@
 #define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " << #expr << " at line " << __LINE__ << '\n'; return 1; } } while (false)
 #include <stdexcept>
 #include <cstdio>
+#ifdef _WIN32
+#define MEMORY_TEST_TRACE(stage) do { std::cerr << "[memory-test] " << stage << std::endl; } while (false)
+#else
+#define MEMORY_TEST_TRACE(stage) ((void)0)
+#endif
 int main(){
+ MEMORY_TEST_TRACE("start");
  nexa::VirtualMemoryManager mm(1024);
  CHECK(mm.totalFrames()==4&&mm.freeFrames()==4);
  mm.createAddressSpace(1); mm.createAddressSpace(2);
@@ -26,6 +32,7 @@ int main(){
  const auto missesBeforeFlush=mm.tlbMisses(); mm.flushTlb(); (void)mm.read(1,5,nexa::MemoryAccess::Kernel); CHECK(mm.tlbMisses()==missesBeforeFlush+1);
  mm.destroyAddressSpace(1); CHECK(mm.freeFrames()==3);
  mm.destroyAddressSpace(2); CHECK(mm.freeFrames()==4);
+ MEMORY_TEST_TRACE("basic paging passed");
  nexa::VirtualMemoryManager swapped(512);
  swapped.createAddressSpace(7);
  swapped.mapPage(7,0); swapped.mapPage(7,1);
@@ -39,6 +46,7 @@ int main(){
  swapped.write(7,256,0xB2);
  CHECK(swapped.read(7,256)==0xB2);
  swapped.destroyAddressSpace(7);
+ MEMORY_TEST_TRACE("swap paging passed");
  CHECK(swapped.freeFrames()==swapped.totalFrames());
 
  nexa::VirtualMemoryManager recovery(512);
@@ -53,6 +61,7 @@ int main(){
  CHECK(recovery.read(42,0)==0);
  recovery.destroyAddressSpace(42);
  recovery.releaseSharedFrame(pinnedA);
+ MEMORY_TEST_TRACE("allocation recovery passed");
  CHECK(recovery.freeFrames()==recovery.totalFrames());
  nexa::VirtualMemoryManager failedRecovery(512);
  failedRecovery.createAddressSpace(43);
@@ -64,6 +73,7 @@ int main(){
  CHECK(allocationFailed&&failedRecovery.allocationRecoveryAttempts()==1&&failedRecovery.allocationRecoveryFailures()==1&&failedRecovery.allocationRecoverySuccesses()==0);
  failedRecovery.releaseSharedFrame(failedPinA); failedRecovery.releaseSharedFrame(failedPinB); failedRecovery.destroyAddressSpace(43);
  CHECK(failedRecovery.freeFrames()==failedRecovery.totalFrames());
+ MEMORY_TEST_TRACE("failed allocation recovery passed");
 
  nexa::VirtualMemoryManager diskSwap(512);
  diskSwap.setSwapFile("nexa_swap_test.bin");
@@ -78,5 +88,6 @@ int main(){
  diskSwap.destroyAddressSpace(9);
  CHECK(diskSwap.freeFrames()==diskSwap.totalFrames());
  std::remove("nexa_swap_test.bin");
+ MEMORY_TEST_TRACE("disk-backed swap passed");
 
 }
