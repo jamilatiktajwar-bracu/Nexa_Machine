@@ -77,14 +77,14 @@ jobs:
           test -n "$pkg"
           archive_listing="$(tar -tzf "$pkg")"
           if [ "$RUNNER_OS" = "macOS" ]; then
-            printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
-            printf '%s\\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
-            printf '%s\\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
-            printf '%s\\n' "$archive_listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
+            printf '%s\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
+            printf '%s\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
+            printf '%s\n' "$archive_listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
           else
-            printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui$'
+            printf '%s\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui$'
           fi
-          printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa$'
+          printf '%s\n' "$archive_listing" | grep -E '(^|/)bin/nexa$'
       - name: Verify desktop release archive layout (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -115,10 +115,10 @@ jobs:
           "$cli" --profile-create release-smoke 256 1024
           source_file="$RUNNER_TEMP/nexa-release-smoke.asm"
           executable_file="$RUNNER_TEMP/nexa-release-smoke.nexa"
-          printf 'LOAD A, 7\\nLOAD B, 8\\nADD A, B\\nHALT\\n' > "$source_file"
+          printf 'LOAD A, 7\nLOAD B, 8\nADD A, B\nHALT\n' > "$source_file"
           "$cli" --compile "$source_file" "$executable_file"
           output="$("$cli" --exe "$executable_file")"
-          printf '%s\\n' "$output" | grep -F 'Executable halted.'
+          printf '%s\n' "$output" | grep -F 'Executable halted.'
           "$cli" --profile-delete release-smoke
           if [ "$RUNNER_OS" = "macOS" ]; then
             (cd release && shasum -a 256 -c SHA256SUMS)
@@ -338,7 +338,7 @@ jobs:
           APP="$RUNNER_TEMP/NexaMachine.xcarchive/Products/Applications/NexaMachine.app"
           codesign --verify --deep --strict "$APP"
           SIGNATURE_INFO="$(codesign -dv --verbose=4 "$APP" 2>&1)"
-          printf '%s\\n' "$SIGNATURE_INFO" | grep -F "TeamIdentifier=$NEXA_IOS_TEAM_ID"
+          printf '%s\n' "$SIGNATURE_INFO" | grep -F "TeamIdentifier=$NEXA_IOS_TEAM_ID"
           EMBEDDED_PROFILE="$APP/embedded.mobileprovision"
           test -f "$EMBEDDED_PROFILE"
           security cms -D -i "$EMBEDDED_PROFILE" > "$RUNNER_TEMP/embedded-profile.plist"
