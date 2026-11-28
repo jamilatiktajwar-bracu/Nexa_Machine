@@ -112,6 +112,7 @@ jobs:
             test -f "$APP/Contents/Info.plist"
             test -n "$(find "$APP/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
             test -n "$(find "$APP/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
+            otool -l "$APP/Contents/MacOS/nexa_gui" | grep -F '@executable_path/../Frameworks'
             test -n "$(find install-root/lib -maxdepth 1 -type f -name 'libcrypto*.dylib' -print -quit)"
             otool -l install-root/bin/nexa | grep -F '@loader_path/../lib'
           else
@@ -212,6 +213,7 @@ jobs:
           test -f "$app_bundle/Contents/Info.plist"
           test -n "$(find "$app_bundle/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
           test -n "$(find "$app_bundle/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
+          otool -l "$gui" | grep -F '@executable_path/../Frameworks'
           test -n "$(find package-install -path '*/lib/libcrypto*.dylib' -print -quit)"
           otool -l "$cli" | grep -F '@loader_path/../lib'
           export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
