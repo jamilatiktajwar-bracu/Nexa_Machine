@@ -1,6 +1,8 @@
 name: C++ build and tests
 on:
   push:
+    branches:
+      - main
   pull_request:
 concurrency:
   group: nexa-ci-${{ github.ref }}
