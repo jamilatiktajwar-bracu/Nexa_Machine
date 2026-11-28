@@ -68,6 +68,89 @@ jobs:
             mv .nexa-SHA256SUMS.tmp release/SHA256SUMS
             (cd release && sha256sum -c SHA256SUMS)
           fi
+      - name: Verify desktop release archive layout (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          archive_listing="$(tar -tzf "$pkg")"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
+            printf '%s\\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
+            printf '%s\\n' "$archive_listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
+          else
+            printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui$'
+          fi
+          printf '%s\\n' "$archive_listing" | grep -E '(^|/)bin/nexa$'
+      - name: Verify desktop release archive layout (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw 'Desktop release ZIP not found' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
+          try {
+            $entries = $archive.Entries | ForEach-Object { $_.FullName }
+            if (-not ($entries | Where-Object { $_ -match '(^|/)bin/nexa\\.exe$' })) { throw 'CLI executable missing from ZIP' }
+            if (-not ($entries | Where-Object { $_ -match '(^|/)bin/nexa_gui\\.exe$' })) { throw 'GUI executable missing from ZIP' }
+            if (-not ($entries | Where-Object { $_ -match 'libcrypto.*\\.dll$' })) { throw 'OpenSSL runtime DLL missing from ZIP' }
+          } finally {
+            $archive.Dispose()
+          }
+      - name: Extract and execute packaged release CLI (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          mkdir -p release-install
+          tar -xzf "$pkg" -C release-install
+          cli="$(find release-install -type f -path '*/bin/nexa' -print -quit)"
+          test -x "$cli"
+          export NEXA_HOME="$RUNNER_TEMP/nexa-release-smoke"
+          "$cli" --profile-create release-smoke 256 1024
+          source_file="$RUNNER_TEMP/nexa-release-smoke.asm"
+          executable_file="$RUNNER_TEMP/nexa-release-smoke.nexa"
+          printf 'LOAD A, 7\\nLOAD B, 8\\nADD A, B\\nHALT\\n' > "$source_file"
+          "$cli" --compile "$source_file" "$executable_file"
+          output="$("$cli" --exe "$executable_file")"
+          printf '%s\\n' "$output" | grep -F 'Executable halted.'
+          "$cli" --profile-delete release-smoke
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            (cd release && shasum -a 256 -c SHA256SUMS)
+          else
+            (cd release && sha256sum -c SHA256SUMS)
+          fi
+      - name: Extract and execute packaged release CLI (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw 'Desktop release ZIP not found' }
+          Expand-Archive -LiteralPath $package.FullName -DestinationPath release-install -Force
+          $cli = Get-ChildItem release-install -Filter nexa.exe -Recurse | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          if (-not $cli) { throw 'Packaged CLI executable not found' }
+          $env:NEXA_HOME = Join-Path $env:RUNNER_TEMP 'nexa-release-smoke'
+          & $cli.FullName --profile-create release-smoke 256 1024
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile creation failed' }
+          $sourceFile = Join-Path $env:RUNNER_TEMP 'nexa-release-smoke.asm'
+          $executableFile = Join-Path $env:RUNNER_TEMP 'nexa-release-smoke.nexa'
+          @('LOAD A, 7', 'LOAD B, 8', 'ADD A, B', 'HALT') | Set-Content -LiteralPath $sourceFile -Encoding ascii
+          & $cli.FullName --compile $sourceFile $executableFile
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI compile failed' }
+          $output = & $cli.FullName --exe $executableFile
+          if ($LASTEXITCODE -ne 0 -or ($output -notlike '*Executable halted.*')) { throw 'Packaged VM execution failed' }
+          & $cli.FullName --profile-delete release-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile cleanup failed' }
+          $checksumLine = Get-Content release/SHA256SUMS | Where-Object { $_ -match '\\.zip$' } | Select-Object -First 1
+          if (-not $checksumLine) { throw 'Release ZIP checksum entry missing' }
+          $expected = ($checksumLine -split '\\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'Release ZIP checksum mismatch' }
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-desktop-${{ runner.os }}
