@@ -115,7 +115,7 @@ jobs:
           heap-size: 512
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             APK="$(find mobile/android/app/build/outputs/apk/release -type f -name '*.apk' -print -quit 2>/dev/null || true)"
             if [ -z "$APK" ]; then
               APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
