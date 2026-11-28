@@ -1,4 +1,5 @@
 #include "nexa/snapshot_journal.hpp"
+#include "test_process.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -53,8 +54,7 @@ int main(int argc, char** argv) {
 
     for (const std::string phase : {"after-disk-replacement", "after-vm-load"}) {
         write(target, "pre-crash-placeholder");
-        const std::string command = "\"" + std::string(argv[0]) + "\" --crash-child " + phase;
-        const int status = std::system(command.c_str());
+        const int status = nexa_test::runChildProcess(argv[0], {"--crash-child", phase});
         if (status == 0) { std::cerr << "child unexpectedly exited normally\n"; return 1; }
         if (!fs::exists(journal)) { std::cerr << "journal missing after crash\n"; return 1; }
         nexa::snapshot::recover(journal);
@@ -181,11 +181,7 @@ int main(int argc, char** argv) {
     const std::string publicationCommand="\""+std::string(argv[0])+"\" --publication-crash-child \""+
         publicationJournal.string()+"\"";
     const int publicationStatus=std::system(publicationCommand.c_str());
-#ifdef _WIN32
-    const int expectedPublicationStatus=86;
-#else
-    const int expectedPublicationStatus=86<<8;
-#endif
+const int expectedPublicationStatus = 86;
     if (publicationStatus!=expectedPublicationStatus ||
         read(publicationTarget)!="publication-original" || fs::exists(publicationJournal) ||
         !fs::exists(publicationTemp)) {
@@ -218,11 +214,7 @@ int main(int argc, char** argv) {
     const std::string groupCommand="\""+std::string(argv[0])+"\" --group-crash-child \""+
         diskA.string()+"\" \""+diskB.string()+"\"";
     const int groupStatus=std::system(groupCommand.c_str());
-#ifdef _WIN32
-    const int expectedGroupStatus=85;
-#else
-    const int expectedGroupStatus=85<<8;
-#endif
+const int expectedGroupStatus = 85;
     if(groupStatus!=expectedGroupStatus) {
         std::cerr<<"multi-disk child did not terminate at intended fault point\\n";return 1;
     }
