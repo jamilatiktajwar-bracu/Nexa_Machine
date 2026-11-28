@@ -230,7 +230,17 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict><key>method</key><string>app-store-connect</string><key>teamID</key><string>$NEXA_IOS_TEAM_ID</string><key>signingStyle</key><string>manual</string><key>provisioningProfiles</key><dict><key>org.nexa.machine</key><string>$PROFILE_NAME</string></dict></dict></plist>
           EOF
-          codesign --verify --deep --strict "$RUNNER_TEMP/NexaMachine.xcarchive/Products/Applications/NexaMachine.app"
+          APP="$RUNNER_TEMP/NexaMachine.xcarchive/Products/Applications/NexaMachine.app"
+          codesign --verify --deep --strict "$APP"
+          SIGNATURE_INFO="$(codesign -dv --verbose=4 "$APP" 2>&1)"
+          printf '%s\n' "$SIGNATURE_INFO" | grep -F "TeamIdentifier=$NEXA_IOS_TEAM_ID"
+          EMBEDDED_PROFILE="$APP/embedded.mobileprovision"
+          test -f "$EMBEDDED_PROFILE"
+          security cms -D -i "$EMBEDDED_PROFILE" > "$RUNNER_TEMP/embedded-profile.plist"
+          EMBEDDED_TEAM=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$RUNNER_TEMP/embedded-profile.plist")
+          test "$EMBEDDED_TEAM" = "$NEXA_IOS_TEAM_ID"
+          GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$RUNNER_TEMP/embedded-profile.plist")
+          test "$GET_TASK_ALLOW" = false
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NexaMachine.xcarchive" -exportPath "$RUNNER_TEMP/ios-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
           ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ios-export" nexa-ios-appstore.zip
           shasum -a 256 nexa-ios-appstore.zip > nexa-ios-appstore.zip.sha256
