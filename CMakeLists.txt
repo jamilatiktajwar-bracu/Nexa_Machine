@@ -130,7 +130,8 @@ if(NEXA_BUILD_GUI)
    set_target_properties(nexa_gui PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER "org.nexa.machine.desktop"
     MACOSX_BUNDLE_BUNDLE_NAME "Nexa Machine"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    INSTALL_RPATH "@executable_path/../Frameworks")
    install(TARGETS nexa_gui BUNDLE DESTINATION .)
   else()
    add_executable(nexa_gui ${NEXA_GUI_SOURCES})
@@ -143,6 +144,26 @@ if(NEXA_BUILD_GUI)
   if(WIN32 OR APPLE)
    qt_generate_deploy_app_script(TARGET nexa_gui OUTPUT_SCRIPT NEXA_QT_DEPLOY_SCRIPT NO_UNSUPPORTED_PLATFORM_ERROR)
    install(SCRIPT ${NEXA_QT_DEPLOY_SCRIPT})
+   if(APPLE)
+    # macdeployqt copies frameworks, but some Qt 6.12 kits leave the main
+    # executable without the loader-relative framework search path.
+    install(CODE [[
+      set(_nexa_gui_executable "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/nexa_gui.app/Contents/MacOS/nexa_gui")
+      execute_process(COMMAND /usr/bin/otool -l "${_nexa_gui_executable}"
+        OUTPUT_VARIABLE _nexa_gui_load_commands RESULT_VARIABLE _nexa_otool_result)
+      if(NOT _nexa_otool_result EQUAL 0)
+        message(FATAL_ERROR "Unable to inspect the deployed Nexa macOS app executable")
+      endif()
+      string(FIND "${_nexa_gui_load_commands}" "@executable_path/../Frameworks" _nexa_framework_rpath)
+      if(_nexa_framework_rpath EQUAL -1)
+        execute_process(COMMAND /usr/bin/install_name_tool -add_rpath "@executable_path/../Frameworks" "${_nexa_gui_executable}"
+          RESULT_VARIABLE _nexa_rpath_result)
+        if(NOT _nexa_rpath_result EQUAL 0)
+          message(FATAL_ERROR "Unable to add framework RPATH to Nexa macOS app executable")
+        endif()
+      endif()
+    ]])
+   endif()
   endif()
  elseif(NEXA_REQUIRE_GUI)
   message(FATAL_ERROR "NEXA_REQUIRE_GUI is ON but Qt6 Widgets was not found")
