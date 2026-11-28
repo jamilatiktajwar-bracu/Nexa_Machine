@@ -125,14 +125,14 @@ jobs:
             adb install "$APK"
             adb shell am start -W -n com.nexa.machine/.MainActivity
             sleep 8
-            FIRST_PID="$(adb shell pidof com.nexa.machine | tr -d '\\r')"
+            FIRST_PID="$(adb shell pidof com.nexa.machine | tr -d '\r')"
             test -n "$FIRST_PID"
             adb shell am force-stop com.nexa.machine
             adb shell am start -W -n com.nexa.machine/.MainActivity
             sleep 8
-            SECOND_PID="$(adb shell pidof com.nexa.machine | tr -d '\\r')"
+            SECOND_PID="$(adb shell pidof com.nexa.machine | tr -d '\r')"
             test -n "$SECOND_PID"
-            printf 'Android app relaunched successfully (pid %s -> %s)\\n' "$FIRST_PID" "$SECOND_PID"
+            printf 'Android app relaunched successfully (pid %s -> %s)\n' "$FIRST_PID" "$SECOND_PID"
       - name: Verify signed Android outputs and checksums
         if: env.NEXA_ANDROID_SIGNING_READY == 'true'
         shell: bash
