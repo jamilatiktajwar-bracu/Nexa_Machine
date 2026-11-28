@@ -6,18 +6,24 @@ case "$MODE" in
   instrumentation)
     adb wait-for-device
     booted=""
-    for attempt in $(seq 1 60); do
-      booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-      if [[ "$booted" == "1" ]]; then
-        break
+    for attempt in $(seq 1 180); do
+      device_state="$(adb get-state 2>/dev/null || true)"
+      if [[ "$device_state" == "device" ]]; then
+        booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+        if [[ "$booted" == "1" ]]; then
+          break
+        fi
       fi
       sleep 2
     done
     [[ "$booted" == "1" ]] || {
-      echo "Android emulator did not finish booting." >&2
+      echo "Android emulator did not become online and finish booting." >&2
       adb devices -l || true
+      adb logcat -d -t 500 || true
       exit 1
     }
+    adb shell input keyevent KEYCODE_WAKEUP || true
+    adb shell wm dismiss-keyguard || true
     gradle -p mobile/android connectedDebugAndroidTest
 
     # The OS-level force-stop is host-driven after instrumentation exits.
@@ -27,8 +33,10 @@ case "$MODE" in
     mkdir -p "$diagnostics"
     verify_workspace_recovery() {
       local attempt="$1"
-      local ui_dump="$RUNNER_TEMP/nexa-android-ui-$attempt.xml"
+      local ui_dump="${RUNNER_TEMP:-/tmp}/nexa-android-ui-$attempt.xml"
       for ui_attempt in $(seq 1 20); do
+        adb shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+        adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
         adb shell uiautomator dump /sdcard/nexa-window.xml >/dev/null 2>&1 || true
         adb shell cat /sdcard/nexa-window.xml > "$ui_dump" 2>/dev/null || true
         if grep -Fq "Workspace restored" "$ui_dump" &&
