@@ -77,7 +77,7 @@ jobs:
           test -n "$pkg"
           archive_listing="$(tar -tzf "$pkg")"
           if [ "$RUNNER_OS" = "macOS" ]; then
-            printf '%s\n' "$archive_listing" | grep -E '(^|/)bin/nexa_gui[.]app/Contents/MacOS/nexa_gui$'
+            printf '%s\n' "$archive_listing" | grep -E '(^|/)nexa_gui[.]app/Contents/MacOS/nexa_gui$'
             printf '%s\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/Frameworks/QtWidgets[.]framework/'
             printf '%s\n' "$archive_listing" | grep -E 'nexa_gui[.]app/Contents/PlugIns/platforms/libqcocoa[.]dylib$'
             printf '%s\n' "$archive_listing" | grep -E '(^|/)lib/libcrypto[^/]*[.]dylib$'
