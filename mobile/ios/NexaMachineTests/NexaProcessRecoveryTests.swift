@@ -6,6 +6,11 @@ final class NexaProcessRecoveryTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.waitForExistence(timeout: 15))
 
+        let ready = app.staticTexts["Ready · recovery checked"]
+        XCTAssertTrue(
+            ready.waitForExistence(timeout: 15),
+            "The native session did not finish recovery initialization"
+        )
         let save = app.buttons["Save snapshot"]
         XCTAssertTrue(save.waitForExistence(timeout: 10))
         save.tap()
