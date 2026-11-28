@@ -172,22 +172,7 @@ jobs:
           ram-size: 4096
           heap-size: 512
           disable-animations: true
-          script: |
-            set -eu
-            adb wait-for-device
-            for attempt in $(seq 1 60); do
-              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-              [ "$BOOTED" = "1" ] && break
-              sleep 2
-            done
-            [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]
-            gradle -p mobile/android connectedDebugAndroidTest
-
-  ios-simulator:
-    timeout-minutes: 60
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
+          script: bash ci/android-emulator.sh instrumentation
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Build iOS VM core
