@@ -179,6 +179,7 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Build iOS VM core
