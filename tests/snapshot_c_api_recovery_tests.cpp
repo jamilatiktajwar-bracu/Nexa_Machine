@@ -1,4 +1,5 @@
 #include "nexa/c_api.h"
+#include "test_process.hpp"
 #include <array>
 #include <cstdlib>
 #include <filesystem>
@@ -21,9 +22,6 @@ static void fillFile(const fs::path& path, unsigned char value) {
               static_cast<std::streamsize>(bytes.size()));
     out.flush();
     if (!out) throw std::runtime_error("failed to write disk fixture");
-}
-static std::string quote(const std::string& value) {
-    return "\"" + value + "\"";
 }
 static bool createSession(NexaContext* context, uint64_t& session) {
     return nexa_session_create(context, "restore-crash-test", 1024, &session) == 0;
@@ -103,16 +101,11 @@ int main(int argc, char** argv) {
     nexa_context_destroy(setup);
 
     for (const int failpoint : {3, 4}) {
-        const std::string command =
-            quote(argv[0]) + " --restore-crash-child " + std::to_string(failpoint) +
-            " " + quote(vmState.string()) + " " + quote(snapshotDir.string()) +
-            " " + quote(disk.string()) + " " + quote(preCrashVm.string());
-        const int childStatus = std::system(command.c_str());
-#ifdef _WIN32
+        const int childStatus = nexa_test::runChildProcess(
+            argv[0], {"--restore-crash-child", std::to_string(failpoint),
+                      vmState.string(), snapshotDir.string(),
+                      disk.string(), preCrashVm.string()});
         const int expectedStatus = failpoint == 3 ? 83 : 84;
-#else
-        const int expectedStatus = (failpoint == 3 ? 83 : 84) << 8;
-#endif
         if (childStatus != expectedStatus || !fs::exists(journal)) {
             std::cerr << "restore child missed crash failpoint " << failpoint
                       << " (status " << childStatus << ")\n";
