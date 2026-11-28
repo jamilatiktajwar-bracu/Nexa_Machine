@@ -117,6 +117,71 @@ jobs:
           $pkg = Get-ChildItem release -Filter *.zip | Select-Object -First 1
           (Get-FileHash $pkg.FullName -Algorithm SHA256).Hash + '  ' + $pkg.Name | Out-File release/SHA256SUMS -Encoding ascii
           "NexaMachine`nCommit: ${{ github.sha }}`nPlatform: Windows" | Out-File release/BUILDINFO.txt -Encoding utf8
+      - name: Extract and launch packaged outputs (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          mkdir -p package-install
+          tar -xzf "$pkg" -C package-install
+          cli="$(find package-install -type f -path '*/bin/nexa' -print -quit)"
+          gui="$(find package-install -type f -path '*/bin/nexa_gui' -print -quit)"
+          test -x "$cli" && test -x "$gui"
+          export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
+          "$cli" --profile-create ci-smoke 256 1024
+          "$cli" --profile-delete ci-smoke
+          xvfb-run -a bash -c 'set +e; timeout 8s "$1"; result=$?; test "$result" -eq 124 -o "$result" -eq 0' _ "$gui"
+          (cd release && sha256sum -c SHA256SUMS)
+      - name: Extract and launch packaged outputs (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg="$(find release -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
+          test -n "$pkg"
+          mkdir -p package-install
+          tar -xzf "$pkg" -C package-install
+          cli="$(find package-install -type f -path '*/bin/nexa' -print -quit)"
+          gui="$(find package-install -type f -path '*/bin/nexa_gui' -print -quit)"
+          test -x "$cli" && test -x "$gui"
+          export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
+          "$cli" --profile-create ci-smoke 256 1024
+          "$cli" --profile-delete ci-smoke
+          for attempt in 1 2; do
+            "$gui" > packaged-gui-smoke.log 2>&1 &
+            pid=$!
+            sleep 5
+            kill -0 "$pid"
+            kill "$pid"
+            wait "$pid" || true
+          done
+          (cd release && shasum -a 256 -c SHA256SUMS)
+      - name: Extract and launch packaged outputs (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem release -Filter *.zip | Select-Object -First 1
+          if (-not $package) { throw 'Packaged ZIP was not found' }
+          Expand-Archive -LiteralPath $package.FullName -DestinationPath package-install -Force
+          $cli = Get-ChildItem package-install -Filter nexa.exe -Recurse | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          $gui = Get-ChildItem package-install -Filter nexa_gui.exe -Recurse | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          if (-not $cli -or -not $gui) { throw 'Packaged CLI or GUI executable is missing' }
+          $env:NEXA_HOME = Join-Path $env:RUNNER_TEMP 'nexa-package-smoke'
+          & $cli.FullName --profile-create ci-smoke 256 1024
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile create failed' }
+          & $cli.FullName --profile-delete ci-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI profile cleanup failed' }
+          $expected = (Get-Content release/SHA256SUMS -Raw).Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)[0]
+          $actual = (Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected.ToLowerInvariant()) { throw 'Packaged ZIP checksum mismatch' }
+          for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $proc = Start-Process -FilePath $gui.FullName -PassThru
+            Start-Sleep -Seconds 5
+            if ($proc.HasExited) { throw "Packaged GUI exited during launch ($attempt)" }
+            Stop-Process -Id $proc.Id -Force
+          }
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
