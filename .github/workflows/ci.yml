@@ -25,7 +25,16 @@ jobs:
         run: brew install qt
       - name: Install Qt6 (Windows)
         if: runner.os == 'Windows'
-        run: vcpkg install qtbase:x64-windows
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install openssl:x64-windows
       - name: Configure Linux
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON
@@ -34,7 +43,7 @@ jobs:
         run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
       - name: Configure Windows
         if: runner.os == 'Windows'
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+        run: cmake -S . -B build -DBUILD_TESTING=ON -DNEXA_BUILD_GUI=ON -DNEXA_REQUIRE_GUI=ON -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
@@ -63,9 +72,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $tool = Get-ChildItem "$env:VCPKG_INSTALLATION_ROOT/installed" -Filter windeployqt.exe -Recurse | Select-Object -First 1
-          if (-not $tool) { throw 'windeployqt was not found in vcpkg Qt installation' }
-          & $tool.FullName --release --no-translations build/Release/nexa_gui.exe
+          $tool = Join-Path $env:QT_ROOT_DIR 'bin/windeployqt.exe'
+          if (-not (Test-Path $tool)) { throw "windeployqt was not found under QT_ROOT_DIR: $tool" }
+          & $tool --release --no-translations build/Release/nexa_gui.exe
           if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed' }
       - name: GUI launch and restart smoke (Windows)
         if: runner.os == 'Windows'
