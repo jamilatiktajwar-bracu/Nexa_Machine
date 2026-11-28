@@ -176,11 +176,11 @@ jobs:
             set -euo pipefail
             adb wait-for-device
             for attempt in $(seq 1 60); do
-              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
               [ "$BOOTED" = "1" ] && break
               sleep 2
             done
-            [ "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1" ]
+            [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]
             gradle -p mobile/android connectedDebugAndroidTest
 
   ios-simulator:
