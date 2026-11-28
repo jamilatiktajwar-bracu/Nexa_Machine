@@ -173,7 +173,7 @@ jobs:
           heap-size: 512
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             adb wait-for-device
             for attempt in $(seq 1 60); do
               BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
