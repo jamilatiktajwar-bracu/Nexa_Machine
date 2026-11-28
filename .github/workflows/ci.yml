@@ -175,6 +175,10 @@ jobs:
           heap-size: 512
           disable-animations: true
           script: bash ci/android-emulator.sh instrumentation
+  ios-simulator:
+    timeout-minutes: 60
+    runs-on: macos-latest
+    steps:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Build iOS VM core
