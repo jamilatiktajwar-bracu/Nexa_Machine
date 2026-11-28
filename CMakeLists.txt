@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 project(NexaMachine VERSION 2.34.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 20)
@@ -24,7 +24,17 @@ if(NEXA_BUILD_HOST_TOOLS)
  add_executable(nexa src/main.cpp src/config.cpp src/virtual_disk.cpp src/vm_manager.cpp src/executable.cpp src/vfs.cpp src/kernel.cpp src/shell.cpp src/memory_manager.cpp src/platform.cpp src/workspace.cpp)
  target_include_directories(nexa PRIVATE include)
  target_link_libraries(nexa PRIVATE nexa_vm_core OpenSSL::Crypto)
- install(TARGETS nexa RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ if(WIN32)
+  install(TARGETS nexa
+   RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+   PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+   POST_EXCLUDE_REGEXES ".*[Ss]ystem32/.*\\.dll")
+ else()
+  install(TARGETS nexa RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ endif()
  if(MSVC)
   target_compile_options(nexa PRIVATE /W4 /permissive-)
  else()
