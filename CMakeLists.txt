@@ -110,11 +110,23 @@ endif()
 if(NEXA_BUILD_GUI)
  find_package(Qt6 COMPONENTS Widgets QUIET)
  if(Qt6Widgets_FOUND)
-  add_executable(nexa_gui src/gui.cpp src/session_gui.cpp src/config.cpp src/workspace.cpp src/virtual_disk.cpp)
+  set(NEXA_GUI_SOURCES
+   src/gui.cpp src/session_gui.cpp src/config.cpp src/workspace.cpp src/virtual_disk.cpp)
+  if(APPLE)
+   # Qt's macOS deployment helper requires a proper .app bundle. A plain
+   # executable skips framework/plugin deployment and crashes after packaging.
+   add_executable(nexa_gui MACOSX_BUNDLE ${NEXA_GUI_SOURCES})
+   set_target_properties(nexa_gui PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER "org.nexa.machine.desktop"
+    MACOSX_BUNDLE_BUNDLE_NAME "Nexa Machine"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+   install(TARGETS nexa_gui BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR})
+  else()
+   add_executable(nexa_gui ${NEXA_GUI_SOURCES})
+   install(TARGETS nexa_gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
   target_include_directories(nexa_gui PRIVATE include)
   target_link_libraries(nexa_gui PRIVATE Qt6::Widgets nexa_vm_core)
-  install(TARGETS nexa_gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  # Qt's generated deployment script is supported on Windows/macOS.
   # Linux packages rely on distribution-provided Qt6 runtime dependencies:
   # the generic script can fail rewriting RPATH on distro plugin ELF files.
   if(WIN32 OR APPLE)
