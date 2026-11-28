@@ -108,7 +108,11 @@ jobs:
         run: |
           test -x install-root/bin/nexa || test -f install-root/bin/nexa.exe
           if [ "$RUNNER_OS" = "macOS" ]; then
-            test -x install-root/bin/nexa_gui.app/Contents/MacOS/nexa_gui
+            app_bundle="install-root/bin/nexa_gui.app"
+            test -x "$app_bundle/Contents/MacOS/nexa_gui"
+            test -f "$app_bundle/Contents/Info.plist"
+            test -n "$(find "$app_bundle/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
+            test -n "$(find "$app_bundle/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
           else
             test -f install-root/bin/nexa_gui || test -f install-root/bin/nexa_gui.exe
           fi
@@ -186,6 +190,9 @@ jobs:
           app_bundle="$(find package-install -type d -name 'nexa_gui.app' -print -quit)"
           gui="$app_bundle/Contents/MacOS/nexa_gui"
           test -x "$cli" && test -x "$gui"
+          test -f "$app_bundle/Contents/Info.plist"
+          test -n "$(find "$app_bundle/Contents" -type d -name 'QtWidgets.framework' -print -quit)"
+          test -n "$(find "$app_bundle/Contents" -type f -path '*/platforms/libqcocoa.dylib' -print -quit)"
           export NEXA_HOME="$RUNNER_TEMP/nexa-package-smoke"
           "$cli" --profile-create ci-smoke 256 1024
           "$cli" --profile-delete ci-smoke
