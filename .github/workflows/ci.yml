@@ -5,7 +5,7 @@ on:
       - main
   pull_request:
 concurrency:
-  group: nexa-ci-${{ github.ref }}
+  group: nexa-ci-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   desktop:
