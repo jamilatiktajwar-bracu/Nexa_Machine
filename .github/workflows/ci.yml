@@ -142,7 +142,7 @@ jobs:
           license_status=${PIPESTATUS[1]}
           set -o pipefail
           test "$license_status" -eq 0
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'emulator' 'platform-tools' 'system-images;android-34;default;x86_64'
       - name: Build Android native core
         run: cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 -DNEXA_BUILD_HOST_TOOLS=OFF -DNEXA_BUILD_GUI=OFF -DBUILD_TESTING=OFF && cmake --build build-android --config Release --parallel
       - uses: actions/setup-java@v4
@@ -151,7 +151,7 @@ jobs:
           java-version: '17'
       - name: Install Gradle
         run: curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip && unzip -q /tmp/gradle.zip -d /tmp && echo /tmp/gradle-8.9/bin >> "$GITHUB_PATH"
-      - name: Android build and emulator tests
+      - name: Build Android debug APK
         run: gradle -p mobile/android assembleDebug
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
@@ -163,16 +163,25 @@ jobs:
         env:
           ANDROID_I_WANT_MY_TCG: "yes"
         with:
-          api-level: 35
-          target: google_apis
+          api-level: 34
+          target: default
           arch: x86_64
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot -wipe-data
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot -wipe-data -accel off
           emulator-boot-timeout: 900
-          cores: 2
-          ram-size: 2048
+          cores: 4
+          ram-size: 4096
           heap-size: 512
           disable-animations: true
-          script: gradle -p mobile/android connectedDebugAndroidTest
+          script: |
+            set -euo pipefail
+            adb wait-for-device
+            for attempt in $(seq 1 60); do
+              BOOTED="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              [ "$BOOTED" = "1" ] && break
+              sleep 2
+            done
+            [ "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1" ]
+            gradle -p mobile/android connectedDebugAndroidTest
 
   ios-simulator:
     timeout-minutes: 60
