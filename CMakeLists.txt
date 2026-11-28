@@ -29,9 +29,9 @@ if(NEXA_BUILD_HOST_TOOLS)
    RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-   POST_EXCLUDE_REGEXES ".*[Ss]ystem32/.*\\.dll")
+   POST_EXCLUDE_REGEXES ".*[Ss]ystem32/.*\\.dll"
+   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
  elseif(APPLE)
   # The macOS CLI uses OpenSSL for password hashing. Bundle non-system
   # dylibs and resolve them relative to the installed bin/ executable.
@@ -40,9 +40,9 @@ if(NEXA_BUILD_HOST_TOOLS)
    RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(RUNTIME_DEPENDENCY_SET nexa_cli_runtime_dependencies
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
    PRE_EXCLUDE_REGEXES "^/System/Library/" "^/usr/lib/"
-   POST_EXCLUDE_REGEXES "^/System/Library/" "^/usr/lib/")
+   POST_EXCLUDE_REGEXES "^/System/Library/" "^/usr/lib/"
+   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
  else()
   install(TARGETS nexa RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
  endif()
