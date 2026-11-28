@@ -7,6 +7,8 @@ val releaseStoreFile = System.getenv("NEXA_ANDROID_KEYSTORE_PATH")
 val releaseStorePassword = System.getenv("NEXA_ANDROID_STORE_PASSWORD")
 val releaseKeyAlias = System.getenv("NEXA_ANDROID_KEY_ALIAS")
 val releaseKeyPassword = System.getenv("NEXA_ANDROID_KEY_PASSWORD")
+val nexaVersionName = providers.gradleProperty("nexaVersionName").orElse("2.34.0").get()
+val nexaVersionCode = providers.gradleProperty("nexaVersionCode").orElse("23400").get().toInt()
 
 android {
     signingConfigs {
@@ -28,8 +30,8 @@ android {
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndkVersion = "27.2.12479018"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = nexaVersionCode
+        versionName = nexaVersionName
         externalNativeBuild {
             cmake { cppFlags += "-std=c++20"; arguments += listOf("-DNEXA_BUILD_HOST_TOOLS=OFF", "-DNEXA_BUILD_GUI=OFF") }
         }
