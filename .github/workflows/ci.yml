@@ -196,7 +196,7 @@ jobs:
           & $cli.FullName --compile $sourceFile $executableFile
           if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI assembly compilation failed' }
           $executionOutput = & $cli.FullName --exe $executableFile
-          if ($LASTEXITCODE -ne 0 -or ($executionOutput -notmatch 'Executable halted\\.')) { throw 'Packaged CLI VM execution failed' }
+          if ($LASTEXITCODE -ne 0 -or ($executionOutput -notlike '*Executable halted.*')) { throw 'Packaged CLI VM execution failed' }
           $expected = (Get-Content release/SHA256SUMS -Raw).Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)[0]
           $actual = (Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected.ToLowerInvariant()) { throw 'Packaged ZIP checksum mismatch' }
