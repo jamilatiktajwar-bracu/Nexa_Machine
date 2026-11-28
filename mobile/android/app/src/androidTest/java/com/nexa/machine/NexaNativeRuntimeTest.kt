@@ -111,5 +111,4 @@ class NexaNativeRuntimeTest {
         assertTrue("Disk-bundle manifest was not persisted",
             File(snapshotRoot, "disks/manifest.txt").isFile)
     }
-    }
 }
