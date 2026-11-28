@@ -279,6 +279,17 @@ jobs:
           heap-size: 512
           disable-animations: true
           script: bash ci/android-emulator.sh instrumentation
+      - name: Upload Android instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-android-instrumentation-diagnostics
+          path: |
+            mobile/android/app/build/reports/androidTests/connected/debug/
+            mobile/android/app/build/outputs/androidTest-results/connected/debug/
+            mobile/android/app/build/diagnostics/
+          if-no-files-found: ignore
+          retention-days: 7
   ios-simulator:
     timeout-minutes: 60
     runs-on: macos-latest
