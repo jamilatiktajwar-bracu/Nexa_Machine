@@ -99,7 +99,7 @@ class NexaNativeRuntimeTest {
         try {
             val session = NexaNative.createSession(context, "force-stop seed", 4096)
             assertTrue("Native session creation failed", session != 0L)
-            assertEquals(0, NexaNative.loadAssembly(context, session, "LOAD A, 88\\nOUT A, 1\\nHALT\\n"))
+            assertEquals(0, NexaNative.loadAssembly(context, session, "LOAD A, 88\nOUT A, 1\nHALT\n"))
             assertEquals(0, NexaNative.start(context, session))
             assertEquals(0, NexaNative.run(context, session, 64))
             assertEquals(0, NexaNative.saveSnapshot(context, session, snapshotRoot.absolutePath))
